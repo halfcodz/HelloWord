@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import 'auth/auth_gate.dart';
+import 'features/exam/repositories/exam_repository.dart';
 import 'features/word_sets/repositories/word_set_repository.dart';
 
 class HelloWordApp extends StatelessWidget {
@@ -20,6 +21,7 @@ class HelloWordApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<WordSetRepository>(create: (_) => WordSetRepository()),
+        Provider<ExamRepository>(create: (_) => ExamRepository()),
       ],
       child: MaterialApp(
         title: 'HelloWord',

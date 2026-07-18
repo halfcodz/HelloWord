@@ -73,13 +73,24 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.auth.uid == request.resource.data.createdBy;
     }
+
+    // 실시간 시험 세션: 로그인한 사용자(언니·동생)가 참여/조회
+    match /sessions/{sessionId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.hostUid;
+      allow update, delete: if request.auth != null;
+
+      match /answers/{answerId} {
+        allow read, write: if request.auth != null;
+      }
+    }
   }
 }
 ```
 
-> Phase 2부터 동생이 시험에 참여할 수 있도록 `sessions` 규칙을 추가합니다.
-> (지금은 Firestore가 테스트 모드라 규칙 없이도 동작하지만, public 저장소이므로
-> 위 규칙을 콘솔에 반영해 두는 것을 권장합니다.)
+> 지금은 Firestore가 테스트 모드라 규칙 없이도 동작하지만, public 저장소이므로
+> 위 규칙을 콘솔에 반영해 두는 것을 권장합니다.
 
 ---
 

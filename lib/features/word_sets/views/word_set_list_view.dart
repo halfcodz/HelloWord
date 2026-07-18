@@ -87,7 +87,7 @@ class _WordSetListBody extends StatelessWidget {
           set: set,
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => WordSetDetailView(set: set),
+              builder: (_) => WordSetDetailView(set: set, user: user),
             ),
           ),
           onDelete: () => _confirmDelete(context, viewModel, set),

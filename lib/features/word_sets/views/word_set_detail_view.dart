@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/utils/date_format.dart';
+import '../../../models/app_user.dart';
+import '../../exam/repositories/exam_repository.dart';
+import '../../exam/views/session_monitor_view.dart';
 import '../models/word_set.dart';
 
 /// 저장된 단어 세트의 상세(단어 목록) 화면.
 class WordSetDetailView extends StatelessWidget {
-  const WordSetDetailView({super.key, required this.set});
+  const WordSetDetailView({super.key, required this.set, required this.user});
 
   final WordSet set;
+  final AppUser user;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(set.title)),
+      bottomNavigationBar: _StartExamButton(set: set, user: user),
       body: Column(
         children: [
           Container(
@@ -72,6 +78,69 @@ class WordSetDetailView extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "이 단어로 시험 내기" 버튼. 세션을 만들고 감독 화면으로 이동한다.
+class _StartExamButton extends StatefulWidget {
+  const _StartExamButton({required this.set, required this.user});
+
+  final WordSet set;
+  final AppUser user;
+
+  @override
+  State<_StartExamButton> createState() => _StartExamButtonState();
+}
+
+class _StartExamButtonState extends State<_StartExamButton> {
+  bool _creating = false;
+
+  Future<void> _start() async {
+    setState(() => _creating = true);
+    try {
+      final session = await context.read<ExamRepository>().createSession(
+            wordSet: widget.set,
+            hostUid: widget.user.uid,
+            hostName: widget.user.name,
+          );
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SessionMonitorView(sessionId: session.id),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('시험을 시작하지 못했어요. 다시 시도해 주세요.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _creating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.all(12.w),
+        child: FilledButton.icon(
+          onPressed: _creating ? null : _start,
+          icon: _creating
+              ? SizedBox(
+                  height: 18.h,
+                  width: 18.h,
+                  child: const CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.play_arrow),
+          label: Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.h),
+            child: const Text('이 단어로 시험 내기'),
+          ),
+        ),
       ),
     );
   }

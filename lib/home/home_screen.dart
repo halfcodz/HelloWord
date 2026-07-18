@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../auth/auth_service.dart';
+import '../features/exam/views/session_join_view.dart';
 import '../features/word_sets/views/word_set_list_view.dart';
 import '../models/app_user.dart';
 
@@ -43,17 +45,36 @@ class _YoungerHome extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 '${user.name}님, 환영합니다 👋',
+                textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
-              const SizedBox(height: 32),
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Text('곧 언니가 낸 시험에 참여할 수 있어요. (Phase 2에서 구현)'),
+              SizedBox(height: 40.h),
+              Icon(
+                Icons.school_outlined,
+                size: 72.sp,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                '언니가 시험을 열고 코드를 알려주면\n아래 버튼으로 참여하세요.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              SizedBox(height: 32.h),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => SessionJoinView(user: user),
+                  ),
+                ),
+                icon: const Icon(Icons.login),
+                label: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.h),
+                  child: const Text('시험 참여하기'),
                 ),
               ),
             ],
