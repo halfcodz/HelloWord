@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'auth/auth_gate.dart';
 import 'core/theme/app_theme.dart';
 import 'features/exam/repositories/exam_repository.dart';
+import 'features/social/repositories/friend_repository.dart';
 import 'features/word_sets/repositories/word_set_repository.dart';
 
 class HelloWordApp extends StatelessWidget {
@@ -23,6 +24,7 @@ class HelloWordApp extends StatelessWidget {
       providers: [
         Provider<WordSetRepository>(create: (_) => WordSetRepository()),
         Provider<ExamRepository>(create: (_) => ExamRepository()),
+        Provider<FriendRepository>(create: (_) => FriendRepository()),
       ],
       child: MaterialApp(
         title: 'HelloWord',

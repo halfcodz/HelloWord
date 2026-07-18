@@ -130,6 +130,17 @@ class ExamRepository {
     });
   }
 
+  /// 동생이 시험(공부) 중인지 상태를 표시한다. 친구 프로필의 불꽃 표시에 쓰인다.
+  Future<void> setStudying({
+    required String uid,
+    required bool studying,
+  }) async {
+    await _firestore.collection('users').doc(uid).set(
+      {'studying': studying},
+      SetOptions(merge: true),
+    );
+  }
+
   /// 세션과 하위 답안을 삭제한다(언니가 취소할 때).
   Future<void> deleteSession(String sessionId) async {
     final answers = await _answers(sessionId).get();

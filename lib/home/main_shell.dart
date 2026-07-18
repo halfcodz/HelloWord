@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../core/services/presence_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/bouncy_tap.dart';
 import '../core/widgets/gradient_button.dart';
 import '../features/exam/views/session_join_view.dart';
 import '../features/profile/views/profile_view.dart';
+import '../features/social/views/friend_bar.dart';
 import '../features/word_sets/views/calendar_home_view.dart';
 import '../features/word_sets/views/word_set_list_view.dart';
 import '../models/app_user.dart';
@@ -23,6 +25,19 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _index = 0;
+  final _presence = PresenceService();
+
+  @override
+  void initState() {
+    super.initState();
+    _presence.start(widget.user.uid);
+  }
+
+  @override
+  void dispose() {
+    _presence.dispose();
+    super.dispose();
+  }
 
   List<Widget> _pages() {
     final user = widget.user;
@@ -172,12 +187,16 @@ class _YoungerHomeTab extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('HelloWord ✨')),
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.all(24.w),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+        child: Column(
+          children: [
+            FriendBar(me: user),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24.w),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                 Text('${user.name}님, 안녕! 👋',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 24.sp, color: AppColors.ink)),
@@ -219,9 +238,12 @@ class _YoungerHomeTab extends StatelessWidget {
                 .animate()
                 .fadeIn(duration: 500.ms)
                 .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-      ),
-    );
+      );
   }
 }

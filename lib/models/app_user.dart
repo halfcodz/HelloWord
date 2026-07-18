@@ -23,6 +23,8 @@ class AppUser {
     required this.email,
     required this.name,
     this.role,
+    this.online = false,
+    this.studying = false,
   });
 
   final String uid;
@@ -30,12 +32,20 @@ class AppUser {
   final String name;
   final UserRole? role;
 
+  /// 현재 앱에 접속 중인지.
+  final bool online;
+
+  /// 현재 시험(공부) 중인지.
+  final bool studying;
+
   factory AppUser.fromMap(String uid, Map<String, dynamic> map) {
     return AppUser(
       uid: uid,
       email: map['email'] as String? ?? '',
       name: map['name'] as String? ?? '',
       role: UserRoleX.fromStorage(map['role'] as String?),
+      online: map['online'] as bool? ?? false,
+      studying: map['studying'] as bool? ?? false,
     );
   }
 }

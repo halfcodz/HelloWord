@@ -61,9 +61,13 @@ Firebase 콘솔 **Firestore > 규칙** 탭에 붙여넣고 게시:
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 본인 프로필만 읽고 쓸 수 있음
+    // 사용자 프로필: 로그인한 사용자끼리 서로 조회(친구 상태) 및
+    // 친구 추가(상대 문서의 friends 배열 갱신)를 허용한다.
+    // ※ 자매 둘만 쓰는 비공개 앱이라 이 정도 개방을 허용. 공개 서비스라면
+    //    friends 필드에 한정하는 등 더 촘촘한 규칙이 필요.
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
     }
 
     // 단어 세트: 만든 언니 본인만 접근
