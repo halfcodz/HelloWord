@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../models/app_user.dart';
+import '../../call/views/call_panel.dart';
+import '../../chat/views/chat_view.dart';
 import '../models/exam_session.dart';
 import '../repositories/exam_repository.dart';
 import '../viewmodels/session_exam_viewmodel.dart';
@@ -29,13 +31,15 @@ class SessionExamView extends StatelessWidget {
         sessionId: sessionId,
         guestUid: user.uid,
       ),
-      child: const _ExamBody(),
+      child: _ExamBody(user: user),
     );
   }
 }
 
 class _ExamBody extends StatefulWidget {
-  const _ExamBody();
+  const _ExamBody({required this.user});
+
+  final AppUser user;
 
   @override
   State<_ExamBody> createState() => _ExamBodyState();
@@ -65,6 +69,22 @@ class _ExamBodyState extends State<_ExamBody> {
       appBar: AppBar(
         title: Text(session?.title ?? '시험'),
         automaticallyImplyLeading: false,
+        actions: [
+          if (session != null && !viewModel.isFinished)
+            IconButton(
+              tooltip: '채팅',
+              icon: const Icon(Icons.chat_bubble_outline),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ChatView(
+                    myUid: widget.user.uid,
+                    otherUid: session.hostUid,
+                    otherName: session.hostName,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       body: SafeArea(child: _buildBody(context, viewModel, session)),
     );
@@ -98,6 +118,8 @@ class _ExamBodyState extends State<_ExamBody> {
     final theme = Theme.of(context);
     return Column(
       children: [
+        // 시험 보는 동안 언니와 영상통화.
+        CallPanel(sessionId: session.id, isCaller: false),
         LinearProgressIndicator(
           value: session.total == 0
               ? 0

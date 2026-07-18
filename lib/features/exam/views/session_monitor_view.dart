@@ -4,6 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../call/views/call_panel.dart';
+import '../../chat/views/chat_view.dart';
 import '../../word_sets/models/word_pair.dart';
 import '../models/exam_answer.dart';
 import '../models/exam_session.dart';
@@ -68,6 +70,22 @@ class _MonitorBody extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(session?.title ?? '시험 감독'),
+        actions: [
+          if (session?.guestUid != null)
+            IconButton(
+              tooltip: '채팅',
+              icon: const Icon(Icons.chat_bubble_outline),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ChatView(
+                    myUid: session!.hostUid,
+                    otherUid: session.guestUid!,
+                    otherName: session.guestName ?? '동생',
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       body: SafeArea(child: _buildContent(context, viewModel, session)),
     );
@@ -197,6 +215,9 @@ class _LiveMonitor extends StatelessWidget {
 
     return Column(
       children: [
+        // 시험 진행 중에는 동생과 영상통화.
+        if (!finished)
+          CallPanel(sessionId: session.id, isCaller: true),
         Container(
           width: double.infinity,
           padding: EdgeInsets.all(16.w),

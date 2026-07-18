@@ -81,13 +81,22 @@ service cloud.firestore {
     }
 
     // 실시간 시험 세션: 로그인한 사용자(언니·동생)가 참여/조회
+    // 하위(answers=답안, rtc=영상통화 시그널링)도 로그인 사용자에게 허용
     match /sessions/{sessionId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null
         && request.auth.uid == request.resource.data.hostUid;
       allow update, delete: if request.auth != null;
 
-      match /answers/{answerId} {
+      match /{sub=**} {
+        allow read, write: if request.auth != null;
+      }
+    }
+
+    // 1:1 채팅: 로그인한 사용자끼리
+    match /chats/{roomId} {
+      allow read, write: if request.auth != null;
+      match /messages/{msgId} {
         allow read, write: if request.auth != null;
       }
     }

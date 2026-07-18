@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../models/app_user.dart';
+import '../../chat/views/chat_view.dart';
 import '../repositories/friend_repository.dart';
 import '../viewmodels/friends_viewmodel.dart';
 import 'friend_avatar.dart';
@@ -42,6 +43,18 @@ class _FriendBarBody extends StatelessWidget {
       SnackBar(
         content: Text('${isMe ? "나" : user.name} · ${_statusText(user)}'),
         duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _openChat(BuildContext context, AppUser friend) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChatView(
+          myUid: me.uid,
+          otherUid: friend.uid,
+          otherName: friend.name,
+        ),
       ),
     );
   }
@@ -115,7 +128,7 @@ class _FriendBarBody extends StatelessWidget {
           for (final friend in friends) ...[
             FriendAvatar(
               user: friend,
-              onTap: () => _showStatus(context, friend),
+              onTap: () => _openChat(context, friend),
             ),
             SizedBox(width: 8.w),
           ],
