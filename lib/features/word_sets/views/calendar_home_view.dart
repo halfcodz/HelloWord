@@ -12,7 +12,8 @@ import '../viewmodels/word_set_list_viewmodel.dart';
 import 'word_set_detail_view.dart';
 import 'word_set_upload_view.dart';
 
-/// 언니 홈: 상단 친구 바 + 노션풍 월 달력(단어 세트를 날짜별 바로 표시).
+/// 언니 홈: 상단 친구 바 + 컴팩트한 노션풍 월 달력.
+/// 날짜를 누르면 아래에 그 날의 단어 세트가 표시된다.
 class CalendarHomeView extends StatelessWidget {
   const CalendarHomeView({super.key, required this.user});
 
@@ -40,7 +41,9 @@ class _CalendarBody extends StatefulWidget {
 }
 
 class _CalendarBodyState extends State<_CalendarBody> {
-  DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
+  final _now = DateTime.now();
+  late DateTime _month = DateTime(_now.year, _now.month);
+  late DateTime _selectedDay = DateTime(_now.year, _now.month, _now.day);
 
   DateTime _dayKey(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -56,37 +59,16 @@ class _CalendarBodyState extends State<_CalendarBody> {
       setState(() => _month = DateTime(_month.year, _month.month - 1));
   void _nextMonth() =>
       setState(() => _month = DateTime(_month.year, _month.month + 1));
-  void _today() {
-    final now = DateTime.now();
-    setState(() => _month = DateTime(now.year, now.month));
-  }
-
-  void _openDay(DateTime day, List<WordSet> sets) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.cream,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
-      ),
-      builder: (_) => _DaySheet(
-        day: day,
-        sets: sets,
-        onOpenSet: (set) {
-          Navigator.of(context).pop();
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => WordSetDetailView(set: set, user: widget.user),
-            ),
-          );
-        },
-      ),
-    );
-  }
+  void _today() => setState(() {
+        _month = DateTime(_now.year, _now.month);
+        _selectedDay = DateTime(_now.year, _now.month, _now.day);
+      });
 
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<WordSetListViewModel>();
     final events = _groupByDay(viewModel.sets);
+    final selectedSets = events[_dayKey(_selectedDay)] ?? const <WordSet>[];
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -110,14 +92,29 @@ class _CalendarBodyState extends State<_CalendarBody> {
               onToday: _today,
             ),
             const _WeekdayRow(),
+            _MonthGrid(
+              month: _month,
+              selectedDay: _selectedDay,
+              today: DateTime(_now.year, _now.month, _now.day),
+              eventsByDay: events,
+              onDayTap: (day) => setState(() => _selectedDay = day),
+            ),
+            Divider(height: 20.h, thickness: 1, indent: 20.w, endIndent: 20.w),
+            _SelectedDayHeader(day: _selectedDay, count: selectedSets.length),
+            SizedBox(height: 8.h),
             Expanded(
               child: viewModel.loading
                   ? const Center(child: CircularProgressIndicator())
-                  : _MonthGrid(
-                      month: _month,
-                      eventsByDay: events,
-                      onDayTap: (day) =>
-                          _openDay(day, events[_dayKey(day)] ?? const []),
+                  : _DaySetList(
+                      sets: selectedSets,
+                      onOpenSet: (set) => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => WordSetDetailView(
+                            set: set,
+                            user: widget.user,
+                          ),
+                        ),
+                      ),
                     ),
             ),
           ],
@@ -143,11 +140,11 @@ class _MonthHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(20.w, 4.h, 12.w, 4.h),
+      padding: EdgeInsets.fromLTRB(20.w, 4.h, 8.w, 0),
       child: Row(
         children: [
           Text('${month.year}년 ${month.month}월',
-              style: TextStyle(fontSize: 20.sp, color: AppColors.ink)),
+              style: TextStyle(fontSize: 19.sp, color: AppColors.ink)),
           const Spacer(),
           BouncyTap(
             onTap: onToday,
@@ -162,12 +159,14 @@ class _MonthHeader extends StatelessWidget {
             ),
           ),
           IconButton(
+            visualDensity: VisualDensity.compact,
             onPressed: onPrev,
-            icon: const Icon(Icons.chevron_left, color: AppColors.lavender),
+            icon: Icon(Icons.chevron_left, color: AppColors.lavender),
           ),
           IconButton(
+            visualDensity: VisualDensity.compact,
             onPressed: onNext,
-            icon: const Icon(Icons.chevron_right, color: AppColors.lavender),
+            icon: Icon(Icons.chevron_right, color: AppColors.lavender),
           ),
         ],
       ),
@@ -183,7 +182,7 @@ class _WeekdayRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 2.h),
       child: Row(
         children: [
           for (var i = 0; i < 7; i++)
@@ -207,13 +206,19 @@ class _WeekdayRow extends StatelessWidget {
 class _MonthGrid extends StatelessWidget {
   const _MonthGrid({
     required this.month,
+    required this.selectedDay,
+    required this.today,
     required this.eventsByDay,
     required this.onDayTap,
   });
 
   final DateTime month;
+  final DateTime selectedDay;
+  final DateTime today;
   final Map<DateTime, List<WordSet>> eventsByDay;
   final void Function(DateTime) onDayTap;
+
+  DateTime _key(DateTime d) => DateTime(d.year, d.month, d.day);
 
   @override
   Widget build(BuildContext context) {
@@ -222,34 +227,32 @@ class _MonthGrid extends StatelessWidget {
     final gridStart = firstOfMonth.subtract(Duration(days: leading));
     final lastOfMonth = DateTime(month.year, month.month + 1, 0);
     final weeks = ((leading + lastOfMonth.day) / 7).ceil();
-    final today = DateTime(
-        DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 8.w),
+      padding: EdgeInsets.symmetric(horizontal: 10.w),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           for (var w = 0; w < weeks; w++)
-            Expanded(
-              child: Row(
-                children: [
-                  for (var d = 0; d < 7; d++)
-                    Builder(builder: (context) {
-                      final date = gridStart.add(Duration(days: w * 7 + d));
-                      final key = DateTime(date.year, date.month, date.day);
-                      return Expanded(
-                        child: _DayCell(
-                          date: date,
-                          inMonth: date.month == month.month,
-                          isToday: key == today,
-                          isSunday: d == 0,
-                          events: eventsByDay[key] ?? const [],
-                          onTap: () => onDayTap(date),
-                        ),
-                      );
-                    }),
-                ],
-              ),
+            Row(
+              children: [
+                for (var d = 0; d < 7; d++)
+                  Builder(builder: (_) {
+                    final date = gridStart.add(Duration(days: w * 7 + d));
+                    final key = _key(date);
+                    return Expanded(
+                      child: _DayCell(
+                        date: date,
+                        inMonth: date.month == month.month,
+                        isToday: key == today,
+                        isSelected: key == _key(selectedDay),
+                        isSunday: d == 0,
+                        eventCount: (eventsByDay[key] ?? const []).length,
+                        onTap: () => onDayTap(date),
+                      ),
+                    );
+                  }),
+              ],
             ),
         ],
       ),
@@ -262,24 +265,19 @@ class _DayCell extends StatelessWidget {
     required this.date,
     required this.inMonth,
     required this.isToday,
+    required this.isSelected,
     required this.isSunday,
-    required this.events,
+    required this.eventCount,
     required this.onTap,
   });
 
   final DateTime date;
   final bool inMonth;
   final bool isToday;
+  final bool isSelected;
   final bool isSunday;
-  final List<WordSet> events;
+  final int eventCount;
   final VoidCallback onTap;
-
-  static const _pillColors = [
-    Color(0xFFFFB3C6),
-    Color(0xFFC4B0F0),
-    Color(0xFF9FE0C9),
-    Color(0xFFFFCE9E),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -293,48 +291,59 @@ class _DayCell extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
+        height: 46.h,
         margin: EdgeInsets.all(2.w),
-        padding: EdgeInsets.symmetric(vertical: 4.h, horizontal: 3.w),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: inMonth ? 0.55 : 0.2),
-          borderRadius: BorderRadius.circular(10.r),
+          color: isSelected
+              ? AppColors.pinkSoft.withValues(alpha: 0.35)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12.r),
+          border: isSelected
+              ? Border.all(color: AppColors.pink, width: 1.5)
+              : null,
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Center(
-              child: Container(
-                width: 22.w,
-                height: 22.w,
-                alignment: Alignment.center,
-                decoration: isToday
-                    ? const BoxDecoration(
-                        gradient: AppColors.primaryButton,
-                        shape: BoxShape.circle,
-                      )
-                    : null,
-                child: Text(
-                  '${date.day}',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: isToday ? Colors.white : dayColor,
-                  ),
+            Container(
+              width: 24.w,
+              height: 24.w,
+              alignment: Alignment.center,
+              decoration: isToday
+                  ? BoxDecoration(
+                      gradient: AppColors.primaryButton,
+                      shape: BoxShape.circle,
+                    )
+                  : null,
+              child: Text(
+                '${date.day}',
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  color: isToday ? Colors.white : dayColor,
                 ),
               ),
             ),
-            SizedBox(height: 2.h),
-            for (var i = 0; i < events.length && i < 2; i++)
-              _EventPill(
-                title: events[i].title,
-                color: _pillColors[i % _pillColors.length],
-              ),
-            if (events.length > 2)
-              Padding(
-                padding: EdgeInsets.only(top: 1.h, left: 2.w),
-                child: Text('+${events.length - 2}',
-                    style: TextStyle(
-                        fontSize: 9.sp, color: AppColors.lavender)),
-              ),
+            SizedBox(height: 3.h),
+            SizedBox(
+              height: 6.h,
+              child: eventCount == 0
+                  ? null
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (var i = 0; i < eventCount && i < 3; i++)
+                          Container(
+                            width: 5.w,
+                            height: 5.w,
+                            margin: EdgeInsets.symmetric(horizontal: 1.w),
+                            decoration: BoxDecoration(
+                              color: AppColors.pink,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
           ],
         ),
       ),
@@ -342,129 +351,109 @@ class _DayCell extends StatelessWidget {
   }
 }
 
-class _EventPill extends StatelessWidget {
-  const _EventPill({required this.title, required this.color});
+class _SelectedDayHeader extends StatelessWidget {
+  const _SelectedDayHeader({required this.day, required this.count});
 
-  final String title;
-  final Color color;
+  final DateTime day;
+  final int count;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 2.h),
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(5.r),
-      ),
-      child: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.clip,
-        softWrap: false,
-        style: TextStyle(fontSize: 9.sp, color: Colors.white),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w),
+      child: Row(
+        children: [
+          Text('${day.month}월 ${day.day}일',
+              style: TextStyle(fontSize: 16.sp, color: AppColors.ink)),
+          SizedBox(width: 8.w),
+          if (count > 0)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 3.h),
+              decoration: BoxDecoration(
+                color: AppColors.pinkSoft.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(20.r),
+              ),
+              child: Text('$count개',
+                  style: TextStyle(fontSize: 12.sp, color: AppColors.pink)),
+            ),
+        ],
       ),
     );
   }
 }
 
-class _DaySheet extends StatelessWidget {
-  const _DaySheet({
-    required this.day,
-    required this.sets,
-    required this.onOpenSet,
-  });
+class _DaySetList extends StatelessWidget {
+  const _DaySetList({required this.sets, required this.onOpenSet});
 
-  final DateTime day;
   final List<WordSet> sets;
   final void Function(WordSet) onOpenSet;
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
+    if (sets.isEmpty) {
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Container(
-                width: 40.w,
-                height: 4.h,
-                decoration: BoxDecoration(
-                  color: AppColors.lavenderSoft,
-                  borderRadius: BorderRadius.circular(4.r),
-                ),
-              ),
-            ),
-            SizedBox(height: 16.h),
-            Text('${day.month}월 ${day.day}일',
-                style: TextStyle(fontSize: 18.sp, color: AppColors.ink)),
-            SizedBox(height: 12.h),
-            if (sets.isEmpty)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 20.h),
-                child: Center(
-                  child: Text('이 날은 등록된 단어가 없어요 🌷',
-                      style: TextStyle(
-                          fontSize: 13.sp, color: AppColors.lavender)),
-                ),
-              )
-            else
-              ...sets.map(
-                (set) => Padding(
-                  padding: EdgeInsets.only(bottom: 10.h),
-                  child: BouncyTap(
-                    onTap: () => onOpenSet(set),
-                    child: Container(
-                      padding: EdgeInsets.all(16.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18.r),
-                        boxShadow: AppColors.softShadow(blur: 12, y: 5),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40.w,
-                            height: 40.w,
-                            decoration: BoxDecoration(
-                              gradient: AppColors.primaryButton,
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Icon(Icons.menu_book_rounded,
-                                color: Colors.white, size: 20.sp),
-                          ),
-                          SizedBox(width: 12.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(set.title,
-                                    style: TextStyle(
-                                        fontSize: 15.sp,
-                                        color: AppColors.ink),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis),
-                                Text('${set.wordCount}개 단어',
-                                    style: TextStyle(
-                                        fontSize: 12.sp,
-                                        color: AppColors.lavender)),
-                              ],
-                            ),
-                          ),
-                          Icon(Icons.chevron_right,
-                              color: AppColors.lavender, size: 20.sp),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            Text('🌷', style: TextStyle(fontSize: 34.sp)),
+            SizedBox(height: 8.h),
+            Text('이 날은 등록된 단어가 없어요',
+                style: TextStyle(fontSize: 13.sp, color: AppColors.lavender)),
           ],
         ),
-      ),
+      );
+    }
+    return ListView.separated(
+      padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 90.h),
+      itemCount: sets.length,
+      separatorBuilder: (_, _) => SizedBox(height: 10.h),
+      itemBuilder: (context, index) {
+        final set = sets[index];
+        return BouncyTap(
+          onTap: () => onOpenSet(set),
+          child: Container(
+            padding: EdgeInsets.all(16.w),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18.r),
+              boxShadow: AppColors.softShadow(blur: 12, y: 5),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 42.w,
+                  height: 42.w,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryButton,
+                    borderRadius: BorderRadius.circular(13.r),
+                  ),
+                  child: Icon(Icons.menu_book_rounded,
+                      color: Colors.white, size: 21.sp),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(set.title,
+                          style: TextStyle(
+                              fontSize: 15.sp, color: AppColors.ink),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                      SizedBox(height: 2.h),
+                      Text('${set.wordCount}개 단어',
+                          style: TextStyle(
+                              fontSize: 12.sp, color: AppColors.lavender)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right,
+                    color: AppColors.lavender, size: 20.sp),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

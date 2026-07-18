@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 
 import '../../../auth/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_controller.dart';
 import '../../../core/widgets/bouncy_tap.dart';
 import '../../../models/app_user.dart';
 
@@ -115,7 +117,9 @@ class ProfileView extends StatelessWidget {
                 label: '이메일',
                 value: user.email,
               ),
-              SizedBox(height: 12.h),
+              SizedBox(height: 20.h),
+              const _ThemePickerCard(),
+              SizedBox(height: 20.h),
               _InfoTile(
                 icon: Icons.logout,
                 label: '로그아웃',
@@ -194,6 +198,96 @@ class _InfoTile extends StatelessWidget {
               Icon(Icons.chevron_right, size: 20.sp, color: AppColors.lavender),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 테마 색상 선택 카드.
+class _ThemePickerCard extends StatelessWidget {
+  const _ThemePickerCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.watch<ThemeController>();
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20.r),
+        boxShadow: AppColors.softShadow(blur: 14, y: 6),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.palette_outlined, size: 20.sp, color: AppColors.pink),
+              SizedBox(width: 10.w),
+              Text('테마 색상',
+                  style: TextStyle(fontSize: 15.sp, color: AppColors.ink)),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              for (final palette in AppPalette.values)
+                _SwatchButton(
+                  palette: palette,
+                  selected: controller.palette == palette,
+                  onTap: () => controller.setPalette(palette),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SwatchButton extends StatelessWidget {
+  const _SwatchButton({
+    required this.palette,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AppPalette palette;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return BouncyTap(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 44.w,
+            height: 44.w,
+            decoration: BoxDecoration(
+              color: palette.swatch,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: selected ? AppColors.ink : Colors.white,
+                width: selected ? 3 : 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: palette.swatch.withValues(alpha: 0.4),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: selected
+                ? Icon(Icons.check, color: Colors.white, size: 20.sp)
+                : null,
+          ),
+          SizedBox(height: 4.h),
+          Text(palette.label,
+              style: TextStyle(fontSize: 10.sp, color: AppColors.ink)),
+        ],
       ),
     );
   }

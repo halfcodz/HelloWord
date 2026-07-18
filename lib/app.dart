@@ -4,12 +4,15 @@ import 'package:provider/provider.dart';
 
 import 'auth/auth_gate.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'features/exam/repositories/exam_repository.dart';
 import 'features/social/repositories/friend_repository.dart';
 import 'features/word_sets/repositories/word_set_repository.dart';
 
 class HelloWordApp extends StatelessWidget {
-  const HelloWordApp({super.key});
+  const HelloWordApp({super.key, required this.themeController});
+
+  final ThemeController themeController;
 
   /// 콘텐츠 최대 폭. 모바일 사파리에서는 화면 전체, 데스크톱 브라우저에서는
   /// 이 폭의 "폰 컬럼"이 가운데 정렬된다.
@@ -25,13 +28,17 @@ class HelloWordApp extends StatelessWidget {
         Provider<WordSetRepository>(create: (_) => WordSetRepository()),
         Provider<ExamRepository>(create: (_) => ExamRepository()),
         Provider<FriendRepository>(create: (_) => FriendRepository()),
+        ChangeNotifierProvider<ThemeController>.value(value: themeController),
       ],
-      child: MaterialApp(
-        title: 'HelloWord',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        builder: (context, child) => _ResponsiveShell(child: child),
-        home: const AuthGate(),
+      // 팔레트가 바뀌면 테마를 다시 계산해 앱 전체에 반영한다.
+      child: Consumer<ThemeController>(
+        builder: (context, _, child) => MaterialApp(
+          title: 'HelloWord',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          builder: (context, child) => _ResponsiveShell(child: child),
+          home: const AuthGate(),
+        ),
       ),
     );
   }
@@ -68,7 +75,7 @@ class _ResponsiveShell extends StatelessWidget {
         final content = MediaQuery(
           data: clampedMedia,
           child: DecoratedBox(
-            decoration: const BoxDecoration(gradient: AppColors.background),
+            decoration: BoxDecoration(gradient: AppColors.background),
             child: child ?? const SizedBox.shrink(),
           ),
         );

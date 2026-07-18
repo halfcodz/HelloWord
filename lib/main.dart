@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'app.dart';
+import 'core/theme/theme_controller.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -18,5 +19,9 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const HelloWordApp());
+
+  // 저장된 테마 팔레트를 적용한 컨트롤러를 준비한다.
+  final themeController = await ThemeController.load();
+
+  runApp(HelloWordApp(themeController: themeController));
 }

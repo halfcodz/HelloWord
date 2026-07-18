@@ -110,16 +110,17 @@ class _BlingBottomBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 8.w),
+          padding: EdgeInsets.symmetric(vertical: 6.h, horizontal: 6.w),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               for (var i = 0; i < items.length; i++)
-                _BarItem(
-                  icon: items[i].icon,
-                  label: items[i].label,
-                  selected: index == i,
-                  onTap: () => onTap(i),
+                Expanded(
+                  child: _BarItem(
+                    icon: items[i].icon,
+                    label: items[i].label,
+                    selected: index == i,
+                    onTap: () => onTap(i),
+                  ),
                 ),
             ],
           ),
@@ -144,30 +145,38 @@ class _BarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 선택: 진한 핑크 / 비선택: 옅은 회보라 — 대비를 확실히.
+    final color = selected ? AppColors.pink : const Color(0xFFB7B0C7);
     return BouncyTap(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOut,
-        padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          gradient: selected ? AppColors.primaryButton : null,
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        child: Row(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 6.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 22.sp,
-              color: selected ? Colors.white : AppColors.lavender,
-            ),
-            if (selected) ...[
-              SizedBox(width: 6.w),
-              Text(
-                label,
-                style: TextStyle(fontSize: 13.sp, color: Colors.white),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
+              decoration: BoxDecoration(
+                color: selected
+                    ? AppColors.pinkSoft.withValues(alpha: 0.5)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(16.r),
               ),
-            ],
+              child: Icon(icon, size: 22.sp, color: color),
+            ),
+            SizedBox(height: 3.h),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11.sp,
+                color: color,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
           ],
         ),
       ),
