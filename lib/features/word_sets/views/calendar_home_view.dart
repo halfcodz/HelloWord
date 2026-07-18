@@ -64,11 +64,38 @@ class _CalendarBodyState extends State<_CalendarBody> {
         _selectedDay = DateTime(_now.year, _now.month, _now.day);
       });
 
+  void _openDay(DateTime day, Map<DateTime, List<WordSet>> events) {
+    setState(() => _selectedDay = day);
+    final sets = events[_dayKey(day)] ?? const <WordSet>[];
+    showDialog<void>(
+      context: context,
+      builder: (_) => _DayDialog(
+        day: day,
+        sets: sets,
+        onOpenSet: (set) {
+          Navigator.of(context).pop();
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => WordSetDetailView(set: set, user: widget.user),
+            ),
+          );
+        },
+        onAdd: () {
+          Navigator.of(context).pop();
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => WordSetUploadView(user: widget.user),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<WordSetListViewModel>();
     final events = _groupByDay(viewModel.sets);
-    final selectedSets = events[_dayKey(_selectedDay)] ?? const <WordSet>[];
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -97,26 +124,12 @@ class _CalendarBodyState extends State<_CalendarBody> {
               selectedDay: _selectedDay,
               today: DateTime(_now.year, _now.month, _now.day),
               eventsByDay: events,
-              onDayTap: (day) => setState(() => _selectedDay = day),
+              onDayTap: (day) => _openDay(day, events),
             ),
-            Divider(height: 20.h, thickness: 1, indent: 20.w, endIndent: 20.w),
-            _SelectedDayHeader(day: _selectedDay, count: selectedSets.length),
-            SizedBox(height: 8.h),
-            Expanded(
-              child: viewModel.loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _DaySetList(
-                      sets: selectedSets,
-                      onOpenSet: (set) => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => WordSetDetailView(
-                            set: set,
-                            user: widget.user,
-                          ),
-                        ),
-                      ),
-                    ),
-            ),
+            SizedBox(height: 10.h),
+            Text('날짜를 누르면 그날의 단어가 나와요 🌸',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12.sp, color: AppColors.lavender)),
           ],
         ),
       ),
@@ -291,8 +304,8 @@ class _DayCell extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        height: 46.h,
-        margin: EdgeInsets.all(2.w),
+        height: 38.h,
+        margin: EdgeInsets.all(1.5.w),
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.pinkSoft.withValues(alpha: 0.35)
@@ -351,109 +364,125 @@ class _DayCell extends StatelessWidget {
   }
 }
 
-class _SelectedDayHeader extends StatelessWidget {
-  const _SelectedDayHeader({required this.day, required this.count});
+/// 날짜를 누르면 뜨는 팝업. 그 날의 단어 세트를 보여준다.
+class _DayDialog extends StatelessWidget {
+  const _DayDialog({
+    required this.day,
+    required this.sets,
+    required this.onOpenSet,
+    required this.onAdd,
+  });
 
   final DateTime day;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20.w),
-      child: Row(
-        children: [
-          Text('${day.month}월 ${day.day}일',
-              style: TextStyle(fontSize: 16.sp, color: AppColors.ink)),
-          SizedBox(width: 8.w),
-          if (count > 0)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 3.h),
-              decoration: BoxDecoration(
-                color: AppColors.pinkSoft.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Text('$count개',
-                  style: TextStyle(fontSize: 12.sp, color: AppColors.pink)),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DaySetList extends StatelessWidget {
-  const _DaySetList({required this.sets, required this.onOpenSet});
-
   final List<WordSet> sets;
   final void Function(WordSet) onOpenSet;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
-    if (sets.isEmpty) {
-      return Center(
+    return Dialog(
+      backgroundColor: AppColors.cream,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(28.r),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(20.w),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('🌷', style: TextStyle(fontSize: 34.sp)),
-            SizedBox(height: 8.h),
-            Text('이 날은 등록된 단어가 없어요',
-                style: TextStyle(fontSize: 13.sp, color: AppColors.lavender)),
-          ],
-        ),
-      );
-    }
-    return ListView.separated(
-      padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 90.h),
-      itemCount: sets.length,
-      separatorBuilder: (_, _) => SizedBox(height: 10.h),
-      itemBuilder: (context, index) {
-        final set = sets[index];
-        return BouncyTap(
-          onTap: () => onOpenSet(set),
-          child: Container(
-            padding: EdgeInsets.all(16.w),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18.r),
-              boxShadow: AppColors.softShadow(blur: 12, y: 5),
-            ),
-            child: Row(
+            Row(
               children: [
-                Container(
-                  width: 42.w,
-                  height: 42.w,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryButton,
-                    borderRadius: BorderRadius.circular(13.r),
-                  ),
-                  child: Icon(Icons.menu_book_rounded,
-                      color: Colors.white, size: 21.sp),
+                Text('${day.month}월 ${day.day}일',
+                    style: TextStyle(fontSize: 18.sp, color: AppColors.ink)),
+                const Spacer(),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(Icons.close, size: 20.sp, color: AppColors.lavender),
                 ),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(set.title,
-                          style: TextStyle(
-                              fontSize: 15.sp, color: AppColors.ink),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      SizedBox(height: 2.h),
-                      Text('${set.wordCount}개 단어',
-                          style: TextStyle(
-                              fontSize: 12.sp, color: AppColors.lavender)),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right,
-                    color: AppColors.lavender, size: 20.sp),
               ],
             ),
-          ),
-        );
-      },
+            SizedBox(height: 8.h),
+            if (sets.isEmpty)
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.h),
+                child: Column(
+                  children: [
+                    Text('🌷', style: TextStyle(fontSize: 34.sp)),
+                    SizedBox(height: 8.h),
+                    Text('이 날은 등록된 단어가 없어요',
+                        style: TextStyle(
+                            fontSize: 13.sp, color: AppColors.lavender)),
+                    SizedBox(height: 16.h),
+                    FilledButton.icon(
+                      onPressed: onAdd,
+                      icon: const Icon(Icons.add),
+                      label: const Text('단어 추가'),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: 320.h),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: sets.length,
+                  separatorBuilder: (_, _) => SizedBox(height: 10.h),
+                  itemBuilder: (context, index) {
+                    final set = sets[index];
+                    return BouncyTap(
+                      onTap: () => onOpenSet(set),
+                      child: Container(
+                        padding: EdgeInsets.all(14.w),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16.r),
+                          boxShadow: AppColors.softShadow(blur: 10, y: 4),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40.w,
+                              height: 40.w,
+                              decoration: BoxDecoration(
+                                gradient: AppColors.primaryButton,
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Icon(Icons.menu_book_rounded,
+                                  color: Colors.white, size: 20.sp),
+                            ),
+                            SizedBox(width: 12.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(set.title,
+                                      style: TextStyle(
+                                          fontSize: 15.sp,
+                                          color: AppColors.ink),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis),
+                                  Text('${set.wordCount}개 단어',
+                                      style: TextStyle(
+                                          fontSize: 12.sp,
+                                          color: AppColors.lavender)),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.chevron_right,
+                                color: AppColors.lavender, size: 20.sp),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

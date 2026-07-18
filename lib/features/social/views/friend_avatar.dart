@@ -1,9 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../models/app_user.dart';
+import '../../profile/services/avatar_service.dart';
 
 /// Todomate풍 원형 프로필 아바타.
 /// - 공부 중: 불꽃(🔥) 배지 + 은은한 주황 글로우
@@ -61,6 +64,7 @@ class FriendAvatar extends StatelessWidget {
                     color: _color,
                     initial: _initial,
                     studying: studying,
+                    photo: AvatarService.decode(user.photoBase64),
                   ),
                   // 접속 중 초록 불빛 (공부 중이 아닐 때).
                   if (user.online && !studying)
@@ -105,11 +109,13 @@ class _AvatarCircle extends StatelessWidget {
     required this.color,
     required this.initial,
     required this.studying,
+    this.photo,
   });
 
   final Color color;
   final String initial;
   final bool studying;
+  final Uint8List? photo;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +126,9 @@ class _AvatarCircle extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         shape: BoxShape.circle,
+        image: photo != null
+            ? DecorationImage(image: MemoryImage(photo!), fit: BoxFit.cover)
+            : null,
         border: Border.all(
           color: studying ? const Color(0xFFFF7A45) : Colors.white,
           width: studying ? 2.5 : 2,
@@ -134,13 +143,15 @@ class _AvatarCircle extends StatelessWidget {
               ]
             : AppColors.softShadow(blur: 8, y: 3),
       ),
-      child: Text(
-        initial,
-        style: TextStyle(
-          fontSize: 20.sp,
-          color: Colors.white,
-        ),
-      ),
+      child: photo != null
+          ? null
+          : Text(
+              initial,
+              style: TextStyle(
+                fontSize: 20.sp,
+                color: Colors.white,
+              ),
+            ),
     );
 
     if (!studying) return circle;

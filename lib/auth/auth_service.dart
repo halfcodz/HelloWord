@@ -73,6 +73,17 @@ class AuthService {
     );
   }
 
+  /// 프로필 사진(base64 JPEG)을 저장한다.
+  Future<void> updatePhoto({
+    required String uid,
+    required String base64,
+  }) async {
+    await _users.doc(uid).set(
+      {'photo': base64},
+      SetOptions(merge: true),
+    );
+  }
+
   Future<void> signOut() => _auth.signOut();
 }
 

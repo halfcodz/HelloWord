@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../../core/widgets/bouncy_tap.dart';
 import '../../../models/app_user.dart';
+import '../services/avatar_service.dart';
 
 /// 내 정보 화면. 이름 수정과 로그아웃을 제공한다.
 class ProfileView extends StatelessWidget {
@@ -46,6 +47,25 @@ class ProfileView extends StatelessWidget {
     }
   }
 
+  Future<void> _changePhoto(BuildContext context) async {
+    try {
+      final base64 = await AvatarService.pickAndEncode();
+      if (base64 == null) return;
+      await AuthService().updatePhoto(uid: user.uid, base64: base64);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('프로필 사진을 바꿨어요! 📸')),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('사진을 불러오지 못했어요.')),
+        );
+      }
+    }
+  }
+
   Future<void> _confirmLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -69,6 +89,7 @@ class ProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isElder = user.role == UserRole.elder;
+    final photoBytes = AvatarService.decode(user.photoBase64);
     return Scaffold(
       appBar: AppBar(title: const Text('내 정보 💖')),
       body: SafeArea(
@@ -77,17 +98,49 @@ class ProfileView extends StatelessWidget {
           child: Column(
             children: [
               SizedBox(height: 12.h),
-              Container(
-                width: 110.w,
-                height: 110.w,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryButton,
-                  shape: BoxShape.circle,
-                  boxShadow: AppColors.softShadow(),
+              BouncyTap(
+                onTap: () => _changePhoto(context),
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 110.w,
+                      height: 110.w,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        gradient: user.photoBase64 == null
+                            ? AppColors.primaryButton
+                            : null,
+                        shape: BoxShape.circle,
+                        image: photoBytes != null
+                            ? DecorationImage(
+                                image: MemoryImage(photoBytes),
+                                fit: BoxFit.cover)
+                            : null,
+                        boxShadow: AppColors.softShadow(),
+                      ),
+                      child: photoBytes != null
+                          ? null
+                          : Text(isElder ? '👩‍🏫' : '🧒',
+                              style: TextStyle(fontSize: 52.sp)),
+                    ),
+                    Positioned(
+                      right: 2.w,
+                      bottom: 2.h,
+                      child: Container(
+                        width: 32.w,
+                        height: 32.w,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: AppColors.softShadow(blur: 6, y: 2),
+                        ),
+                        child: Icon(Icons.camera_alt_rounded,
+                            size: 16.sp, color: AppColors.pink),
+                      ),
+                    ),
+                  ],
                 ),
-                child: Text(isElder ? '👩‍🏫' : '🧒',
-                    style: TextStyle(fontSize: 52.sp)),
               ),
               SizedBox(height: 18.h),
               Text(user.name,

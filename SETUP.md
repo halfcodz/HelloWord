@@ -70,9 +70,11 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
-    // 단어 세트: 만든 언니 본인만 접근
+    // 단어 세트: 로그인한 사용자는 읽기 가능(동생이 언니 단어로 공부),
+    // 생성·수정·삭제는 만든 본인만.
     match /wordSets/{setId} {
-      allow read, update, delete: if request.auth != null
+      allow read: if request.auth != null;
+      allow update, delete: if request.auth != null
         && request.auth.uid == resource.data.createdBy;
       allow create: if request.auth != null
         && request.auth.uid == request.resource.data.createdBy;

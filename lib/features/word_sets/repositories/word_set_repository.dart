@@ -27,6 +27,20 @@ class WordSetRepository {
     });
   }
 
+  /// 여러 작성자(친구=언니)의 단어 세트를 최신순으로 구독한다.
+  /// 동생이 언니가 올린 단어를 혼자 공부할 때 쓴다.
+  Stream<List<WordSet>> watchByCreators(List<String> uids) {
+    if (uids.isEmpty) return Stream.value(const []);
+    return _collection
+        .where('createdBy', whereIn: uids.take(10).toList())
+        .snapshots()
+        .map((snap) {
+      final list = snap.docs.map(WordSet.fromDoc).toList();
+      list.sort((a, b) => b.date.compareTo(a.date));
+      return list;
+    });
+  }
+
   /// 새 단어 세트를 저장하고 생성된 문서 id를 반환한다.
   Future<String> create({
     required String title,

@@ -9,6 +9,7 @@ import '../core/widgets/gradient_button.dart';
 import '../features/exam/views/session_join_view.dart';
 import '../features/profile/views/profile_view.dart';
 import '../features/social/views/friend_bar.dart';
+import '../features/study/views/study_list_view.dart';
 import '../features/word_sets/views/calendar_home_view.dart';
 import '../features/word_sets/views/word_set_list_view.dart';
 import '../models/app_user.dart';
@@ -39,59 +40,72 @@ class _MainShellState extends State<MainShell> {
     super.dispose();
   }
 
-  List<Widget> _pages() {
+  ({List<Widget> pages, List<_NavItem> items}) _config() {
     final user = widget.user;
     if (user.role == UserRole.elder) {
-      return [
-        CalendarHomeView(user: user),
-        WordSetListView(user: user, title: '시험 내기 📝', enableAdd: false),
-        ProfileView(user: user),
-      ];
+      return (
+        pages: [
+          CalendarHomeView(user: user),
+          WordSetListView(user: user, title: '시험 내기 📝', enableAdd: false),
+          ProfileView(user: user),
+        ],
+        items: const [
+          _NavItem(Icons.home_rounded, '홈'),
+          _NavItem(Icons.quiz_rounded, '시험'),
+          _NavItem(Icons.person_rounded, '내 정보'),
+        ],
+      );
     }
-    return [
-      _YoungerHomeTab(
-        user: user,
-        onStart: () => setState(() => _index = 1),
-      ),
-      SessionJoinView(user: user),
-      ProfileView(user: user),
-    ];
+    return (
+      pages: [
+        _YoungerHomeTab(user: user, onStart: () => setState(() => _index = 2)),
+        StudyListView(user: user),
+        SessionJoinView(user: user),
+        ProfileView(user: user),
+      ],
+      items: const [
+        _NavItem(Icons.home_rounded, '홈'),
+        _NavItem(Icons.menu_book_rounded, '공부'),
+        _NavItem(Icons.quiz_rounded, '시험'),
+        _NavItem(Icons.person_rounded, '내 정보'),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final examLabel = widget.user.role == UserRole.elder ? '시험 내기' : '시험 참여';
+    final config = _config();
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: IndexedStack(index: _index, children: _pages()),
+      body: IndexedStack(index: _index, children: config.pages),
       bottomNavigationBar: _BlingBottomBar(
         index: _index,
-        examLabel: examLabel,
+        items: config.items,
         onTap: (i) => setState(() => _index = i),
       ),
     );
   }
 }
 
+class _NavItem {
+  const _NavItem(this.icon, this.label);
+  final IconData icon;
+  final String label;
+}
+
 class _BlingBottomBar extends StatelessWidget {
   const _BlingBottomBar({
     required this.index,
-    required this.examLabel,
+    required this.items,
     required this.onTap,
   });
 
   final int index;
-  final String examLabel;
+  final List<_NavItem> items;
   final ValueChanged<int> onTap;
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      (icon: Icons.home_rounded, label: '홈'),
-      (icon: Icons.quiz_rounded, label: examLabel),
-      (icon: Icons.person_rounded, label: '내 정보'),
-    ];
-
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,

@@ -25,6 +25,7 @@ class AppUser {
     this.role,
     this.online = false,
     this.studying = false,
+    this.photoBase64,
   });
 
   final String uid;
@@ -38,7 +39,11 @@ class AppUser {
   /// 현재 시험(공부) 중인지.
   final bool studying;
 
+  /// 프로필 사진(작게 리사이즈한 JPEG의 base64). 없으면 이니셜 아바타.
+  final String? photoBase64;
+
   factory AppUser.fromMap(String uid, Map<String, dynamic> map) {
+    final photo = map['photo'] as String?;
     return AppUser(
       uid: uid,
       email: map['email'] as String? ?? '',
@@ -46,6 +51,7 @@ class AppUser {
       role: UserRoleX.fromStorage(map['role'] as String?),
       online: map['online'] as bool? ?? false,
       studying: map['studying'] as bool? ?? false,
+      photoBase64: (photo != null && photo.isNotEmpty) ? photo : null,
     );
   }
 }
