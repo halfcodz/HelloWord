@@ -66,10 +66,6 @@ class _CalendarBodyState extends State<_CalendarBody> {
         _selectedDay = DateTime(_now.year, _now.month, _now.day);
       });
 
-  Future<void> _refresh() async {
-    reloadApp(); // 웹: 페이지 새로고침(최신 버전). 모바일: no-op.
-    await Future.delayed(const Duration(milliseconds: 700));
-  }
 
   void _openDay(DateTime day, Map<DateTime, List<WordSet>> events) {
     setState(() => _selectedDay = day);
@@ -105,6 +101,16 @@ class _CalendarBodyState extends State<_CalendarBody> {
     final events = _groupByDay(viewModel.sets);
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('단어 달력'),
+        actions: [
+          IconButton(
+            tooltip: '새로고침',
+            onPressed: reloadApp,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(
@@ -115,33 +121,28 @@ class _CalendarBodyState extends State<_CalendarBody> {
         label: const Text('단어 추가'),
       ),
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _refresh,
-          color: AppColors.pink,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                FriendBar(me: widget.user),
-                MonthCalendar(
-                  month: _month,
-                  selectedDay: _selectedDay,
-                  today: DateTime(_now.year, _now.month, _now.day),
-                  eventCount: (day) =>
-                      (events[_dayKey(day)] ?? const []).length,
-                  onDayTap: (day) => _openDay(day, events),
-                  onPrev: _prevMonth,
-                  onNext: _nextMonth,
-                  onToday: _today,
-                ),
-                SizedBox(height: 10.h),
-                Text('날짜를 누르면 그날의 단어가 나와요 🌸',
-                    textAlign: TextAlign.center,
-                    style:
-                        TextStyle(fontSize: 12.sp, color: AppColors.lavender)),
-              ],
-            ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              FriendBar(me: widget.user),
+              MonthCalendar(
+                month: _month,
+                selectedDay: _selectedDay,
+                today: DateTime(_now.year, _now.month, _now.day),
+                eventCount: (day) =>
+                    (events[_dayKey(day)] ?? const []).length,
+                onDayTap: (day) => _openDay(day, events),
+                onPrev: _prevMonth,
+                onNext: _nextMonth,
+                onToday: _today,
+              ),
+              SizedBox(height: 10.h),
+              Text('날짜를 누르면 그날의 단어가 나와요 🌸',
+                  textAlign: TextAlign.center,
+                  style:
+                      TextStyle(fontSize: 12.sp, color: AppColors.lavender)),
+            ],
           ),
         ),
       ),

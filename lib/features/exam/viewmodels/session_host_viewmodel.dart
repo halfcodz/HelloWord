@@ -16,6 +16,7 @@ class SessionHostViewModel extends ChangeNotifier {
         _sessionId = sessionId {
     _sessionSub = _repository.watchSession(_sessionId).listen((session) {
       _session = session;
+      _loaded = true;
       notifyListeners();
     });
     _answersSub = _repository.watchAnswers(_sessionId).listen((answers) {
@@ -32,6 +33,10 @@ class SessionHostViewModel extends ChangeNotifier {
 
   ExamSession? _session;
   ExamSession? get session => _session;
+
+  /// 첫 스냅샷 수신 여부. 세션이 삭제(null)돼 종료된 것과 로딩을 구분한다.
+  bool _loaded = false;
+  bool get loaded => _loaded;
 
   List<ExamAnswer> _answers = const [];
   List<ExamAnswer> get answers => _answers;

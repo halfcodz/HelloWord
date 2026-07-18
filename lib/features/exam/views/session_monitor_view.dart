@@ -97,6 +97,14 @@ class _MonitorBody extends StatelessWidget {
     ExamSession? session,
   ) {
     if (session == null) {
+      // 동생이 시험을 종료해 세션이 사라진 경우 → 자동으로 홈 이동.
+      if (viewModel.loaded) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            Navigator.of(context).popUntil((r) => r.isFirst);
+          }
+        });
+      }
       return const Center(child: CircularProgressIndicator());
     }
 

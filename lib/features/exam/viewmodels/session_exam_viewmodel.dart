@@ -89,6 +89,9 @@ class SessionExamViewModel extends ChangeNotifier {
     }
   }
 
+  /// 시험을 종료한다(세션 삭제 → 양쪽 모두 종료·홈 이동).
+  Future<void> endSession() => _repository.deleteSession(_sessionId);
+
   @override
   void dispose() {
     _debounce?.cancel();

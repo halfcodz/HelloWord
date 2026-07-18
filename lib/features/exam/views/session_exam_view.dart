@@ -46,6 +46,7 @@ class _ExamBody extends StatefulWidget {
 
 class _ExamBodyState extends State<_ExamBody> {
   final _answerController = TextEditingController();
+  bool _leaving = false;
 
   @override
   void dispose() {
@@ -59,6 +60,39 @@ class _ExamBodyState extends State<_ExamBody> {
     _answerController.clear();
   }
 
+  Future<void> _confirmEnd(SessionExamViewModel viewModel) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('시험을 종료할까요?'),
+        content: const Text('종료하면 카메라·마이크가 꺼지고 홈으로 이동해요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('종료'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await viewModel.endSession();
+      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+    }
+  }
+
+  /// 상대가 종료해 세션이 사라지면 자동으로 홈으로 나간다.
+  void _leaveHome() {
+    if (_leaving) return;
+    _leaving = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<SessionExamViewModel>();
@@ -69,7 +103,7 @@ class _ExamBodyState extends State<_ExamBody> {
         title: Text(session?.title ?? '시험'),
         automaticallyImplyLeading: false,
         actions: [
-          if (session != null && !viewModel.isFinished)
+          if (session != null && !viewModel.isFinished) ...[
             IconButton(
               tooltip: '채팅',
               icon: const Icon(Icons.chat_bubble_outline),
@@ -83,6 +117,12 @@ class _ExamBodyState extends State<_ExamBody> {
                 ),
               ),
             ),
+            IconButton(
+              tooltip: '시험 종료',
+              icon: const Icon(Icons.stop_circle_outlined),
+              onPressed: () => _confirmEnd(viewModel),
+            ),
+          ],
         ],
       ),
       body: SafeArea(child: _buildBody(context, viewModel, session)),
@@ -98,8 +138,9 @@ class _ExamBodyState extends State<_ExamBody> {
       return const Center(child: CircularProgressIndicator());
     }
     if (session == null) {
-      // 언니가 시험을 닫아 세션이 사라진 경우.
-      return _ClosedView();
+      // 상대(언니)가 시험을 종료해 세션이 사라진 경우 → 자동으로 홈 이동.
+      _leaveHome();
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (viewModel.isFinished) {
@@ -256,35 +297,6 @@ class _ResultView extends StatelessWidget {
           .animate()
           .fadeIn(duration: 500.ms)
           .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic),
-    );
-  }
-}
-
-class _ClosedView extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(24.w),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('🌙', style: TextStyle(fontSize: 56.sp)),
-          SizedBox(height: 16.h),
-          Text('시험이 종료되었어요.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16.sp, color: AppColors.ink)),
-          SizedBox(height: 28.h),
-          SizedBox(
-            width: 200.w,
-            child: GradientButton(
-              label: '홈으로',
-              icon: Icons.home_rounded,
-              onPressed: () =>
-                  Navigator.of(context).popUntil((r) => r.isFirst),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
