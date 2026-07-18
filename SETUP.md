@@ -86,10 +86,32 @@ service cloud.firestore {
 ## 4. 실행
 
 ```bash
-flutter run
+flutter run                # 모바일(연결된 기기)
+flutter run -d chrome      # 웹(크롬)에서 실행
 ```
 
 회원가입(이름·이메일·비밀번호·역할) → 자동 로그인 → 홈 화면이 뜨면 Phase 0 완료입니다.
+
+---
+
+## 5. 웹 배포 (Firebase Hosting · 무료)
+
+두 사용자 모두 아이폰이라, 웹으로 배포하면 **사파리에서 링크만 열어** 쓸 수 있습니다.
+
+```bash
+# 1. 웹 빌드
+flutter build web
+
+# 2. Firebase Hosting 배포 (firebase.json/.firebaserc 이미 설정됨)
+firebase deploy --only hosting
+```
+
+배포가 끝나면 `https://helloword-6da23.web.app` 주소가 출력됩니다. 이 링크를
+카톡 등으로 공유하면 두 사람 모두 설치 없이 바로 사용할 수 있습니다.
+
+> Firebase Auth는 `*.web.app`, `*.firebaseapp.com`, `localhost`를 기본 허용 도메인으로
+> 두므로 별도 설정 없이 로그인이 됩니다. 커스텀 도메인을 붙이면 콘솔
+> Authentication > Settings > 승인된 도메인에 추가하세요.
 
 ---
 

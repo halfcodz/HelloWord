@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="언니가 여동생에게 영어 단어 시험을 내는 앱">
+
+  <!-- 모바일 사파리: 기기 폭 기준 렌더링 + 확대 방지 + 노치 대응 -->
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <!-- iOS 홈화면 추가(PWA) 대응 -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="HelloWord">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>HelloWord</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    body { margin: 0; background-color: #6C63FF; }
+    #loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #6C63FF;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+        "Segoe UI", Roboto, sans-serif;
+      color: #ffffff;
+    }
+    #loading .title { font-size: 28px; font-weight: 700; letter-spacing: 0.5px; }
+    #loading .sub { margin-top: 6px; font-size: 14px; opacity: 0.85; }
+    #loading .spinner {
+      margin-top: 28px;
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(255, 255, 255, 0.35);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="title">HelloWord</div>
+    <div class="sub">자매 영어 단어 시험</div>
+    <div class="spinner"></div>
+  </div>
+
+  <script>
+    // Flutter 첫 프레임이 그려지면 로딩 화면 제거.
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('loading');
+      if (el) el.remove();
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

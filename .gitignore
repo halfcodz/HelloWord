@@ -57,4 +57,4 @@ lib/firebase_options.dart
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
 ios/firebase_app_id_file.json
-firebase.json
+# firebase.json / .firebaserc 는 Hosting 배포 설정이라 커밋함 (민감정보 아님)

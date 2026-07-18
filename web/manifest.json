@@ -1,0 +1,35 @@
+{
+    "name": "HelloWord - 자매 영어 단어 시험",
+    "short_name": "HelloWord",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#6C63FF",
+    "theme_color": "#6C63FF",
+    "description": "언니가 여동생에게 영어 단어 시험을 내는 앱",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
