@@ -1,11 +1,20 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'app.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 민감 정보용 .env 로드. 파일이 없어도 앱은 정상 동작한다.
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // .env가 없으면 무시 (민감 값이 필요한 기능에서만 사용).
+  }
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
