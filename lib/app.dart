@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import 'auth/auth_gate.dart';
+import 'core/theme/app_theme.dart';
 import 'features/exam/repositories/exam_repository.dart';
 import 'features/word_sets/repositories/word_set_repository.dart';
 
@@ -26,10 +27,7 @@ class HelloWordApp extends StatelessWidget {
       child: MaterialApp(
         title: 'HelloWord',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorSchemeSeed: const Color(0xFF6C63FF),
-          useMaterial3: true,
-        ),
+        theme: AppTheme.light(),
         builder: (context, child) => _ResponsiveShell(child: child),
         home: const AuthGate(),
       ),
@@ -67,23 +65,25 @@ class _ResponsiveShell extends StatelessWidget {
 
         final content = MediaQuery(
           data: clampedMedia,
-          child: child ?? const SizedBox.shrink(),
+          child: DecoratedBox(
+            decoration: const BoxDecoration(gradient: AppColors.background),
+            child: child ?? const SizedBox.shrink(),
+          ),
         );
 
         if (!isWide) return content;
 
-        // 데스크톱: 옅은 배경 위에 그림자를 준 폰 컬럼을 가운데 배치.
+        // 데스크톱: 옅은 라벤더 배경 위에 그림자를 준 폰 컬럼을 가운데 배치.
         return ColoredBox(
-          color: const Color(0xFFE9E7F3),
+          color: const Color(0xFFE7E1F5),
           child: Center(
             child: Container(
               width: contentWidth,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 24,
+                    color: AppColors.lavender.withValues(alpha: 0.28),
+                    blurRadius: 32,
                     spreadRadius: 2,
                   ),
                 ],

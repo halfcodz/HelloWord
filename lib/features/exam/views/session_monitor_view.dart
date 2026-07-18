@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../word_sets/models/word_pair.dart';
 import '../models/exam_answer.dart';
 import '../models/exam_session.dart';
@@ -125,24 +127,32 @@ class _WaitingView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('동생에게 이 코드를 알려주세요',
-              style: theme.textTheme.titleMedium),
+          Text('동생에게 이 코드를 알려주세요 💌',
+              style: TextStyle(fontSize: 16.sp, color: AppColors.ink)),
           SizedBox(height: 24.h),
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 20.h),
+            padding: EdgeInsets.symmetric(horizontal: 36.w, vertical: 24.h),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(16.r),
+              gradient: AppColors.primaryButton,
+              borderRadius: BorderRadius.circular(24.r),
+              boxShadow: AppColors.softShadow(),
             ),
             child: Text(
               joinCode,
-              style: theme.textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.bold,
+              style: TextStyle(
+                fontSize: 44.sp,
                 letterSpacing: 8.w,
-                color: theme.colorScheme.onPrimaryContainer,
+                color: Colors.white,
               ),
             ),
-          ),
+          )
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .scale(
+                begin: const Offset(1, 1),
+                end: const Offset(1.04, 1.04),
+                duration: 1200.ms,
+                curve: Curves.easeInOut,
+              ),
           SizedBox(height: 24.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

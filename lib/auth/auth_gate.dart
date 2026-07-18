@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../home/home_screen.dart';
+import '../home/main_shell.dart';
 import '../models/app_user.dart';
 import '../role/role_selection_screen.dart';
 import 'auth_service.dart';
@@ -38,7 +38,7 @@ class AuthGate extends StatelessWidget {
             if (appUser == null || appUser.role == null) {
               return RoleSelectionScreen(uid: firebaseUser.uid);
             }
-            return HomeScreen(user: appUser);
+            return MainShell(user: appUser);
           },
         );
       },

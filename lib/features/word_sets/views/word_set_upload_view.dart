@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../models/app_user.dart';
 import '../repositories/word_set_repository.dart';
 import '../viewmodels/word_set_upload_viewmodel.dart';
@@ -212,15 +214,25 @@ class _PickPrompt extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.upload_file_outlined, size: 72.sp),
-            SizedBox(height: 16.h),
-            Text('단어 파일을 올려주세요',
-                style: theme.textTheme.titleMedium),
-            SizedBox(height: 8.h),
+            Container(
+              width: 110.w,
+              height: 110.w,
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryButton,
+                shape: BoxShape.circle,
+                boxShadow: AppColors.softShadow(),
+              ),
+              child: Icon(Icons.cloud_upload_rounded,
+                  size: 54.sp, color: Colors.white),
+            ),
+            SizedBox(height: 20.h),
+            Text('단어 파일을 올려주세요 📄',
+                style: TextStyle(fontSize: 18.sp, color: AppColors.ink)),
+            SizedBox(height: 10.h),
             Text(
               'csv · txt · 엑셀(xlsx) 파일을 지원해요.\n각 줄이 "영단어-해석" 형식이면 됩니다.\n(구분자는 하이픈 -, 쉼표 , 탭 모두 가능)',
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium,
+              style: TextStyle(fontSize: 14.sp, color: AppColors.lavender),
             ),
             if (errorMessage != null) ...[
               SizedBox(height: 16.h),
@@ -239,11 +251,14 @@ class _PickPrompt extends StatelessWidget {
                 ),
               ),
             ],
-            SizedBox(height: 24.h),
-            FilledButton.icon(
-              onPressed: onPick,
-              icon: const Icon(Icons.folder_open),
-              label: const Text('파일 선택'),
+            SizedBox(height: 28.h),
+            SizedBox(
+              width: 200.w,
+              child: GradientButton(
+                label: '파일 선택',
+                icon: Icons.folder_open_rounded,
+                onPressed: onPick,
+              ),
             ),
           ],
         ),
@@ -320,18 +335,10 @@ class _SaveBar extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 8.h),
-        child: FilledButton(
+        child: GradientButton(
+          label: '저장하기 💾',
+          loading: saving,
           onPressed: enabled ? onSave : null,
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 12.h),
-            child: saving
-                ? SizedBox(
-                    height: 20.h,
-                    width: 20.h,
-                    child: const CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('저장하기'),
-          ),
         ),
       ),
     );

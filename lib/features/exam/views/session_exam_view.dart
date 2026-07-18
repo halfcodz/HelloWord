@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../models/app_user.dart';
 import '../models/exam_session.dart';
 import '../repositories/exam_repository.dart';
@@ -112,25 +115,37 @@ class _ExamBodyState extends State<_ExamBody> {
                   style: theme.textTheme.bodyMedium,
                 ),
                 SizedBox(height: 24.h),
-                Card(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: 20.w, vertical: 36.h),
-                    child: Column(
-                      children: [
-                        Text('이 뜻의 영어 단어는?',
-                            style: theme.textTheme.bodySmall),
-                        SizedBox(height: 12.h),
-                        Text(
-                          word.korean,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.headlineMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
+                Container(
+                  key: ValueKey(viewModel.currentIndex),
+                  width: double.infinity,
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 40.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28.r),
+                    boxShadow: AppColors.softShadow(),
                   ),
-                ),
+                  child: Column(
+                    children: [
+                      Text('이 뜻의 영어 단어는? 🤔',
+                          style: TextStyle(
+                              fontSize: 13.sp, color: AppColors.lavender)),
+                      SizedBox(height: 14.h),
+                      Text(
+                        word.korean,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 30.sp, color: AppColors.ink),
+                      ),
+                    ],
+                  ),
+                )
+                    .animate(key: ValueKey(viewModel.currentIndex))
+                    .fadeIn(duration: 300.ms)
+                    .scale(
+                      begin: const Offset(0.95, 0.95),
+                      end: const Offset(1, 1),
+                      curve: Curves.easeOutBack,
+                    ),
                 SizedBox(height: 24.h),
                 TextField(
                   controller: _answerController,
@@ -153,14 +168,12 @@ class _ExamBodyState extends State<_ExamBody> {
           top: false,
           child: Padding(
             padding: EdgeInsets.all(16.w),
-            child: FilledButton(
+            child: GradientButton(
+              label: viewModel.currentIndex + 1 == session.total
+                  ? '제출하고 완료 🎉'
+                  : '제출',
+              icon: Icons.send_rounded,
               onPressed: () => _submit(viewModel),
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 12.h),
-                child: Text(
-                  viewModel.currentIndex + 1 == session.total ? '제출하고 완료' : '제출',
-                ),
-              ),
             ),
           ),
         ),
@@ -177,31 +190,50 @@ class _ResultView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: EdgeInsets.all(24.w),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('🎉', style: TextStyle(fontSize: 56.sp)),
+          Text('🎉', style: TextStyle(fontSize: 72.sp))
+              .animate()
+              .scale(
+                begin: const Offset(0.5, 0.5),
+                end: const Offset(1, 1),
+                duration: 500.ms,
+                curve: Curves.easeOutBack,
+              ),
           SizedBox(height: 16.h),
-          Text('시험 완료!', style: theme.textTheme.headlineSmall),
-          SizedBox(height: 12.h),
-          Text(
-            '$score / $total 개 맞았어요',
-            style: theme.textTheme.titleLarge
-                ?.copyWith(color: theme.colorScheme.primary),
+          Text('시험 완료!',
+              style: TextStyle(fontSize: 24.sp, color: AppColors.ink)),
+          SizedBox(height: 16.h),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 28.w, vertical: 14.h),
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryButton,
+              borderRadius: BorderRadius.circular(24.r),
+              boxShadow: AppColors.softShadow(),
+            ),
+            child: Text(
+              '$score / $total 개 맞았어요',
+              style: TextStyle(fontSize: 22.sp, color: Colors.white),
+            ),
           ),
           SizedBox(height: 40.h),
-          FilledButton(
-            onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 10.h),
-              child: const Text('홈으로'),
+          SizedBox(
+            width: 200.w,
+            child: GradientButton(
+              label: '홈으로',
+              icon: Icons.home_rounded,
+              onPressed: () =>
+                  Navigator.of(context).popUntil((r) => r.isFirst),
             ),
           ),
         ],
-      ),
+      )
+          .animate()
+          .fadeIn(duration: 500.ms)
+          .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic),
     );
   }
 }
@@ -214,13 +246,20 @@ class _ClosedView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.info_outline, size: 48.sp),
+          Text('🌙', style: TextStyle(fontSize: 56.sp)),
           SizedBox(height: 16.h),
-          const Text('시험이 종료되었어요.', textAlign: TextAlign.center),
-          SizedBox(height: 24.h),
-          FilledButton(
-            onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
-            child: const Text('홈으로'),
+          Text('시험이 종료되었어요.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16.sp, color: AppColors.ink)),
+          SizedBox(height: 28.h),
+          SizedBox(
+            width: 200.w,
+            child: GradientButton(
+              label: '홈으로',
+              icon: Icons.home_rounded,
+              onPressed: () =>
+                  Navigator.of(context).popUntil((r) => r.isFirst),
+            ),
           ),
         ],
       ),

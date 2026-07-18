@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../models/app_user.dart';
 import '../repositories/exam_repository.dart';
 import '../viewmodels/session_join_viewmodel.dart';
@@ -69,13 +71,22 @@ class _JoinBodyState extends State<_JoinBody> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(height: 24.h),
-              Icon(Icons.vpn_key_outlined,
-                  size: 56.sp, color: theme.colorScheme.primary),
-              SizedBox(height: 16.h),
+              Container(
+                width: 96.w,
+                height: 96.w,
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryButton,
+                  shape: BoxShape.circle,
+                  boxShadow: AppColors.softShadow(),
+                ),
+                child: Icon(Icons.vpn_key_rounded,
+                    size: 44.sp, color: Colors.white),
+              ),
+              SizedBox(height: 20.h),
               Text(
-                '언니가 알려준 6자리 코드를 입력하세요',
+                '언니가 알려준 6자리 코드를 입력하세요 🔑',
                 textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium,
+                style: TextStyle(fontSize: 16.sp, color: AppColors.ink),
               ),
               SizedBox(height: 32.h),
               TextField(
@@ -107,19 +118,11 @@ class _JoinBodyState extends State<_JoinBody> {
                 ),
               ],
               SizedBox(height: 24.h),
-              FilledButton(
+              GradientButton(
+                label: '참여하기',
+                icon: Icons.login_rounded,
+                loading: viewModel.loading,
                 onPressed: viewModel.loading ? null : () => _join(viewModel),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12.h),
-                  child: viewModel.loading
-                      ? SizedBox(
-                          height: 20.h,
-                          width: 20.h,
-                          child:
-                              const CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('참여하기'),
-                ),
               ),
             ],
           ),

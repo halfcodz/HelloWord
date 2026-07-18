@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/gradient_button.dart';
 import '../../../models/app_user.dart';
 import '../../exam/repositories/exam_repository.dart';
 import '../../exam/views/session_monitor_view.dart';
@@ -127,19 +128,11 @@ class _StartExamButtonState extends State<_StartExamButton> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.all(12.w),
-        child: FilledButton.icon(
+        child: GradientButton(
+          label: '이 단어로 시험 내기',
+          icon: Icons.play_arrow_rounded,
+          loading: _creating,
           onPressed: _creating ? null : _start,
-          icon: _creating
-              ? SizedBox(
-                  height: 18.h,
-                  width: 18.h,
-                  child: const CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.play_arrow),
-          label: Padding(
-            padding: EdgeInsets.symmetric(vertical: 8.h),
-            child: const Text('이 단어로 시험 내기'),
-          ),
         ),
       ),
     );

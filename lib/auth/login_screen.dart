@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../core/theme/app_theme.dart';
+import '../core/widgets/gradient_button.dart';
 import 'auth_service.dart';
 import 'signup_screen.dart';
 
@@ -34,7 +38,6 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text,
         password: _passwordController.text,
       );
-      // 로그인 성공 시 AuthGate가 자동으로 다음 화면으로 전환한다.
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -51,28 +54,16 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(24.w),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+              constraints: BoxConstraints(maxWidth: 420.w),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(Icons.menu_book_rounded, size: 64),
-                    const SizedBox(height: 12),
-                    Text(
-                      'HelloWord',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '자매 영어 단어 시험',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 32),
+                    const _LoginHeader(),
+                    SizedBox(height: 36.h),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -80,19 +71,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: const InputDecoration(
                         labelText: '이메일',
                         prefixIcon: Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return '이메일을 입력해 주세요.';
                         }
                         if (!value.contains('@')) {
-                          return '올바른 이메일 형식이 아닙니다.';
+                          return '올바른 이메일 형식이 아니에요.';
                         }
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16.h),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscure,
@@ -100,7 +90,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: InputDecoration(
                         labelText: '비밀번호',
                         prefixIcon: const Icon(Icons.lock_outline),
-                        border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscure
@@ -118,23 +107,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 24),
-                    FilledButton(
+                    SizedBox(height: 28.h),
+                    GradientButton(
+                      label: '로그인',
+                      loading: _loading,
                       onPressed: _loading ? null : _submit,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: _loading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text('로그인'),
-                      ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h),
                     TextButton(
                       onPressed: _loading
                           ? null
@@ -143,15 +122,54 @@ class _LoginScreenState extends State<LoginScreen> {
                                   builder: (_) => const SignupScreen(),
                                 ),
                               ),
-                      child: const Text('계정이 없으신가요? 회원가입'),
+                      child: const Text('계정이 없으신가요? 회원가입 💕'),
                     ),
                   ],
-                ),
+                )
+                    .animate()
+                    .fadeIn(duration: 500.ms)
+                    .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LoginHeader extends StatelessWidget {
+  const _LoginHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 92.w,
+          height: 92.w,
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryButton,
+            shape: BoxShape.circle,
+            boxShadow: AppColors.softShadow(),
+          ),
+          child: Icon(Icons.auto_stories_rounded,
+              size: 46.sp, color: Colors.white),
+        )
+            .animate(onPlay: (c) => c.repeat(reverse: true))
+            .scale(
+              begin: const Offset(1, 1),
+              end: const Offset(1.06, 1.06),
+              duration: 1600.ms,
+              curve: Curves.easeInOut,
+            ),
+        SizedBox(height: 18.h),
+        Text('HelloWord ✨',
+            style: TextStyle(fontSize: 30.sp, color: AppColors.ink)),
+        SizedBox(height: 4.h),
+        Text('언니랑 함께하는 영어 단어',
+            style: TextStyle(fontSize: 14.sp, color: AppColors.lavender)),
+      ],
     );
   }
 }

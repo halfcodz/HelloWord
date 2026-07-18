@@ -65,6 +65,14 @@ class AuthService {
     );
   }
 
+  /// 사용자 이름(별명)을 수정한다.
+  Future<void> updateName({required String uid, required String name}) async {
+    await _users.doc(uid).set(
+      {'name': name.trim()},
+      SetOptions(merge: true),
+    );
+  }
+
   Future<void> signOut() => _auth.signOut();
 }
 
