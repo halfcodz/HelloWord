@@ -68,6 +68,10 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if request.auth != null;
       allow write: if request.auth != null;
+      // 하위(todos=개인 투두)도 로그인 사용자에게 허용
+      match /{sub=**} {
+        allow read, write: if request.auth != null;
+      }
     }
 
     // 단어 세트: 로그인한 사용자는 읽기 가능(동생이 언니 단어로 공부),

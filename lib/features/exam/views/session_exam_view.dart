@@ -29,7 +29,6 @@ class SessionExamView extends StatelessWidget {
       create: (context) => SessionExamViewModel(
         repository: context.read<ExamRepository>(),
         sessionId: sessionId,
-        guestUid: user.uid,
       ),
       child: _ExamBody(user: user),
     );

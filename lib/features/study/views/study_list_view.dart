@@ -11,6 +11,8 @@ import '../../word_sets/models/word_set.dart';
 import '../../word_sets/repositories/word_set_repository.dart';
 import '../viewmodels/study_viewmodel.dart';
 import 'flashcard_study_view.dart';
+import 'self_quiz_view.dart';
+import 'word_list_view.dart';
 
 /// 동생 공부 탭: 언니가 올린 단어 세트로 혼자 공부한다.
 class StudyListView extends StatelessWidget {
@@ -33,6 +35,64 @@ class StudyListView extends StatelessWidget {
 
 class _StudyBody extends StatelessWidget {
   const _StudyBody();
+
+  void _openStudyMenu(BuildContext context, WordSet set) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.cream,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(20.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Text(set.title,
+                    style: TextStyle(fontSize: 17.sp, color: AppColors.ink)),
+              ),
+              SizedBox(height: 16.h),
+              _MenuTile(
+                icon: Icons.style_rounded,
+                label: '플래시카드',
+                hint: '카드를 넘기며 암기',
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => FlashcardStudyView(set: set)));
+                },
+              ),
+              SizedBox(height: 10.h),
+              _MenuTile(
+                icon: Icons.edit_rounded,
+                label: '직접 입력 연습',
+                hint: '시험처럼 직접 써보기',
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => SelfQuizView(set: set)));
+                },
+              ),
+              SizedBox(height: 10.h),
+              _MenuTile(
+                icon: Icons.list_alt_rounded,
+                label: '단어 목록',
+                hint: '전체 단어 한눈에 보기',
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => WordListView(set: set)));
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,16 +139,70 @@ class _StudyBody extends StatelessWidget {
         final set = viewModel.sets[index];
         return _StudyCard(
           set: set,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => FlashcardStudyView(set: set),
-            ),
-          ),
+          onTap: () => _openStudyMenu(context, set),
         )
             .animate()
             .fadeIn(duration: 300.ms, delay: (index * 50).ms)
             .slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic);
       },
+    );
+  }
+}
+
+class _MenuTile extends StatelessWidget {
+  const _MenuTile({
+    required this.icon,
+    required this.label,
+    required this.hint,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String hint;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return BouncyTap(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18.r),
+          boxShadow: AppColors.softShadow(blur: 10, y: 4),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44.w,
+              height: 44.w,
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryButton,
+                borderRadius: BorderRadius.circular(13.r),
+              ),
+              child: Icon(icon, color: Colors.white, size: 22.sp),
+            ),
+            SizedBox(width: 14.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style:
+                          TextStyle(fontSize: 16.sp, color: AppColors.ink)),
+                  SizedBox(height: 2.h),
+                  Text(hint,
+                      style: TextStyle(
+                          fontSize: 12.sp, color: AppColors.lavender)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: AppColors.lavender, size: 20.sp),
+          ],
+        ),
+      ),
     );
   }
 }

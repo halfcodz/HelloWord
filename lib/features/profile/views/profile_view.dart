@@ -50,18 +50,28 @@ class ProfileView extends StatelessWidget {
   Future<void> _changePhoto(BuildContext context) async {
     try {
       final base64 = await AvatarService.pickAndEncode();
-      if (base64 == null) return;
+      if (base64 == null) return; // 취소
       await AuthService().updatePhoto(uid: user.uid, base64: base64);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('프로필 사진을 바꿨어요! 📸')),
-        );
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('프로필 사진을 바꿨어요! 📸'),
+              duration: Duration(seconds: 2),
+            ),
+          );
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('사진을 불러오지 못했어요.')),
-        );
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('사진을 불러오지 못했어요.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
       }
     }
   }
@@ -153,7 +163,7 @@ class ProfileView extends StatelessWidget {
                   color: AppColors.lavenderSoft,
                   borderRadius: BorderRadius.circular(20.r),
                 ),
-                child: Text(isElder ? '언니 (출제자)' : '동생 (응시자)',
+                child: Text(isElder ? '언니' : '동생',
                     style: TextStyle(fontSize: 13.sp, color: AppColors.ink)),
               ),
               SizedBox(height: 32.h),

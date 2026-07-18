@@ -1,23 +1,23 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:image/image.dart' as img;
-import 'package:image_picker/image_picker.dart';
 
-/// 갤러리 사진을 골라 작은 정사각 JPEG(base64)로 변환한다.
+/// 사진 파일을 골라 작은 정사각 JPEG(base64)로 변환한다.
+/// (웹에서 안정적인 file_picker 사용)
 class AvatarService {
   /// 사진을 고르고 200x200 JPEG base64로 반환. 취소하면 null.
   static Future<String?> pickAndEncode() async {
-    final picker = ImagePicker();
-    final file = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 600,
-      maxHeight: 600,
-      imageQuality: 85,
+    final result = await FilePicker.pickFiles(
+      type: FileType.image,
+      withData: true,
     );
-    if (file == null) return null;
+    if (result == null || result.files.isEmpty) return null;
 
-    final bytes = await file.readAsBytes();
+    final bytes = result.files.first.bytes;
+    if (bytes == null) return null;
+
     final decoded = img.decodeImage(bytes);
     if (decoded == null) return null;
 

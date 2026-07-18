@@ -8,6 +8,7 @@ import 'core/theme/theme_controller.dart';
 import 'features/chat/repositories/chat_repository.dart';
 import 'features/exam/repositories/exam_repository.dart';
 import 'features/social/repositories/friend_repository.dart';
+import 'features/todo/repositories/todo_repository.dart';
 import 'features/word_sets/repositories/word_set_repository.dart';
 
 class HelloWordApp extends StatelessWidget {
@@ -30,6 +31,7 @@ class HelloWordApp extends StatelessWidget {
         Provider<ExamRepository>(create: (_) => ExamRepository()),
         Provider<FriendRepository>(create: (_) => FriendRepository()),
         Provider<ChatRepository>(create: (_) => ChatRepository()),
+        Provider<TodoRepository>(create: (_) => TodoRepository()),
         ChangeNotifierProvider<ThemeController>.value(value: themeController),
       ],
       // 팔레트가 바뀌면 테마를 다시 계산해 앱 전체에 반영한다.

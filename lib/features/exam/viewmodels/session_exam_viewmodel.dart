@@ -12,12 +12,8 @@ class SessionExamViewModel extends ChangeNotifier {
   SessionExamViewModel({
     required ExamRepository repository,
     required String sessionId,
-    required String guestUid,
   })  : _repository = repository,
-        _sessionId = sessionId,
-        _guestUid = guestUid {
-    // 시험을 시작하면 "공부 중" 상태를 켠다.
-    _repository.setStudying(uid: _guestUid, studying: true);
+        _sessionId = sessionId {
     _sessionSub = _repository.watchSession(_sessionId).listen((session) {
       _session = session;
       _loaded = true;
@@ -32,7 +28,6 @@ class SessionExamViewModel extends ChangeNotifier {
 
   final ExamRepository _repository;
   final String _sessionId;
-  final String _guestUid;
 
   StreamSubscription<ExamSession?>? _sessionSub;
   Timer? _debounce;
@@ -87,7 +82,6 @@ class SessionExamViewModel extends ChangeNotifier {
     final next = _currentIndex + 1;
     if (next >= session.total) {
       await _repository.finish(sessionId: _sessionId, score: _correctCount);
-      await _repository.setStudying(uid: _guestUid, studying: false);
     } else {
       _currentIndex = next;
       await _repository.setCurrentIndex(sessionId: _sessionId, index: next);
@@ -99,8 +93,6 @@ class SessionExamViewModel extends ChangeNotifier {
   void dispose() {
     _debounce?.cancel();
     _sessionSub?.cancel();
-    // 화면을 벗어나면 "공부 중" 상태를 끈다.
-    _repository.setStudying(uid: _guestUid, studying: false);
     super.dispose();
   }
 }

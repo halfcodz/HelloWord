@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../models/app_user.dart';
 
@@ -50,7 +51,15 @@ class AuthService {
   Future<void> signIn({
     required String email,
     required String password,
+    bool rememberMe = true,
   }) async {
+    // 웹에서 자동 로그인 여부에 따라 지속성을 설정한다.
+    // (모바일은 기본적으로 로그인이 유지되므로 설정 불필요)
+    if (kIsWeb) {
+      await _auth.setPersistence(
+        rememberMe ? Persistence.LOCAL : Persistence.SESSION,
+      );
+    }
     await _auth.signInWithEmailAndPassword(
       email: email.trim(),
       password: password,

@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../core/services/presence_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/bouncy_tap.dart';
-import '../core/widgets/gradient_button.dart';
 import '../features/chat/views/chat_list_view.dart';
 import '../features/exam/views/session_join_view.dart';
 import '../features/profile/views/profile_view.dart';
-import '../features/social/views/friend_bar.dart';
 import '../features/study/views/study_list_view.dart';
+import '../features/todo/views/todo_home_view.dart';
 import '../features/word_sets/views/calendar_home_view.dart';
 import '../features/word_sets/views/word_set_list_view.dart';
 import '../models/app_user.dart';
@@ -33,10 +31,12 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     _presence.start(widget.user.uid);
+    _updateStudying();
   }
 
   @override
   void dispose() {
+    _presence.setStudying(false);
     _presence.dispose();
     super.dispose();
   }
@@ -63,7 +63,7 @@ class _MainShellState extends State<MainShell> {
     }
     return (
       pages: [
-        _YoungerHomeTab(user: user, onStart: () => setState(() => _index = 2)),
+        TodoHomeView(user: user),
         StudyListView(user: user),
         SessionJoinView(user: user),
         ChatListView(user: user),
@@ -79,6 +79,18 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
+  /// 동생이 '공부' 탭(index 1)에 있을 때만 공부중 상태를 켠다.
+  void _updateStudying() {
+    final studying =
+        widget.user.role == UserRole.younger && _index == 1;
+    _presence.setStudying(studying);
+  }
+
+  void _onTab(int i) {
+    setState(() => _index = i);
+    _updateStudying();
+  }
+
   @override
   Widget build(BuildContext context) {
     final config = _config();
@@ -88,7 +100,7 @@ class _MainShellState extends State<MainShell> {
       bottomNavigationBar: _BlingBottomBar(
         index: _index,
         items: config.items,
-        onTap: (i) => setState(() => _index = i),
+        onTap: _onTab,
       ),
     );
   }
@@ -204,78 +216,5 @@ class _BarItem extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// 동생 홈 탭: 환영 + 시험 참여 유도.
-class _YoungerHomeTab extends StatelessWidget {
-  const _YoungerHomeTab({required this.user, required this.onStart});
-
-  final AppUser user;
-  final VoidCallback onStart;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('HelloWord ✨')),
-      body: SafeArea(
-        child: Column(
-          children: [
-            FriendBar(me: user),
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24.w),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                Text('${user.name}님, 안녕! 👋',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 24.sp, color: AppColors.ink)),
-                SizedBox(height: 40.h),
-                Container(
-                  width: 130.w,
-                  height: 130.w,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryButton,
-                    shape: BoxShape.circle,
-                    boxShadow: AppColors.softShadow(),
-                  ),
-                  child: Icon(Icons.school_rounded,
-                      size: 64.sp, color: Colors.white),
-                )
-                    .animate(onPlay: (c) => c.repeat(reverse: true))
-                    .moveY(
-                        begin: 0,
-                        end: -10,
-                        duration: 1500.ms,
-                        curve: Curves.easeInOut),
-                SizedBox(height: 28.h),
-                Text(
-                  '언니가 시험을 열고 코드를 알려주면\n아래 버튼으로 참여해요!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 15.sp, color: AppColors.ink),
-                ),
-                SizedBox(height: 32.h),
-                SizedBox(
-                  width: double.infinity,
-                  child: GradientButton(
-                    label: '시험 참여하기',
-                    icon: Icons.login_rounded,
-                    onPressed: onStart,
-                  ),
-                ),
-              ],
-            )
-                .animate()
-                .fadeIn(duration: 500.ms)
-                .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
   }
 }

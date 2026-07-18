@@ -24,6 +24,7 @@ class CallService {
   RTCPeerConnection? _pc;
   MediaStream? _localStream;
   final List<StreamSubscription> _subs = [];
+  final List<RTCIceCandidate> _pendingRemoteCandidates = [];
   bool _remoteDescSet = false;
   bool _disposed = false;
 
@@ -45,6 +46,22 @@ class CallService {
           'stun:stun.l.google.com:19302',
           'stun:stun1.l.google.com:19302',
         ],
+      },
+      // 무료 TURN(OpenRelay) — 직접(P2P) 연결이 막히는 망에서도 우회 연결.
+      {
+        'urls': 'turn:openrelay.metered.ca:80',
+        'username': 'openrelayproject',
+        'credential': 'openrelayproject',
+      },
+      {
+        'urls': 'turn:openrelay.metered.ca:443',
+        'username': 'openrelayproject',
+        'credential': 'openrelayproject',
+      },
+      {
+        'urls': 'turn:openrelay.metered.ca:443?transport=tcp',
+        'username': 'openrelayproject',
+        'credential': 'openrelayproject',
       },
     ],
   };
@@ -99,6 +116,7 @@ class CallService {
         await pc.setRemoteDescription(
           RTCSessionDescription(answer['sdp'], answer['type']),
         );
+        await _flushPendingCandidates(pc);
       }
     }));
 
@@ -124,6 +142,7 @@ class CallService {
         final answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         await _callDoc.set({'answer': answer.toMap()}, SetOptions(merge: true));
+        await _flushPendingCandidates(pc);
       }
     }));
 
@@ -138,11 +157,24 @@ class CallService {
 
   void _addCandidate(RTCPeerConnection pc, Map<String, dynamic>? data) {
     if (data == null) return;
-    pc.addCandidate(RTCIceCandidate(
+    final candidate = RTCIceCandidate(
       data['candidate'] as String?,
       data['sdpMid'] as String?,
       data['sdpMLineIndex'] as int?,
-    ));
+    );
+    // 원격 설명(remote description)이 설정되기 전에 도착한 후보는 버퍼링한다.
+    if (_remoteDescSet) {
+      pc.addCandidate(candidate);
+    } else {
+      _pendingRemoteCandidates.add(candidate);
+    }
+  }
+
+  Future<void> _flushPendingCandidates(RTCPeerConnection pc) async {
+    for (final candidate in _pendingRemoteCandidates) {
+      await pc.addCandidate(candidate);
+    }
+    _pendingRemoteCandidates.clear();
   }
 
   /// 카메라 on/off 토글.

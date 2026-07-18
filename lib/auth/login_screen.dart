@@ -22,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _loading = false;
   bool _obscure = true;
+  bool _rememberMe = true;
 
   @override
   void dispose() {
@@ -37,6 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await _auth.signIn(
         email: _emailController.text,
         password: _passwordController.text,
+        rememberMe: _rememberMe,
       );
     } catch (error) {
       if (!mounted) return;
@@ -107,7 +109,28 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 28.h),
+                    SizedBox(height: 8.h),
+                    GestureDetector(
+                      onTap: () =>
+                          setState(() => _rememberMe = !_rememberMe),
+                      behavior: HitTestBehavior.opaque,
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: _rememberMe,
+                            onChanged: (v) =>
+                                setState(() => _rememberMe = v ?? true),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6.r),
+                            ),
+                          ),
+                          Text('자동 로그인',
+                              style: TextStyle(
+                                  fontSize: 14.sp, color: AppColors.ink)),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
                     GradientButton(
                       label: '로그인',
                       loading: _loading,
