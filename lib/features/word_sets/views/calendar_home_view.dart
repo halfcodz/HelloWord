@@ -8,6 +8,7 @@ import '../../../core/widgets/bouncy_tap.dart';
 import '../../../core/widgets/month_calendar.dart';
 import '../../../models/app_user.dart';
 import '../../social/views/friend_bar.dart';
+import '../../social/views/notification_bell.dart';
 import '../models/word_set.dart';
 import '../repositories/word_set_repository.dart';
 import '../viewmodels/word_set_list_viewmodel.dart';
@@ -104,6 +105,7 @@ class _CalendarBodyState extends State<_CalendarBody> {
       appBar: AppBar(
         title: const Text('단어 달력'),
         actions: [
+          NotificationBell(user: widget.user),
           IconButton(
             tooltip: '새로고침',
             onPressed: reloadApp,

@@ -20,7 +20,7 @@ class FriendBar extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => FriendsViewModel(
         repository: context.read<FriendRepository>(),
-        myUid: me.uid,
+        me: me,
       ),
       child: _FriendBarBody(me: me),
     );
@@ -59,7 +59,11 @@ class _FriendBarBody extends StatelessWidget {
     );
   }
 
-  Future<void> _addFriend(
+  /// 언니는 '동생', 동생은 '웅니'를 초대한다.
+  String get _inviteTargetLabel =>
+      me.role == UserRole.elder ? '동생' : '웅니';
+
+  Future<void> _invite(
     BuildContext context,
     FriendsViewModel viewModel,
   ) async {
@@ -67,11 +71,11 @@ class _FriendBarBody extends StatelessWidget {
     final email = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('친구 추가 💛'),
+        title: Text('$_inviteTargetLabel 초대하기 💌'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('상대의 이메일을 입력하면 서로 연결돼요.'),
+            Text('$_inviteTargetLabel의 이메일을 입력하면 초대장을 보내요.\n상대가 승인하면 친구가 됩니다.'),
             SizedBox(height: 12.h),
             TextField(
               controller: controller,
@@ -88,21 +92,22 @@ class _FriendBarBody extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('추가'),
+            child: const Text('초대'),
           ),
         ],
       ),
     );
     if (email == null || email.isEmpty) return;
 
-    final result = await viewModel.addFriend(email);
+    final result = await viewModel.invite(email);
     if (!context.mounted) return;
     final message = switch (result) {
-      FriendAddResult.success => '친구를 추가했어요! 🎉',
+      FriendAddResult.success => '초대장을 보냈어요! 상대가 승인하면 친구가 돼요 💌',
       FriendAddResult.notFound => '그 이메일의 사용자를 찾지 못했어요.',
-      FriendAddResult.self => '내 이메일은 추가할 수 없어요.',
+      FriendAddResult.self => '내 이메일은 초대할 수 없어요.',
       FriendAddResult.alreadyFriend => '이미 친구예요!',
-      FriendAddResult.error => '추가 중 오류가 발생했어요.',
+      FriendAddResult.alreadyPending => '이미 초대장을 보냈어요.',
+      FriendAddResult.error => '초대 중 오류가 발생했어요.',
     };
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
@@ -132,7 +137,10 @@ class _FriendBarBody extends StatelessWidget {
             ),
             SizedBox(width: 8.w),
           ],
-          _AddFriendButton(onTap: () => _addFriend(context, viewModel)),
+          _AddFriendButton(
+            label: '$_inviteTargetLabel 초대',
+            onTap: () => _invite(context, viewModel),
+          ),
         ],
       ),
     );
@@ -140,9 +148,10 @@ class _FriendBarBody extends StatelessWidget {
 }
 
 class _AddFriendButton extends StatelessWidget {
-  const _AddFriendButton({required this.onTap});
+  const _AddFriendButton({required this.onTap, required this.label});
 
   final VoidCallback onTap;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -164,7 +173,7 @@ class _AddFriendButton extends StatelessWidget {
             ),
           ),
           SizedBox(height: 4.h),
-          Text('친구 추가',
+          Text(label,
               style: TextStyle(fontSize: 11.sp, color: AppColors.lavender)),
         ],
       ),

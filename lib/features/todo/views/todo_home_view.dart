@@ -7,6 +7,7 @@ import '../../../core/utils/app_reload.dart';
 import '../../../core/widgets/month_calendar.dart';
 import '../../../models/app_user.dart';
 import '../../social/views/friend_bar.dart';
+import '../../social/views/notification_bell.dart';
 import '../models/todo.dart';
 import '../repositories/todo_repository.dart';
 
@@ -107,6 +108,7 @@ class _TodoHomeViewState extends State<TodoHomeView> {
       appBar: AppBar(
         title: const Text('할 일'),
         actions: [
+          NotificationBell(user: widget.user),
           IconButton(
             tooltip: '새로고침',
             onPressed: reloadApp,

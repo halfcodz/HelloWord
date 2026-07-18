@@ -104,6 +104,11 @@ service cloud.firestore {
         allow read, write: if request.auth != null;
       }
     }
+
+    // 친구 초대
+    match /friendInvites/{id} {
+      allow read, write: if request.auth != null;
+    }
   }
 }
 ```

@@ -5,28 +5,31 @@ import 'package:flutter/foundation.dart';
 import '../../../models/app_user.dart';
 import '../repositories/friend_repository.dart';
 
-/// 상단 프로필 바에 쓰이는 친구 목록/상태 관리.
+/// 상단 프로필 바/채팅 목록에 쓰이는 친구 목록 및 초대 보내기.
 class FriendsViewModel extends ChangeNotifier {
   FriendsViewModel({
     required FriendRepository repository,
-    required this.myUid,
+    required this.me,
   }) : _repository = repository {
-    _sub = _repository.watchFriends(myUid).listen((friends) {
+    _sub = _repository.watchFriends(me.uid).listen((friends) {
       _friends = friends;
       notifyListeners();
     });
   }
 
   final FriendRepository _repository;
-  final String myUid;
+  final AppUser me;
 
   StreamSubscription<List<AppUser>>? _sub;
 
   List<AppUser> _friends = const [];
   List<AppUser> get friends => _friends;
 
-  Future<FriendAddResult> addFriend(String email) =>
-      _repository.addByEmail(myUid: myUid, email: email);
+  Future<FriendAddResult> invite(String email) => _repository.sendInvite(
+        myUid: me.uid,
+        myName: me.name,
+        email: email,
+      );
 
   @override
   void dispose() {

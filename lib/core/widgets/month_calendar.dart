@@ -202,8 +202,9 @@ class _DayCell extends StatelessWidget {
               ? Border.all(color: AppColors.pink, width: 1.5)
               : null,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // 날짜 원은 칸 중앙에, 점 표시는 아래쪽에 겹쳐 배치한다.
+        child: Stack(
+          alignment: Alignment.center,
           children: [
             Container(
               width: 24.w,
@@ -223,27 +224,25 @@ class _DayCell extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(height: 3.h),
-            SizedBox(
-              height: 6.h,
-              child: eventCount == 0
-                  ? null
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        for (var i = 0; i < eventCount && i < 3; i++)
-                          Container(
-                            width: 5.w,
-                            height: 5.w,
-                            margin: EdgeInsets.symmetric(horizontal: 1.w),
-                            decoration: BoxDecoration(
-                              color: AppColors.pink,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                      ],
-                    ),
-            ),
+            if (eventCount > 0)
+              Positioned(
+                bottom: 3.h,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < eventCount && i < 3; i++)
+                      Container(
+                        width: 5.w,
+                        height: 5.w,
+                        margin: EdgeInsets.symmetric(horizontal: 1.w),
+                        decoration: BoxDecoration(
+                          color: AppColors.pink,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),

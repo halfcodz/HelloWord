@@ -21,7 +21,7 @@ class ChatListView extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => FriendsViewModel(
         repository: context.read<FriendRepository>(),
-        myUid: user.uid,
+        me: user,
       ),
       child: _ChatListBody(user: user),
     );

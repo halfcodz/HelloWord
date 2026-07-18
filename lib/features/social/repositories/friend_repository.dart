@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../models/app_user.dart';
+import '../models/friend_invite.dart';
 
-enum FriendAddResult { success, notFound, self, alreadyFriend, error }
+enum FriendAddResult { success, notFound, self, alreadyFriend, alreadyPending, error }
 
-/// 친구 연결(이메일로 추가) 및 친구 상태 실시간 구독을 담당한다.
+/// 친구 초대(승인/거절) 및 친구 상태 실시간 구독을 담당한다.
 class FriendRepository {
   FriendRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
@@ -13,10 +14,13 @@ class FriendRepository {
 
   CollectionReference<Map<String, dynamic>> get _users =>
       _firestore.collection('users');
+  CollectionReference<Map<String, dynamic>> get _invites =>
+      _firestore.collection('friendInvites');
 
-  /// 이메일로 상대를 찾아 서로의 친구 목록에 추가한다.
-  Future<FriendAddResult> addByEmail({
+  /// 이메일로 상대를 찾아 초대를 보낸다(상대가 승인하면 친구가 된다).
+  Future<FriendAddResult> sendInvite({
     required String myUid,
+    required String myName,
     required String email,
   }) async {
     try {
@@ -24,29 +28,59 @@ class FriendRepository {
           await _users.where('email', isEqualTo: email.trim()).limit(1).get();
       if (query.docs.isEmpty) return FriendAddResult.notFound;
 
-      final friendDoc = query.docs.first;
-      if (friendDoc.id == myUid) return FriendAddResult.self;
+      final target = query.docs.first;
+      if (target.id == myUid) return FriendAddResult.self;
 
       final myFriends =
           ((await _users.doc(myUid).get()).data()?['friends'] as List?)
                   ?.cast<String>() ??
               const [];
-      if (myFriends.contains(friendDoc.id)) {
-        return FriendAddResult.alreadyFriend;
-      }
+      if (myFriends.contains(target.id)) return FriendAddResult.alreadyFriend;
 
-      await _users.doc(myUid).set(
-        {'friends': FieldValue.arrayUnion([friendDoc.id])},
-        SetOptions(merge: true),
-      );
-      await _users.doc(friendDoc.id).set(
-        {'friends': FieldValue.arrayUnion([myUid])},
-        SetOptions(merge: true),
-      );
+      // 내가 그 상대에게 보낸 대기 중 초대가 이미 있는지 확인(단일 equality).
+      final mine = await _invites.where('fromUid', isEqualTo: myUid).get();
+      final already = mine.docs.any((d) =>
+          d.data()['toUid'] == target.id && d.data()['status'] == 'pending');
+      if (already) return FriendAddResult.alreadyPending;
+
+      await _invites.add({
+        'fromUid': myUid,
+        'fromName': myName,
+        'toUid': target.id,
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
       return FriendAddResult.success;
     } catch (_) {
       return FriendAddResult.error;
     }
+  }
+
+  /// 내가 받은 대기 중 초대를 실시간 구독한다.
+  Stream<List<FriendInvite>> watchIncomingInvites(String uid) {
+    return _invites.where('toUid', isEqualTo: uid).snapshots().map((snap) => snap
+        .docs
+        .map(FriendInvite.fromDoc)
+        .where((i) => i.status == 'pending')
+        .toList());
+  }
+
+  /// 초대를 승인해 서로 친구가 된다.
+  Future<void> acceptInvite(FriendInvite invite) async {
+    await _users.doc(invite.toUid).set(
+      {'friends': FieldValue.arrayUnion([invite.fromUid])},
+      SetOptions(merge: true),
+    );
+    await _users.doc(invite.fromUid).set(
+      {'friends': FieldValue.arrayUnion([invite.toUid])},
+      SetOptions(merge: true),
+    );
+    await _invites.doc(invite.id).delete();
+  }
+
+  /// 초대를 거절한다.
+  Future<void> rejectInvite(String inviteId) async {
+    await _invites.doc(inviteId).delete();
   }
 
   /// 내 친구들의 상태(접속·공부중)를 실시간으로 구독한다.

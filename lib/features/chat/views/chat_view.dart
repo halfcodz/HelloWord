@@ -31,6 +31,12 @@ class _ChatViewState extends State<ChatView> {
       _repository.roomIdFor(widget.myUid, widget.otherUid);
 
   @override
+  void initState() {
+    super.initState();
+    _repository.markRead(roomId: _roomId, uid: widget.myUid);
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
@@ -63,6 +69,7 @@ class _ChatViewState extends State<ChatView> {
     return Scaffold(
       appBar: AppBar(title: Text('${widget.otherName} 💬')),
       body: SafeArea(
+        minimum: EdgeInsets.only(bottom: 10.h),
         child: Column(
           children: [
             Expanded(

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 
 import '../core/services/presence_service.dart';
+import '../features/chat/repositories/chat_repository.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/bouncy_tap.dart';
 import '../features/chat/views/chat_list_view.dart';
@@ -94,13 +96,21 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final config = _config();
+    final chatIndex = config.items.indexWhere((it) => it.label == '채팅');
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: IndexedStack(index: _index, children: config.pages),
-      bottomNavigationBar: _BlingBottomBar(
-        index: _index,
-        items: config.items,
-        onTap: _onTab,
+      bottomNavigationBar: StreamBuilder<bool>(
+        stream: context.read<ChatRepository>().watchHasUnread(widget.user.uid),
+        builder: (context, snapshot) {
+          final hasUnread = snapshot.data ?? false;
+          return _BlingBottomBar(
+            index: _index,
+            items: config.items,
+            badgeIndex: hasUnread ? chatIndex : null,
+            onTap: _onTab,
+          );
+        },
       ),
     );
   }
@@ -117,11 +127,13 @@ class _BlingBottomBar extends StatelessWidget {
     required this.index,
     required this.items,
     required this.onTap,
+    this.badgeIndex,
   });
 
   final int index;
   final List<_NavItem> items;
   final ValueChanged<int> onTap;
+  final int? badgeIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -142,8 +154,9 @@ class _BlingBottomBar extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
+        minimum: EdgeInsets.only(bottom: 10.h),
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 6.h, horizontal: 6.w),
+          padding: EdgeInsets.fromLTRB(6.w, 8.h, 6.w, 4.h),
           child: Row(
             children: [
               for (var i = 0; i < items.length; i++)
@@ -152,6 +165,7 @@ class _BlingBottomBar extends StatelessWidget {
                     icon: items[i].icon,
                     label: items[i].label,
                     selected: index == i,
+                    showBadge: i == badgeIndex,
                     onTap: () => onTap(i),
                   ),
                 ),
@@ -169,12 +183,14 @@ class _BarItem extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.showBadge = false,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final bool showBadge;
 
   @override
   Widget build(BuildContext context) {
@@ -198,7 +214,26 @@ class _BarItem extends StatelessWidget {
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(16.r),
               ),
-              child: Icon(icon, size: 22.sp, color: color),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(icon, size: 22.sp, color: color),
+                  if (showBadge)
+                    Positioned(
+                      right: -2.w,
+                      top: -2.h,
+                      child: Container(
+                        width: 9.w,
+                        height: 9.w,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF4D6D),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
             SizedBox(height: 3.h),
             Text(

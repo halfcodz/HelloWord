@@ -38,6 +38,7 @@ class ChatRepository {
     await room.set({
       'participants': participants,
       'lastMessage': trimmed,
+      'lastSenderId': senderId,
       'lastAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
@@ -45,6 +46,32 @@ class ChatRepository {
       'senderId': senderId,
       'text': trimmed,
       'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// 채팅방을 열었을 때 읽음 시각을 기록한다.
+  Future<void> markRead({required String roomId, required String uid}) async {
+    await _chats.doc(roomId).set(
+      {'read_$uid': FieldValue.serverTimestamp()},
+      SetOptions(merge: true),
+    );
+  }
+
+  /// 안 읽은 메시지가 하나라도 있는지 실시간 구독(채팅 탭 배지용).
+  Stream<bool> watchHasUnread(String uid) {
+    return _chats
+        .where('participants', arrayContains: uid)
+        .snapshots()
+        .map((snap) {
+      for (final doc in snap.docs) {
+        final d = doc.data();
+        final lastAt = d['lastAt'] as Timestamp?;
+        final lastSender = d['lastSenderId'] as String?;
+        final read = d['read_$uid'] as Timestamp?;
+        if (lastAt == null || lastSender == uid) continue;
+        if (read == null || lastAt.compareTo(read) > 0) return true;
+      }
+      return false;
     });
   }
 }
