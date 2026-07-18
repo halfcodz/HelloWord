@@ -287,8 +287,8 @@ class _EmptyState extends StatelessWidget {
             SizedBox(height: 8.h),
             Text(
               onAdd != null
-                  ? '단어 파일(csv·txt·엑셀)을 올려\n첫 시험을 만들어 보세요!'
-                  : '홈 달력에서 단어를 먼저 추가해 주세요!',
+                  ? '단어 파일(csv·txt·엑셀)을 올려\n공부자료를 만들어 보세요!'
+                  : '자료 탭에서 공부자료를 먼저 추가해 주세요!',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14.sp, color: AppColors.lavender),
             ),

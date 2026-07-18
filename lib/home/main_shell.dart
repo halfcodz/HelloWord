@@ -6,6 +6,7 @@ import '../core/services/presence_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/bouncy_tap.dart';
 import '../core/widgets/gradient_button.dart';
+import '../features/chat/views/chat_list_view.dart';
 import '../features/exam/views/session_join_view.dart';
 import '../features/profile/views/profile_view.dart';
 import '../features/social/views/friend_bar.dart';
@@ -46,12 +47,16 @@ class _MainShellState extends State<MainShell> {
       return (
         pages: [
           CalendarHomeView(user: user),
-          WordSetListView(user: user, title: '시험 내기 📝', enableAdd: false),
+          WordSetListView(user: user, title: '공부자료', enableAdd: true),
+          WordSetListView(user: user, title: '시험 내기', enableAdd: false),
+          ChatListView(user: user),
           ProfileView(user: user),
         ],
         items: const [
           _NavItem(Icons.home_rounded, '홈'),
+          _NavItem(Icons.folder_rounded, '자료'),
           _NavItem(Icons.quiz_rounded, '시험'),
+          _NavItem(Icons.chat_bubble_rounded, '채팅'),
           _NavItem(Icons.person_rounded, '내 정보'),
         ],
       );
@@ -61,12 +66,14 @@ class _MainShellState extends State<MainShell> {
         _YoungerHomeTab(user: user, onStart: () => setState(() => _index = 2)),
         StudyListView(user: user),
         SessionJoinView(user: user),
+        ChatListView(user: user),
         ProfileView(user: user),
       ],
       items: const [
         _NavItem(Icons.home_rounded, '홈'),
         _NavItem(Icons.menu_book_rounded, '공부'),
         _NavItem(Icons.quiz_rounded, '시험'),
+        _NavItem(Icons.chat_bubble_rounded, '채팅'),
         _NavItem(Icons.person_rounded, '내 정보'),
       ],
     );
@@ -172,7 +179,7 @@ class _BarItem extends StatelessWidget {
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
               decoration: BoxDecoration(
                 color: selected
                     ? AppColors.pinkSoft.withValues(alpha: 0.5)
@@ -185,8 +192,10 @@ class _BarItem extends StatelessWidget {
             Text(
               label,
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.visible,
               style: TextStyle(
-                fontSize: 11.sp,
+                fontSize: 10.sp,
                 color: color,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
               ),

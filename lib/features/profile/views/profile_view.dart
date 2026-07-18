@@ -91,7 +91,7 @@ class ProfileView extends StatelessWidget {
     final isElder = user.role == UserRole.elder;
     final photoBytes = AvatarService.decode(user.photoBase64);
     return Scaffold(
-      appBar: AppBar(title: const Text('내 정보 💖')),
+      appBar: AppBar(title: const Text('내 정보')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(24.w),
