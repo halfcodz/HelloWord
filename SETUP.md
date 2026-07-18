@@ -65,11 +65,21 @@ service cloud.firestore {
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+
+    // 단어 세트: 만든 언니 본인만 접근
+    match /wordSets/{setId} {
+      allow read, update, delete: if request.auth != null
+        && request.auth.uid == resource.data.createdBy;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.createdBy;
+    }
   }
 }
 ```
 
-> Phase 1부터 `wordSets`, `sessions` 규칙을 여기에 추가합니다.
+> Phase 2부터 동생이 시험에 참여할 수 있도록 `sessions` 규칙을 추가합니다.
+> (지금은 Firestore가 테스트 모드라 규칙 없이도 동작하지만, public 저장소이므로
+> 위 규칙을 콘솔에 반영해 두는 것을 권장합니다.)
 
 ---
 
