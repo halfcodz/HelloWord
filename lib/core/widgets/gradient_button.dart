@@ -31,8 +31,7 @@ class GradientButton extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             gradient: AppColors.primaryButton,
-            borderRadius: BorderRadius.circular(30.r),
-            boxShadow: AppColors.softShadow(blur: 18, y: 8),
+            borderRadius: BorderRadius.circular(14.r),
           ),
           child: loading
               ? SizedBox(

@@ -57,7 +57,7 @@ class ProfileView extends StatelessWidget {
           ..clearSnackBars()
           ..showSnackBar(
             const SnackBar(
-              content: Text('프로필 사진을 바꿨어요! 📸'),
+              content: Text('프로필 사진을 바꿨어요!'),
               duration: Duration(seconds: 2),
             ),
           );
@@ -80,7 +80,7 @@ class ProfileView extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('로그아웃 할까요? 👋'),
+        title: const Text('로그아웃 할까요?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),

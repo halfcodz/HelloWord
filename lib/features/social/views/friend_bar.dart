@@ -71,7 +71,7 @@ class _FriendBarBody extends StatelessWidget {
     final email = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('$_inviteTargetLabel 초대하기 💌'),
+        title: Text('$_inviteTargetLabel 초대하기'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -102,7 +102,7 @@ class _FriendBarBody extends StatelessWidget {
     final result = await viewModel.invite(email);
     if (!context.mounted) return;
     final message = switch (result) {
-      FriendAddResult.success => '초대장을 보냈어요! 상대가 승인하면 친구가 돼요 💌',
+      FriendAddResult.success => '초대장을 보냈어요! 상대가 승인하면 친구가 돼요',
       FriendAddResult.notFound => '그 이메일의 사용자를 찾지 못했어요.',
       FriendAddResult.self => '내 이메일은 초대할 수 없어요.',
       FriendAddResult.alreadyFriend => '이미 친구예요!',

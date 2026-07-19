@@ -67,7 +67,7 @@ class _ChatViewState extends State<ChatView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.otherName} 💬')),
+      appBar: AppBar(title: Text(widget.otherName)),
       body: SafeArea(
         minimum: EdgeInsets.only(bottom: 10.h),
         child: Column(

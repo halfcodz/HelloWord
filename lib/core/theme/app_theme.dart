@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// 사용자가 설정에서 고를 수 있는 색 테마.
+/// 사용자가 설정에서 고를 수 있는 포인트 색.
 enum AppPalette { pink, lavender, mint, sky, peach }
 
 extension AppPaletteX on AppPalette {
   String get label => switch (this) {
-        AppPalette.pink => '핑크',
-        AppPalette.lavender => '라벤더',
-        AppPalette.mint => '민트',
-        AppPalette.sky => '하늘',
-        AppPalette.peach => '피치',
+        AppPalette.pink => '블루',
+        AppPalette.lavender => '인디고',
+        AppPalette.mint => '그린',
+        AppPalette.sky => '스카이',
+        AppPalette.peach => '오렌지',
       };
 
-  /// 스와치에 보여줄 대표색.
   Color get swatch => _specs[this]!.primary;
 
   static AppPalette fromName(String? name) {
@@ -25,114 +24,76 @@ extension AppPaletteX on AppPalette {
 }
 
 class _PaletteSpec {
-  const _PaletteSpec({
-    required this.primary,
-    required this.primarySoft,
-    required this.secondary,
-    required this.secondarySoft,
-    required this.button,
-    required this.background,
-  });
-
+  const _PaletteSpec({required this.primary, required this.primarySoft});
   final Color primary;
   final Color primarySoft;
-  final Color secondary;
-  final Color secondarySoft;
-  final List<Color> button;
-  final List<Color> background;
 }
 
+// 토스풍: 흰/회색 바탕에 깔끔한 포인트 색.
 const Map<AppPalette, _PaletteSpec> _specs = {
   AppPalette.pink: _PaletteSpec(
-    primary: Color(0xFFFF7FB6),
-    primarySoft: Color(0xFFFFC1DA),
-    secondary: Color(0xFFB79CED),
-    secondarySoft: Color(0xFFE4DAFF),
-    button: [Color(0xFFFF8FBF), Color(0xFFB79CED)],
-    background: [Color(0xFFFFF0F7), Color(0xFFF1ECFF)],
+    primary: Color(0xFF3182F6), // Toss-like blue
+    primarySoft: Color(0xFFE8F3FF),
   ),
   AppPalette.lavender: _PaletteSpec(
-    primary: Color(0xFF9B8CEC),
-    primarySoft: Color(0xFFD9CFFF),
-    secondary: Color(0xFFF48FC0),
-    secondarySoft: Color(0xFFFAD4E8),
-    button: [Color(0xFFA98FEE), Color(0xFFF48FC0)],
-    background: [Color(0xFFF3EFFF), Color(0xFFFDEEF7)],
+    primary: Color(0xFF4C6EF5),
+    primarySoft: Color(0xFFEAEDFF),
   ),
   AppPalette.mint: _PaletteSpec(
-    primary: Color(0xFF4FCBA6),
-    primarySoft: Color(0xFFBFEEDF),
-    secondary: Color(0xFF7FC8E8),
-    secondarySoft: Color(0xFFCDEBF7),
-    button: [Color(0xFF57D6B0), Color(0xFF7FC8E8)],
-    background: [Color(0xFFEBFBF5), Color(0xFFEAF6FB)],
+    primary: Color(0xFF20C997),
+    primarySoft: Color(0xFFE6FCF5),
   ),
   AppPalette.sky: _PaletteSpec(
-    primary: Color(0xFF6FA8FF),
-    primarySoft: Color(0xFFCFE0FF),
-    secondary: Color(0xFF9B8CEC),
-    secondarySoft: Color(0xFFDCD5F7),
-    button: [Color(0xFF7FB0FF), Color(0xFF9B8CEC)],
-    background: [Color(0xFFEDF4FF), Color(0xFFF1EEFF)],
+    primary: Color(0xFF15AABF),
+    primarySoft: Color(0xFFE3FAFC),
   ),
   AppPalette.peach: _PaletteSpec(
-    primary: Color(0xFFFF9166),
-    primarySoft: Color(0xFFFFD6C2),
-    secondary: Color(0xFFFFB27F),
-    secondarySoft: Color(0xFFFFE6D3),
-    button: [Color(0xFFFF9E7A), Color(0xFFFFC48F)],
-    background: [Color(0xFFFFF3EC), Color(0xFFFFF6EF)],
+    primary: Color(0xFFFF922B),
+    primarySoft: Color(0xFFFFF0E1),
   ),
 };
 
-/// 현재 팔레트에 따라 값이 바뀌는 색 토큰. [AppColors.apply]로 갱신한다.
+/// 중앙 색 토큰. [AppColors.apply]로 포인트 색을 갱신한다.
+/// (이름은 기존 호환을 위해 유지하되 값은 토스풍으로 재정의)
 class AppColors {
   AppColors._();
 
-  // 팔레트 의존(가변) 토큰 — 기본은 핑크.
-  static Color pink = _specs[AppPalette.pink]!.primary;
+  // 포인트 색(팔레트 의존).
+  static Color pink = _specs[AppPalette.pink]!.primary; // primary
   static Color pinkSoft = _specs[AppPalette.pink]!.primarySoft;
-  static Color lavender = _specs[AppPalette.pink]!.secondary;
-  static Color lavenderSoft = _specs[AppPalette.pink]!.secondarySoft;
 
+  // 보조/회색 계열(고정).
+  static Color lavender = const Color(0xFF8B95A1); // 보조 텍스트/아이콘 회색
+  static Color lavenderSoft = const Color(0xFFF2F4F6); // 옅은 회색 배경
+
+  // 주요 버튼: 단색(그라데이션 형태지만 같은 색 두 개).
   static LinearGradient primaryButton = const LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [Color(0xFFFF8FBF), Color(0xFFB79CED)],
-  );
-  static LinearGradient background = const LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFFFF0F7), Color(0xFFF1ECFF)],
+    colors: [Color(0xFF3182F6), Color(0xFF3182F6)],
   );
 
-  // 고정 토큰.
-  static const Color mint = Color(0xFF8FE3C8);
-  static const Color peach = Color(0xFFFFD3B6);
-  static const Color cream = Color(0xFFFFF6FB);
-  static const Color ink = Color(0xFF5B4A63);
+  // 배경: 평평한 밝은 회색.
+  static LinearGradient background = const LinearGradient(
+    colors: [Color(0xFFF2F4F6), Color(0xFFF2F4F6)],
+  );
+
+  static const Color mint = Color(0xFF20C997);
+  static const Color peach = Color(0xFFFF922B);
+  static const Color cream = Colors.white; // 다이얼로그/시트 흰색
+  static const Color ink = Color(0xFF191F28); // 거의 검정 텍스트
 
   static void apply(AppPalette palette) {
     final s = _specs[palette]!;
     pink = s.primary;
     pinkSoft = s.primarySoft;
-    lavender = s.secondary;
-    lavenderSoft = s.secondarySoft;
-    primaryButton = LinearGradient(
-      begin: Alignment.centerLeft,
-      end: Alignment.centerRight,
-      colors: s.button,
-    );
-    background = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: s.background,
-    );
+    primaryButton =
+        LinearGradient(colors: [s.primary, s.primary]);
+    // 배경/보조 회색은 팔레트와 무관하게 유지.
   }
 
-  static List<BoxShadow> softShadow({double blur = 24, double y = 10}) => [
+  /// 아주 은은한 회색 그림자(토스풍 카드).
+  static List<BoxShadow> softShadow({double blur = 12, double y = 3}) => [
         BoxShadow(
-          color: pink.withValues(alpha: 0.18),
+          color: const Color(0xFF191F28).withValues(alpha: 0.05),
           blurRadius: blur,
           offset: Offset(0, y),
         ),
@@ -146,7 +107,7 @@ class AppTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.pink,
       primary: AppColors.pink,
-      secondary: AppColors.lavender,
+      secondary: AppColors.pink,
       tertiary: AppColors.mint,
       surface: Colors.white,
       brightness: Brightness.light,
@@ -156,7 +117,7 @@ class AppTheme {
       onSurface: AppColors.ink,
     );
 
-    final baseText = GoogleFonts.juaTextTheme().apply(
+    final baseText = GoogleFonts.notoSansKrTextTheme().apply(
       bodyColor: AppColors.ink,
       displayColor: AppColors.ink,
     );
@@ -166,7 +127,7 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: Colors.transparent,
       textTheme: baseText,
-      splashFactory: InkSparkle.splashFactory,
+      splashFactory: NoSplash.splashFactory,
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: _SoftPageTransitionsBuilder(),
@@ -177,87 +138,94 @@ class AppTheme {
         },
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFFF2F4F6),
         surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
         foregroundColor: AppColors.ink,
-        titleTextStyle: GoogleFonts.jua(fontSize: 20, color: AppColors.ink),
+        titleTextStyle: GoogleFonts.notoSansKr(
+          fontSize: 18,
+          color: AppColors.ink,
+          fontWeight: FontWeight.w700,
+        ),
       ),
       cardTheme: CardThemeData(
         color: Colors.white,
         elevation: 0,
-        shadowColor: AppColors.pink.withValues(alpha: 0.15),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.pink,
           foregroundColor: Colors.white,
-          shape: const StadiumBorder(),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          textStyle: GoogleFonts.jua(fontSize: 16),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          textStyle:
+              GoogleFonts.notoSansKr(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.lavender,
-          textStyle: GoogleFonts.jua(fontSize: 15),
+          foregroundColor: AppColors.pink,
+          textStyle:
+              GoogleFonts.notoSansKr(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: AppColors.pink,
         foregroundColor: Colors.white,
+        elevation: 2,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.85),
+        fillColor: const Color(0xFFF2F4F6),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: AppColors.pinkSoft),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: AppColors.pinkSoft.withValues(alpha: 0.7)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: AppColors.pink, width: 2),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.pink, width: 1.5),
         ),
-        labelStyle: const TextStyle(color: AppColors.ink),
+        labelStyle: const TextStyle(color: Color(0xFF8B95A1)),
         floatingLabelStyle: TextStyle(color: AppColors.pink),
+        hintStyle: const TextStyle(color: Color(0xFFB0B8C1)),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.lavenderSoft,
         labelStyle: const TextStyle(color: AppColors.ink),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         side: BorderSide.none,
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: AppColors.cream,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
-        ),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.lavender,
-        contentTextStyle: GoogleFonts.jua(color: Colors.white, fontSize: 14),
+        backgroundColor: const Color(0xFF333D4B),
+        contentTextStyle:
+            GoogleFonts.notoSansKr(color: Colors.white, fontSize: 14),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFFE5E8EB),
+        thickness: 1,
       ),
     );
   }
 }
 
-/// 부드러운 페이드 + 살짝 위로 슬라이드 + 스케일 화면 전환.
+/// 부드럽고 담백한 페이드 + 살짝 슬라이드 전환(토스풍).
 class _SoftPageTransitionsBuilder extends PageTransitionsBuilder {
   const _SoftPageTransitionsBuilder();
 
@@ -278,13 +246,10 @@ class _SoftPageTransitionsBuilder extends PageTransitionsBuilder {
       opacity: curved,
       child: SlideTransition(
         position: Tween<Offset>(
-          begin: const Offset(0, 0.04),
+          begin: const Offset(0.06, 0),
           end: Offset.zero,
         ).animate(curved),
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.98, end: 1.0).animate(curved),
-          child: child,
-        ),
+        child: child,
       ),
     );
   }

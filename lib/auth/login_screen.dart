@@ -187,7 +187,7 @@ class _LoginHeader extends StatelessWidget {
               curve: Curves.easeInOut,
             ),
         SizedBox(height: 18.h),
-        Text('HelloWord ✨',
+        Text('HelloWord',
             style: TextStyle(fontSize: 30.sp, color: AppColors.ink)),
         SizedBox(height: 4.h),
         Text('언니랑 함께하는 영어 단어',

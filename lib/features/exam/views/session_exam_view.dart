@@ -190,7 +190,7 @@ class _ExamBodyState extends State<_ExamBody> {
                   ),
                   child: Column(
                     children: [
-                      Text('이 뜻의 영어 단어는? 🤔',
+                      Text('이 뜻의 영어 단어는?',
                           style: TextStyle(
                               fontSize: 13.sp, color: AppColors.lavender)),
                       SizedBox(height: 14.h),

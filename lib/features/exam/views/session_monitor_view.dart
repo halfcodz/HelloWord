@@ -153,7 +153,7 @@ class _WaitingView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('동생에게 이 코드를 알려주세요 💌',
+          Text('동생에게 이 코드를 알려주세요',
               style: TextStyle(fontSize: 16.sp, color: AppColors.ink)),
           SizedBox(height: 24.h),
           Container(

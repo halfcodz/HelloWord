@@ -140,7 +140,7 @@ class _CalendarBodyState extends State<_CalendarBody> {
                 onToday: _today,
               ),
               SizedBox(height: 10.h),
-              Text('날짜를 누르면 그날의 단어가 나와요 🌸',
+              Text('날짜를 누르면 그날의 단어가 나와요',
                   textAlign: TextAlign.center,
                   style:
                       TextStyle(fontSize: 12.sp, color: AppColors.lavender)),

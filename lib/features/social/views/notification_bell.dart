@@ -34,7 +34,7 @@ class NotificationBell extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('알림 🔔',
+                  Text('알림',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 17.sp, color: AppColors.ink)),
                   SizedBox(height: 16.h),
@@ -124,7 +124,7 @@ class _InviteTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('${invite.fromName}님이 친구 초대를 보냈어요 💌',
+          Text('${invite.fromName}님이 친구 초대를 보냈어요',
               style: TextStyle(fontSize: 15.sp, color: AppColors.ink)),
           SizedBox(height: 12.h),
           Row(
