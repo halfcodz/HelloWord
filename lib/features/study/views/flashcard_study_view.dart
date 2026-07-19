@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bouncy_tap.dart';
-import '../../../core/widgets/gradient_button.dart';
 import '../../word_sets/models/word_pair.dart';
 import '../../word_sets/models/word_set.dart';
 
@@ -20,33 +19,48 @@ class FlashcardStudyView extends StatefulWidget {
 class _FlashcardStudyViewState extends State<FlashcardStudyView> {
   late List<WordPair> _words = List.of(widget.set.words);
   int _index = 0;
-  bool _showEnglish = false;
+  bool _showKorean = false;
+  int _memorized = 0;
 
-  void _flip() => setState(() => _showEnglish = !_showEnglish);
+  void _flip() => setState(() => _showKorean = !_showKorean);
 
-  void _next() {
+  void _advance({required bool memorized}) {
+    if (memorized) _memorized++;
     if (_index < _words.length - 1) {
       setState(() {
         _index++;
-        _showEnglish = false;
+        _showKorean = false;
       });
+    } else {
+      _finish();
     }
   }
 
-  void _prev() {
-    if (_index > 0) {
-      setState(() {
-        _index--;
-        _showEnglish = false;
-      });
-    }
+  void _finish() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('플래시카드 완료! 🎉'),
+        content: Text('총 ${_words.length}개 중 $_memorized개를 외웠어요.'),
+        actions: [
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
+            },
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _shuffle() {
     setState(() {
       _words = List.of(widget.set.words)..shuffle();
       _index = 0;
-      _showEnglish = false;
+      _showKorean = false;
+      _memorized = 0;
     });
   }
 
@@ -57,120 +71,140 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.set.title),
+        title: Text('${_index + 1}/$total',
+            style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.ink)),
+        centerTitle: true,
         actions: [
           IconButton(
             onPressed: _shuffle,
-            icon: const Icon(Icons.shuffle_rounded),
+            icon: Icon(Icons.shuffle_rounded, color: AppColors.grayText),
             tooltip: '섞기',
           ),
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            LinearProgressIndicator(value: (_index + 1) / total),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(24.w),
-                child: Column(
-                  children: [
-                    SizedBox(height: 8.h),
-                    Text('${_index + 1} / $total',
-                        style: TextStyle(
-                            fontSize: 14.sp, color: AppColors.lavender)),
-                    SizedBox(height: 20.h),
-                    Expanded(
-                      child: BouncyTap(
-                        onTap: _flip,
-                        scale: 0.98,
-                        child: Container(
-                          width: double.infinity,
-                          alignment: Alignment.center,
-                          padding: EdgeInsets.all(24.w),
-                          decoration: BoxDecoration(
-                            gradient: _showEnglish
-                                ? AppColors.primaryButton
-                                : null,
-                            color: _showEnglish ? null : Colors.white,
-                            borderRadius: BorderRadius.circular(18.r),
-                            boxShadow: AppColors.softShadow(),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _showEnglish ? '영어' : '뜻',
-                                style: TextStyle(
-                                  fontSize: 13.sp,
-                                  color: _showEnglish
-                                      ? Colors.white70
-                                      : AppColors.lavender,
-                                ),
-                              ),
-                              SizedBox(height: 16.h),
-                              Text(
-                                _showEnglish ? word.english : word.korean,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 30.sp,
-                                  color: _showEnglish
-                                      ? Colors.white
-                                      : AppColors.ink,
-                                ),
-                              ),
-                              SizedBox(height: 20.h),
-                              Text(
-                                _showEnglish ? '카드를 탭하면 뜻으로' : '카드를 탭하면 영어로',
-                                style: TextStyle(
-                                  fontSize: 12.sp,
-                                  color: _showEnglish
-                                      ? Colors.white70
-                                      : AppColors.lavender,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 20.h),
+          child: Column(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4.r),
+                child: LinearProgressIndicator(
+                  value: (_index + 1) / total,
+                  minHeight: 6.h,
+                  backgroundColor: AppColors.fieldBg,
+                  valueColor: AlwaysStoppedAnimation(AppColors.pink),
+                ),
+              ),
+              SizedBox(height: 20.h),
+              Expanded(
+                child: BouncyTap(
+                  onTap: _flip,
+                  scale: 0.98,
+                  child: Container(
+                    width: double.infinity,
+                    alignment: Alignment.center,
+                    padding: EdgeInsets.all(24.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24.r),
+                      border: Border.all(color: AppColors.border),
+                      boxShadow: AppColors.softShadow(blur: 20, y: 6),
                     ),
-                    SizedBox(height: 20.h),
-                    Row(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _index > 0 ? _prev : null,
-                            style: OutlinedButton.styleFrom(
-                              shape: const StadiumBorder(),
-                              padding: EdgeInsets.symmetric(vertical: 14.h),
-                              side: BorderSide(color: AppColors.pinkSoft),
-                            ),
-                            child: const Text('이전'),
+                        Text(
+                          _showKorean ? '뜻' : '영어',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.hint,
                           ),
                         ),
-                        SizedBox(width: 12.w),
-                        Expanded(
-                          flex: 2,
-                          child: _index < total - 1
-                              ? GradientButton(
-                                  label: '다음',
-                                  icon: Icons.arrow_forward_rounded,
-                                  onPressed: _next,
-                                )
-                              : GradientButton(
-                                  label: '완료',
-                                  icon: Icons.check_rounded,
-                                  onPressed: () => Navigator.of(context).pop(),
-                                ),
+                        SizedBox(height: 18.h),
+                        Text(
+                          _showKorean ? word.korean : word.english,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: _showKorean ? 30.sp : 38.sp,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                        SizedBox(height: 24.h),
+                        Text(
+                          _showKorean ? '카드를 탭하면 영어가 보여요' : '카드를 탭하면 뜻이 보여요',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: AppColors.hint,
+                          ),
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              SizedBox(height: 20.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: _CardButton(
+                      label: '아직 헷갈려요',
+                      bg: AppColors.fieldBg,
+                      fg: AppColors.grayText,
+                      onTap: () => _advance(memorized: false),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: _CardButton(
+                      label: '외웠어요!',
+                      bg: AppColors.pink,
+                      fg: Colors.white,
+                      onTap: () => _advance(memorized: true),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _CardButton extends StatelessWidget {
+  const _CardButton({
+    required this.label,
+    required this.bg,
+    required this.fg,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color bg;
+  final Color fg;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 54.h,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                fontSize: 15.sp, fontWeight: FontWeight.w700, color: fg)),
       ),
     );
   }
