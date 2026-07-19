@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/utils/date_format.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/word_tile.dart';
 import '../../../models/app_user.dart';
 import '../../exam/repositories/exam_repository.dart';
 import '../../exam/views/session_monitor_view.dart';
@@ -56,26 +57,9 @@ class WordSetDetailView extends StatelessWidget {
             child: ListView.separated(
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
               itemCount: set.words.length,
-              separatorBuilder: (_, _) => Divider(height: 1.h),
-              itemBuilder: (context, index) {
-                final word = set.words[index];
-                return ListTile(
-                  dense: true,
-                  leading: Text(
-                    '${index + 1}',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  title: Text(
-                    word.english,
-                    style: theme.textTheme.bodyLarge
-                        ?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  trailing: Text(
-                    word.korean,
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                );
-              },
+              separatorBuilder: (_, _) => SizedBox(height: 8.h),
+              itemBuilder: (context, index) =>
+                  WordTile(word: set.words[index], index: index + 1),
             ),
           ),
         ],

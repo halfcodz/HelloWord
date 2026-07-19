@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/web_theme.dart';
 import 'app_theme.dart';
 
 /// 선택한 테마 팔레트를 보관하고 기기에 저장한다.
@@ -22,6 +23,7 @@ class ThemeController extends ChangeNotifier {
       // 저장소 접근 실패 시 기본값.
     }
     AppColors.apply(palette);
+    applyWebThemeColor(AppColors.background.colors.first);
     return ThemeController._(palette);
   }
 
@@ -29,6 +31,7 @@ class ThemeController extends ChangeNotifier {
     if (_palette == palette) return;
     _palette = palette;
     AppColors.apply(palette);
+    applyWebThemeColor(AppColors.background.colors.first);
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();

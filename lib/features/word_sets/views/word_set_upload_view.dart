@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/word_tile.dart';
 import '../../../models/app_user.dart';
 import '../repositories/word_set_repository.dart';
 import '../viewmodels/word_set_upload_viewmodel.dart';
@@ -171,27 +172,21 @@ class _UploadScreenState extends State<_UploadScreen> {
             ),
           ),
         ),
-        SliverList.separated(
-          itemCount: viewModel.words.length,
-          separatorBuilder: (_, _) => Divider(height: 1.h),
-          itemBuilder: (context, index) {
-            final word = viewModel.words[index];
-            return ListTile(
-              dense: true,
-              leading: Text('${index + 1}',
-                  style: Theme.of(context).textTheme.bodySmall),
-              title: Text(
-                word.english,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(word.korean),
+        SliverPadding(
+          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          sliver: SliverList.separated(
+            itemCount: viewModel.words.length,
+            separatorBuilder: (_, _) => SizedBox(height: 8.h),
+            itemBuilder: (context, index) => WordTile(
+              word: viewModel.words[index],
+              index: index + 1,
               trailing: IconButton(
                 icon: Icon(Icons.close, size: 18.sp),
                 tooltip: '이 단어 제외',
                 onPressed: () => viewModel.removeWordAt(index),
               ),
-            );
-          },
+            ),
+          ),
         ),
         SliverToBoxAdapter(child: SizedBox(height: 16.h)),
       ],

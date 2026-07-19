@@ -50,14 +50,12 @@ class _MainShellState extends State<MainShell> {
         pages: [
           CalendarHomeView(user: user),
           WordSetListView(user: user, title: '공부자료', enableAdd: true),
-          WordSetListView(user: user, title: '시험 내기', enableAdd: false),
           ChatListView(user: user),
           ProfileView(user: user),
         ],
         items: const [
           _NavItem(Icons.home_rounded, '홈'),
           _NavItem(Icons.folder_rounded, '자료'),
-          _NavItem(Icons.quiz_rounded, '시험'),
           _NavItem(Icons.chat_bubble_rounded, '채팅'),
           _NavItem(Icons.person_rounded, '내 정보'),
         ],
