@@ -37,73 +37,44 @@ class _TodoHomeViewState extends State<TodoHomeView> {
     super.dispose();
   }
 
-  void _openAddSheet() {
+  void _openAddDialog() {
     _addController.clear();
-    showModalBottomSheet<void>(
+    showDialog<void>(
       context: context,
-      isScrollControlled: true, // 키보드 위로 올라오게
-      backgroundColor: AppColors.cream,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18.r)),
-      ),
-      builder: (sheetContext) {
-        // 키보드 인셋은 스크롤 영역 '바깥'에만 준다.
-        // 이렇게 해야 입력칸이 키보드 위로 밀려 올라가면서도
-        // 내용이 화면 위로 잘리지 않는다.
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('${_selectedDay.month}월 ${_selectedDay.day}일 할 일',
+              style: TextStyle(
+                  fontSize: 17.sp,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink)),
+          content: TextField(
+            controller: _addController,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _add(dialogContext),
+            decoration: const InputDecoration(hintText: '무엇을 할까요?'),
           ),
-          child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(20.w, 14.h, 20.w, 20.h),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40.w,
-                    height: 4.h,
-                    decoration: BoxDecoration(
-                      color: AppColors.border,
-                      borderRadius: BorderRadius.circular(2.r),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 16.h),
-                Text('${_selectedDay.month}월 ${_selectedDay.day}일 할 일',
-                    style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.ink)),
-                SizedBox(height: 14.h),
-                TextField(
-                  controller: _addController,
-                  autofocus: true,
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _add(sheetContext),
-                  decoration: const InputDecoration(hintText: '무엇을 할까요?'),
-                ),
-                SizedBox(height: 14.h),
-                FilledButton(
-                  onPressed: () => _add(sheetContext),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 10.h),
-                    child: const Text('추가'),
-                  ),
-                ),
-              ],
+          actionsPadding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 12.h),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('취소'),
             ),
-          ),
+            FilledButton(
+              onPressed: () => _add(dialogContext),
+              child: const Text('추가'),
+            ),
+          ],
         );
       },
     );
   }
 
-  Future<void> _add(BuildContext sheetContext) async {
+  Future<void> _add(BuildContext dialogContext) async {
     final text = _addController.text.trim();
     if (text.isEmpty) return;
-    Navigator.of(sheetContext).pop();
+    Navigator.of(dialogContext).pop();
     try {
       await _repo.add(uid: widget.user.uid, text: text, date: _selectedDay);
     } catch (_) {
@@ -133,7 +104,7 @@ class _TodoHomeViewState extends State<TodoHomeView> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _openAddSheet,
+        onPressed: _openAddDialog,
         child: const Icon(Icons.add),
       ),
       body: SafeArea(
