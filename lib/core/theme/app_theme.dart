@@ -81,6 +81,21 @@ class AppColors {
   static const Color cream = Colors.white; // 다이얼로그/시트 흰색
   static const Color ink = Color(0xFF191F28); // 거의 검정 텍스트
 
+  // ── 디자인 토큰(HelloWord 토스풍) ──
+  static const Color grayText = Color(0xFF4E5968); // 진한 보조 텍스트
+  static const Color gray = Color(0xFF8B95A1); // 보조 텍스트
+  static const Color hint = Color(0xFFB0B8C1); // 힌트/비활성
+  static const Color rowBg = Color(0xFFF8F9FA); // 리스트 행 배경
+  static const Color fieldBg = Color(0xFFF2F4F6); // 입력/칩 배경
+  static const Color border = Color(0xFFE5E8EB); // 얇은 테두리
+  static const Color blueSoft = Color(0xFFE8F3FF); // 블루 소프트
+  static const Color green = Color(0xFF20C997); // 접속/정답
+  static const Color greenSoft = Color(0xFFE6FCF5);
+  static const Color danger = Color(0xFFFF4D6D); // 배지/에러
+  static const Color dangerSoft = Color(0xFFFFEBEE);
+  static const Color orangeSoft = Color(0xFFFFF0E1); // 동생 아바타 배경
+  static const Color sunday = Color(0xFFFF6B8A); // 달력 일요일
+
   static void apply(AppPalette palette) {
     final s = _specs[palette]!;
     pink = s.primary;

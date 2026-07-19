@@ -165,17 +165,16 @@ class _AddFriendButton extends StatelessWidget {
             child: Container(
               width: 52.w,
               height: 52.w,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
+              decoration: const BoxDecoration(
+                color: AppColors.fieldBg,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.pinkSoft, width: 2),
               ),
-              child: Icon(Icons.add, color: AppColors.pink, size: 24.sp),
+              child: Icon(Icons.add, color: AppColors.gray, size: 22.sp),
             ),
           ),
           SizedBox(height: 4.h),
           Text(label,
-              style: TextStyle(fontSize: 11.sp, color: AppColors.lavender)),
+              style: TextStyle(fontSize: 11.sp, color: AppColors.hint)),
         ],
       ),
     );

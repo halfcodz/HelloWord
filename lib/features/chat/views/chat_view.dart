@@ -73,7 +73,9 @@ class _ChatViewState extends State<ChatView> {
         child: Column(
           children: [
             Expanded(
-              child: StreamBuilder<List<ChatMessage>>(
+              child: ColoredBox(
+                color: AppColors.rowBg,
+                child: StreamBuilder<List<ChatMessage>>(
                 stream: _repository.watchMessages(_roomId),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
@@ -82,9 +84,9 @@ class _ChatViewState extends State<ChatView> {
                   final messages = snapshot.data!;
                   if (messages.isEmpty) {
                     return Center(
-                      child: Text('첫 메시지를 보내보세요 💕',
+                      child: Text('첫 메시지를 보내보세요',
                           style: TextStyle(
-                              fontSize: 14.sp, color: AppColors.lavender)),
+                              fontSize: 14.sp, color: AppColors.gray)),
                     );
                   }
                   _scrollToBottom();
@@ -101,6 +103,7 @@ class _ChatViewState extends State<ChatView> {
                     },
                   );
                 },
+              ),
               ),
             ),
             _InputBar(controller: _controller, onSend: _send),
@@ -126,20 +129,28 @@ class _Bubble extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
         constraints: BoxConstraints(maxWidth: 260.w),
         decoration: BoxDecoration(
-          gradient: isMine ? AppColors.primaryButton : null,
-          color: isMine ? null : Colors.white,
+          color: isMine ? AppColors.pink : Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(18.r),
-            topRight: Radius.circular(18.r),
-            bottomLeft: Radius.circular(isMine ? 18.r : 4.r),
-            bottomRight: Radius.circular(isMine ? 4.r : 18.r),
+            topLeft: Radius.circular(isMine ? 18.r : 4.r),
+            topRight: Radius.circular(isMine ? 4.r : 18.r),
+            bottomLeft: Radius.circular(18.r),
+            bottomRight: Radius.circular(18.r),
           ),
-          boxShadow: AppColors.softShadow(blur: 8, y: 3),
+          boxShadow: isMine
+              ? null
+              : [
+                  BoxShadow(
+                    color: AppColors.ink.withValues(alpha: 0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
         ),
         child: Text(
           text,
           style: TextStyle(
             fontSize: 14.sp,
+            height: 1.35,
             color: isMine ? Colors.white : AppColors.ink,
           ),
         ),
