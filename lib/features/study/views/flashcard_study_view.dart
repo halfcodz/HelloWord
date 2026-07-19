@@ -93,7 +93,7 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
                                 ? AppColors.primaryButton
                                 : null,
                             color: _showEnglish ? null : Colors.white,
-                            borderRadius: BorderRadius.circular(28.r),
+                            borderRadius: BorderRadius.circular(18.r),
                             boxShadow: AppColors.softShadow(),
                           ),
                           child: Column(

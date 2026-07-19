@@ -83,7 +83,7 @@ class _SelfQuizViewState extends State<SelfQuizView> {
                           horizontal: 20.w, vertical: 36.h),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(28.r),
+                        borderRadius: BorderRadius.circular(18.r),
                         boxShadow: AppColors.softShadow(),
                       ),
                       child: Column(
@@ -204,7 +204,7 @@ class _ResultScaffold extends StatelessWidget {
                       EdgeInsets.symmetric(horizontal: 28.w, vertical: 14.h),
                   decoration: BoxDecoration(
                     gradient: AppColors.primaryButton,
-                    borderRadius: BorderRadius.circular(24.r),
+                    borderRadius: BorderRadius.circular(16.r),
                     boxShadow: AppColors.softShadow(),
                   ),
                   child: Text('$score / $total 개 맞았어요',

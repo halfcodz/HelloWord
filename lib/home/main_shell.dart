@@ -139,8 +139,8 @@ class _BlingBottomBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(26.r),
-          topRight: Radius.circular(26.r),
+          topLeft: Radius.circular(16.r),
+          topRight: Radius.circular(16.r),
         ),
         boxShadow: [
           BoxShadow(

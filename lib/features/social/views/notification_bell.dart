@@ -21,7 +21,7 @@ class NotificationBell extends StatelessWidget {
       context: context,
       backgroundColor: AppColors.cream,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18.r)),
       ),
       builder: (_) => SafeArea(
         child: Padding(

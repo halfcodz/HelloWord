@@ -39,7 +39,7 @@ class _StudyBody extends StatelessWidget {
       context: context,
       backgroundColor: AppColors.cream,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18.r)),
       ),
       builder: (sheetContext) => SafeArea(
         child: Padding(
@@ -219,7 +219,7 @@ class _StudyCard extends StatelessWidget {
         padding: EdgeInsets.all(18.w),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(22.r),
+          borderRadius: BorderRadius.circular(16.r),
           boxShadow: AppColors.softShadow(blur: 16, y: 7),
         ),
         child: Row(

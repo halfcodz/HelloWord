@@ -160,7 +160,7 @@ class _WaitingView extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: 36.w, vertical: 24.h),
             decoration: BoxDecoration(
               gradient: AppColors.primaryButton,
-              borderRadius: BorderRadius.circular(24.r),
+              borderRadius: BorderRadius.circular(16.r),
               boxShadow: AppColors.softShadow(),
             ),
             child: Text(
@@ -347,7 +347,7 @@ class _AnswerRow extends StatelessWidget {
       );
     } else if (typing.isNotEmpty) {
       trailing = Text(
-        '✏️ $typing',
+        typing,
         style: theme.textTheme.bodyMedium?.copyWith(
           fontStyle: FontStyle.italic,
           color: theme.colorScheme.primary,

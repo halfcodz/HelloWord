@@ -171,7 +171,7 @@ class _DayDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: AppColors.cream,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(28.r),
+        borderRadius: BorderRadius.circular(18.r),
       ),
       child: Padding(
         padding: EdgeInsets.all(20.w),

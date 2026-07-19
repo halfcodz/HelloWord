@@ -46,7 +46,7 @@ class WordSetDetailView extends StatelessWidget {
                 if (set.message.trim().isNotEmpty) ...[
                   SizedBox(height: 12.h),
                   Text(
-                    '💬 ${set.message}',
+                    set.message,
                     style: theme.textTheme.bodyMedium,
                   ),
                 ],

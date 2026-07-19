@@ -44,7 +44,7 @@ class _TodoHomeViewState extends State<TodoHomeView> {
       isScrollControlled: true, // 키보드 위로 올라오게
       backgroundColor: AppColors.cream,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18.r)),
       ),
       builder: (sheetContext) {
         return Padding(

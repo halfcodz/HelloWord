@@ -19,7 +19,7 @@ class WordSetListView extends StatelessWidget {
   const WordSetListView({
     super.key,
     required this.user,
-    this.title = '단어 세트 📚',
+    this.title = '단어 세트',
     this.enableAdd = true,
   });
 
@@ -159,7 +159,7 @@ class _WordSetCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24.r),
+          borderRadius: BorderRadius.circular(16.r),
           boxShadow: AppColors.softShadow(blur: 20, y: 8),
         ),
         padding: EdgeInsets.all(18.w),
@@ -221,7 +221,7 @@ class _WordSetCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14.r),
                 ),
                 child: Text(
-                  '💬 ${set.message}',
+                  set.message,
                   style: TextStyle(fontSize: 13.sp, color: AppColors.ink),
                 ),
               ),

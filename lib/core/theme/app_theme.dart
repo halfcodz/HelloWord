@@ -71,9 +71,9 @@ class AppColors {
     colors: [Color(0xFF3182F6), Color(0xFF3182F6)],
   );
 
-  // 배경: 평평한 밝은 회색.
+  // 배경: 흰색.
   static LinearGradient background = const LinearGradient(
-    colors: [Color(0xFFF2F4F6), Color(0xFFF2F4F6)],
+    colors: [Colors.white, Colors.white],
   );
 
   static const Color mint = Color(0xFF20C997);
@@ -90,10 +90,10 @@ class AppColors {
     // 배경/보조 회색은 팔레트와 무관하게 유지.
   }
 
-  /// 아주 은은한 회색 그림자(토스풍 카드).
-  static List<BoxShadow> softShadow({double blur = 12, double y = 3}) => [
+  /// 아주 은은한 회색 그림자(흰 배경 위에서도 보이도록).
+  static List<BoxShadow> softShadow({double blur = 16, double y = 4}) => [
         BoxShadow(
-          color: const Color(0xFF191F28).withValues(alpha: 0.05),
+          color: const Color(0xFF191F28).withValues(alpha: 0.08),
           blurRadius: blur,
           offset: Offset(0, y),
         ),
@@ -138,7 +138,7 @@ class AppTheme {
         },
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFFF2F4F6),
+        backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         elevation: 0,
