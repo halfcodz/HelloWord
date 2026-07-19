@@ -62,5 +62,11 @@ class WordSetRepository {
     return ref.id;
   }
 
+  /// id로 단어 세트 한 개를 가져온다. 없으면 null.
+  Future<WordSet?> getById(String id) async {
+    final doc = await _collection.doc(id).get();
+    return doc.exists ? WordSet.fromDoc(doc) : null;
+  }
+
   Future<void> delete(String id) => _collection.doc(id).delete();
 }

@@ -56,6 +56,55 @@ class _UploadScreenState extends State<_UploadScreen> {
     }
   }
 
+  Future<void> _openPasteDialog(WordSetUploadViewModel viewModel) async {
+    final controller = TextEditingController();
+    final text = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('표 붙여넣기'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'GPT나 엑셀에서 만든 단어 표를 그대로 붙여넣으세요.\n(영어 - 뜻 순서, 표·목록 모두 인식돼요)',
+                style: TextStyle(fontSize: 13.sp, color: AppColors.gray),
+              ),
+              SizedBox(height: 12.h),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                maxLines: 8,
+                minLines: 5,
+                decoration: const InputDecoration(
+                  hintText: '| apple | 사과 |\n| banana | 바나나 |\n또는\napple, 사과\nbanana, 바나나',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(controller.text),
+            child: const Text('불러오기'),
+          ),
+        ],
+      ),
+    );
+    if (text == null || text.trim().isEmpty) return;
+    viewModel.parseFromText(text);
+    if (_titleController.text.trim().isEmpty && viewModel.title.isNotEmpty) {
+      _titleController.text = viewModel.title;
+    }
+  }
+
   Future<void> _pickDate(WordSetUploadViewModel viewModel) async {
     final picked = await showDatePicker(
       context: context,
@@ -111,6 +160,7 @@ class _UploadScreenState extends State<_UploadScreen> {
             ? viewModel.errorMessage
             : null,
         onPick: () => _pickFile(viewModel),
+        onPaste: () => _openPasteDialog(viewModel),
       );
     }
 
@@ -235,9 +285,14 @@ class _RecipientPicker extends StatelessWidget {
 }
 
 class _PickPrompt extends StatelessWidget {
-  const _PickPrompt({required this.onPick, this.errorMessage});
+  const _PickPrompt({
+    required this.onPick,
+    required this.onPaste,
+    this.errorMessage,
+  });
 
   final VoidCallback onPick;
+  final VoidCallback onPaste;
   final String? errorMessage;
 
   @override
@@ -261,11 +316,11 @@ class _PickPrompt extends StatelessWidget {
                   size: 54.sp, color: Colors.white),
             ),
             SizedBox(height: 20.h),
-            Text('단어 파일을 올려주세요 📄',
+            Text('단어를 불러와 주세요 📄',
                 style: TextStyle(fontSize: 18.sp, color: AppColors.ink)),
             SizedBox(height: 10.h),
             Text(
-              'csv · txt · 엑셀(xlsx) 파일을 지원해요.\n각 줄이 "영단어-해석" 형식이면 됩니다.\n(구분자는 하이픈 -, 쉼표 , 탭 모두 가능)',
+              'GPT·엑셀에서 만든 표를 복사해 붙여넣거나,\ncsv·txt·엑셀(xlsx) 파일을 올릴 수 있어요.\n("영어 - 뜻" 순서면 표·목록 모두 인식돼요)',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14.sp, color: AppColors.lavender),
             ),
@@ -288,12 +343,18 @@ class _PickPrompt extends StatelessWidget {
             ],
             SizedBox(height: 28.h),
             SizedBox(
-              width: 200.w,
+              width: 220.w,
               child: GradientButton(
-                label: '파일 선택',
-                icon: Icons.folder_open_rounded,
-                onPressed: onPick,
+                label: '표 붙여넣기',
+                icon: Icons.content_paste_rounded,
+                onPressed: onPaste,
               ),
+            ),
+            SizedBox(height: 10.h),
+            TextButton.icon(
+              onPressed: onPick,
+              icon: const Icon(Icons.folder_open_rounded),
+              label: const Text('파일에서 불러오기'),
             ),
           ],
         ),

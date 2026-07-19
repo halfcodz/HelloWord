@@ -137,6 +137,29 @@ class WordSetUploadViewModel extends ChangeNotifier {
     }
   }
 
+  /// GPT 등에서 복사한 표 텍스트를 붙여넣어 단어를 만든다.
+  /// 저장 성공 흐름은 파일 업로드와 동일하다.
+  void parseFromText(String text) {
+    _status = UploadStatus.parsing;
+    _errorMessage = null;
+    notifyListeners();
+
+    final parsed = WordFileParser.parseText(text);
+    if (parsed.pairs.isEmpty) {
+      _status = UploadStatus.error;
+      _errorMessage =
+          '유효한 단어를 찾지 못했어요. "영어 - 뜻" 형태의 표나 목록인지 확인해 주세요.';
+      notifyListeners();
+      return;
+    }
+
+    _fileName = '붙여넣은 단어';
+    _words = parsed.pairs;
+    _skippedLines = parsed.skippedLines;
+    _status = UploadStatus.ready;
+    notifyListeners();
+  }
+
   void setTitle(String value) {
     _title = value;
     notifyListeners();

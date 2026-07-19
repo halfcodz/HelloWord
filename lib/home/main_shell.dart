@@ -7,6 +7,7 @@ import '../features/chat/repositories/chat_repository.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/bouncy_tap.dart';
 import '../features/chat/views/chat_list_view.dart';
+import '../features/exam/views/exam_dashboard_view.dart';
 import '../features/exam/views/session_join_view.dart';
 import '../features/profile/views/profile_view.dart';
 import '../features/study/views/study_list_view.dart';
@@ -47,7 +48,7 @@ class _MainShellState extends State<MainShell> {
     if (user.role == UserRole.elder) {
       return (
         pages: [
-          TodoHomeView(user: user),
+          ExamDashboardView(user: user),
           WordSetListView(user: user, title: '공부자료', enableAdd: true),
           ChatListView(user: user),
           ProfileView(user: user),

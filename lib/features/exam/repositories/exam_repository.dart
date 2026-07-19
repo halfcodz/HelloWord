@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../word_sets/models/word_set.dart';
 import '../models/exam_answer.dart';
+import '../models/exam_plan.dart';
+import '../models/exam_result.dart';
 import '../models/exam_session.dart';
 
 /// 실시간 시험 세션에 대한 Firestore 데이터 접근 계층.
@@ -18,6 +20,12 @@ class ExamRepository {
 
   CollectionReference<Map<String, dynamic>> _answers(String sessionId) =>
       _sessions.doc(sessionId).collection('answers');
+
+  CollectionReference<Map<String, dynamic>> get _plans =>
+      _firestore.collection('examPlans');
+
+  CollectionReference<Map<String, dynamic>> get _results =>
+      _firestore.collection('examResults');
 
   String _generateJoinCode() {
     final rand = Random();
@@ -123,12 +131,105 @@ class ExamRepository {
     required String sessionId,
     required int score,
   }) async {
+    // 세션과 답안을 모아 영구 결과(examResults)로 기록한 뒤 세션 상태를 갱신한다.
+    // 세션이 나중에 삭제돼도 결과는 남아 언니가 확인할 수 있다.
+    final sessionDoc = await _sessions.doc(sessionId).get();
+    if (sessionDoc.exists) {
+      final session = ExamSession.fromDoc(sessionDoc);
+      final answersSnap = await _answers(sessionId).get();
+      final byIndex = <int, ExamAnswer>{};
+      for (final doc in answersSnap.docs) {
+        final a = ExamAnswer.fromDoc(doc);
+        byIndex[a.index] = a;
+      }
+      final items = <ExamResultItem>[];
+      for (var i = 0; i < session.words.length; i++) {
+        final w = session.words[i];
+        final a = byIndex[i];
+        items.add(ExamResultItem(
+          index: i,
+          english: w.english,
+          korean: w.korean,
+          submitted: a?.submitted ?? '',
+          correct: a?.correct ?? false,
+        ));
+      }
+      final result = ExamResult(
+        id: '',
+        hostUid: session.hostUid,
+        guestUid: session.guestUid ?? '',
+        guestName: session.guestName ?? '',
+        wordSetId: session.wordSetId,
+        title: session.title,
+        total: session.words.length,
+        score: score,
+        items: items,
+      );
+      await _results.add(result.toMap());
+      // 같은 단어세트의 예정 시험이 있으면 완료 처리.
+      await _markPlansDone(
+          hostUid: session.hostUid, wordSetId: session.wordSetId);
+    }
+
     await _sessions.doc(sessionId).update({
       'status': SessionStatus.finished.name,
       'score': score,
       'finishedAt': FieldValue.serverTimestamp(),
     });
   }
+
+  // ── 예정된 시험(examPlans) ─────────────────────────
+
+  Future<void> createPlan(ExamPlan plan) => _plans.add(plan.toMap());
+
+  Stream<List<ExamPlan>> watchPlansByHost(String uid) => _plans
+      .where('hostUid', isEqualTo: uid)
+      .snapshots()
+      .map((snap) {
+        final list = snap.docs.map(ExamPlan.fromDoc).toList();
+        list.sort((a, b) => a.scheduledDate.compareTo(b.scheduledDate));
+        return list;
+      });
+
+  Stream<List<ExamPlan>> watchPlansForGuest(String uid) => _plans
+      .where('guestUids', arrayContains: uid)
+      .snapshots()
+      .map((snap) {
+        final list = snap.docs.map(ExamPlan.fromDoc).toList();
+        list.sort((a, b) => a.scheduledDate.compareTo(b.scheduledDate));
+        return list;
+      });
+
+  Future<void> deletePlan(String id) => _plans.doc(id).delete();
+
+  Future<void> _markPlansDone({
+    required String hostUid,
+    required String wordSetId,
+  }) async {
+    // 단일 필드(hostUid) 쿼리 후 클라이언트에서 걸러 복합 색인을 피한다.
+    final snap = await _plans.where('hostUid', isEqualTo: hostUid).get();
+    for (final doc in snap.docs) {
+      final plan = ExamPlan.fromDoc(doc);
+      if (plan.wordSetId == wordSetId && !plan.done) {
+        await doc.reference.update({'done': true});
+      }
+    }
+  }
+
+  // ── 시험 결과(examResults) ─────────────────────────
+
+  Stream<List<ExamResult>> watchResultsByHost(String uid) => _results
+      .where('hostUid', isEqualTo: uid)
+      .snapshots()
+      .map((snap) {
+        final list = snap.docs.map(ExamResult.fromDoc).toList();
+        list.sort((a, b) {
+          final ad = a.createdAt ?? DateTime(2000);
+          final bd = b.createdAt ?? DateTime(2000);
+          return bd.compareTo(ad); // 최신순
+        });
+        return list;
+      });
 
   /// 동생이 시험(공부) 중인지 상태를 표시한다. 친구 프로필의 불꽃 표시에 쓰인다.
   Future<void> setStudying({

@@ -61,6 +61,10 @@ class SessionExamViewModel extends ChangeNotifier {
     });
   }
 
+  /// 채점용 정규화: 소문자 + 앞뒤·중간 공백 제거(대소문자·공백 무시).
+  static String _normalize(String s) =>
+      s.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
+
   /// 답을 제출하고 다음 문제로 넘어간다(마지막이면 종료).
   Future<void> submit(String answer) async {
     final word = currentWord;
@@ -68,8 +72,7 @@ class SessionExamViewModel extends ChangeNotifier {
     if (word == null || session == null) return;
 
     _debounce?.cancel();
-    final correct =
-        answer.trim().toLowerCase() == word.english.trim().toLowerCase();
+    final correct = _normalize(answer) == _normalize(word.english);
     if (correct) _correctCount++;
 
     await _repository.submitAnswer(

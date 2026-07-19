@@ -58,20 +58,61 @@ class WordFileParser {
           '﻿',
           '',
         );
+    return parseText(content);
+  }
+
+  /// GPT/스프레드시트 등에서 복사한 텍스트(표)를 [WordPair] 목록으로 변환한다.
+  ///
+  /// 지원 형식:
+  /// - 마크다운 표: `| apple | 사과 |` (구분선 `|---|`·헤더 자동 제외)
+  /// - 탭/쉼표/하이픈으로 구분된 각 줄: `apple\t사과`, `apple, 사과`, `apple - 사과`
+  static ParsedWords parseText(String content) {
     final pairs = <WordPair>[];
     var skipped = 0;
 
     for (final rawLine in content.split(RegExp(r'\r?\n'))) {
       final line = rawLine.trim();
       if (line.isEmpty) continue;
-      final pair = _splitLine(line);
+      if (_isMarkdownSeparator(line)) continue; // |---|---| 구분선
+      final pair =
+          line.contains('|') ? _splitPipe(line) : _splitLine(line);
       if (pair == null) {
         skipped++;
         continue;
       }
+      if (_looksLikeHeader(pair)) continue; // 영어/뜻 같은 헤더행
       pairs.add(pair);
     }
     return ParsedWords(pairs: pairs, skippedLines: skipped);
+  }
+
+  /// `| apple | 사과 |` 형태의 마크다운/파이프 표 한 줄을 분리한다.
+  static WordPair? _splitPipe(String line) {
+    final cells = line
+        .split('|')
+        .map((c) => c.trim())
+        .where((c) => c.isNotEmpty)
+        .toList();
+    if (cells.length < 2) return null;
+    final en = cells[0];
+    final ko = cells[1];
+    if (en.isEmpty || ko.isEmpty) return null;
+    return WordPair(english: en, korean: ko);
+  }
+
+  /// `|---|:--:|` 같은 마크다운 표 구분선인지.
+  static bool _isMarkdownSeparator(String line) {
+    final stripped = line.replaceAll(RegExp(r'[\s|:\-]'), '');
+    return stripped.isEmpty && line.contains('-');
+  }
+
+  /// `영어 | 뜻` 같은 헤더행으로 보이면 제외한다.
+  static bool _looksLikeHeader(WordPair pair) {
+    const enHeaders = {'영어', '영단어', '단어', 'english', 'word', 'eng', '스펠링'};
+    const koHeaders = {'뜻', '의미', '해석', '한글', '뜻(한글)', 'korean', 'meaning'};
+    final en = pair.english.toLowerCase();
+    final ko = pair.korean.toLowerCase();
+    return enHeaders.contains(en) && koHeaders.contains(ko);
   }
 
   static WordPair? _splitLine(String line) {
