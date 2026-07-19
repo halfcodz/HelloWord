@@ -47,37 +47,53 @@ class _TodoHomeViewState extends State<TodoHomeView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(18.r)),
       ),
       builder: (sheetContext) {
+        // 키보드 인셋은 스크롤 영역 '바깥'에만 준다.
+        // 이렇게 해야 입력칸이 키보드 위로 밀려 올라가면서도
+        // 내용이 화면 위로 잘리지 않는다.
         return Padding(
-          // 키보드 높이만큼 아래 여백을 줘서 입력칸이 가려지지 않게 한다.
           padding: EdgeInsets.only(
-            left: 20.w,
-            right: 20.w,
-            top: 20.h,
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20.h,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('${_selectedDay.month}월 ${_selectedDay.day}일 할 일',
-                  style: TextStyle(fontSize: 16.sp, color: AppColors.ink)),
-              SizedBox(height: 14.h),
-              TextField(
-                controller: _addController,
-                autofocus: true,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _add(sheetContext),
-                decoration: const InputDecoration(hintText: '무엇을 할까요?'),
-              ),
-              SizedBox(height: 14.h),
-              FilledButton(
-                onPressed: () => _add(sheetContext),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 10.h),
-                  child: const Text('추가'),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(20.w, 14.h, 20.w, 20.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                SizedBox(height: 16.h),
+                Text('${_selectedDay.month}월 ${_selectedDay.day}일 할 일',
+                    style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink)),
+                SizedBox(height: 14.h),
+                TextField(
+                  controller: _addController,
+                  autofocus: true,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _add(sheetContext),
+                  decoration: const InputDecoration(hintText: '무엇을 할까요?'),
+                ),
+                SizedBox(height: 14.h),
+                FilledButton(
+                  onPressed: () => _add(sheetContext),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10.h),
+                    child: const Text('추가'),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -265,7 +281,7 @@ class _TodoTile extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.cream,
             borderRadius: BorderRadius.circular(16.r),
             boxShadow: AppColors.softShadow(blur: 8, y: 3),
           ),
@@ -308,7 +324,7 @@ class _CheckCircle extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         gradient: done ? AppColors.primaryButton : null,
-        color: done ? null : Colors.white,
+        color: done ? null : AppColors.cream,
         shape: BoxShape.circle,
         border: Border.all(
           color: done ? Colors.transparent : AppColors.pinkSoft,

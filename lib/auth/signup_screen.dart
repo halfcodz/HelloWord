@@ -174,7 +174,7 @@ class _RolePicker extends StatelessWidget {
         Expanded(
           child: _RoleCard(
             mascot: '🐰',
-            label: '언니',
+            label: '웅니',
             hint: '단어를 내요',
             bg: AppColors.blueSoft,
             selected: role == UserRole.elder,
@@ -222,7 +222,7 @@ class _RoleCard extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: EdgeInsets.symmetric(vertical: 20.h),
         decoration: BoxDecoration(
-          color: selected ? AppColors.blueSoft : Colors.white,
+          color: selected ? AppColors.blueSoft : AppColors.cream,
           borderRadius: BorderRadius.circular(18.r),
           border: Border.all(
             color: selected ? AppColors.pink : AppColors.border,
