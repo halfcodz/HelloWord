@@ -11,6 +11,7 @@ import '../models/exam_answer.dart';
 import '../models/exam_session.dart';
 import '../repositories/exam_repository.dart';
 import '../viewmodels/session_host_viewmodel.dart';
+import 'exam_result_widgets.dart';
 
 /// 언니(출제자)의 실시간 감독 화면.
 class SessionMonitorView extends StatelessWidget {
@@ -128,10 +129,10 @@ class _MonitorBody extends StatelessWidget {
             context,
             viewModel,
             title: session.status == SessionStatus.finished
-                ? '시험을 닫을까요?'
+                ? '통화를 끊고 시험을 마칠까요?'
                 : '시험을 종료할까요?',
             message: session.status == SessionStatus.finished
-                ? '결과를 닫고 목록으로 돌아갑니다.'
+                ? '영상통화가 종료되고 언니·동생 모두 홈으로 이동해요.'
                 : '진행 중인 시험을 종료합니다.',
           ),
         );
@@ -223,78 +224,84 @@ class _LiveMonitor extends StatelessWidget {
 
     return Column(
       children: [
-        // 시험 진행 중에는 동생과 영상통화.
-        if (!finished)
-          CallPanel(sessionId: session.id, isCaller: true),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(16.w),
-          color: finished
-              ? theme.colorScheme.tertiaryContainer
-              : theme.colorScheme.surfaceContainerHighest,
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    finished
-                        ? '시험 완료'
-                        : '${session.guestName ?? "동생"} 응시 중',
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
+        // 영상통화는 진행 중·완료 후 모두 같은 위치에 유지해 끊기지 않게 한다.
+        CallPanel(
+          key: const ValueKey('monitor-call'),
+          sessionId: session.id,
+          isCaller: true,
+        ),
+        if (finished) ...[
+          ExamScoreBanner(
+            score: viewModel.correctCount,
+            total: session.total,
+            name: session.guestName ?? '동생',
+          ),
+          Expanded(
+            child: ExamReviewList(
+              words: session.words,
+              resolve: viewModel.answerAt,
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 12.h),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: onClose,
+                  icon: const Icon(Icons.call_end_rounded),
+                  label: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.h),
+                    child: const Text('통화 종료하고 시험 마치기'),
                   ),
-                  Text(
-                    '${viewModel.submittedCount} / ${session.total}',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                ],
-              ),
-              SizedBox(height: 8.h),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '맞은 개수: ${viewModel.correctCount}',
-                  style: theme.textTheme.bodyMedium,
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-        Expanded(
-          child: ListView.separated(
-            padding: EdgeInsets.all(12.w),
-            itemCount: session.words.length,
-            separatorBuilder: (_, _) => SizedBox(height: 8.h),
-            itemBuilder: (context, index) {
-              return _AnswerRow(
-                index: index,
-                word: session.words[index],
-                answer: viewModel.answerAt(index),
-                isCurrent: !finished && index == session.currentIndex,
-              );
-            },
+        ] else ...[
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(16.w),
+            color: theme.colorScheme.surfaceContainerHighest,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('${session.guestName ?? "동생"} 응시 중',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+                Text('${viewModel.submittedCount} / ${session.total}',
+                    style: theme.textTheme.titleMedium),
+              ],
+            ),
           ),
-        ),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.all(12.w),
-            child: finished
-                ? FilledButton(
-                    onPressed: onClose,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10.h),
-                      child: const Text('닫기'),
-                    ),
-                  )
-                : TextButton.icon(
-                    onPressed: onClose,
-                    icon: const Icon(Icons.stop_circle_outlined),
-                    label: const Text('시험 종료'),
-                  ),
+          Expanded(
+            child: ListView.separated(
+              padding: EdgeInsets.all(12.w),
+              itemCount: session.words.length,
+              separatorBuilder: (_, _) => SizedBox(height: 8.h),
+              itemBuilder: (context, index) {
+                return _AnswerRow(
+                  index: index,
+                  word: session.words[index],
+                  answer: viewModel.answerAt(index),
+                  isCurrent: index == session.currentIndex,
+                );
+              },
+            ),
           ),
-        ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.all(12.w),
+              child: TextButton.icon(
+                onPressed: onClose,
+                icon: const Icon(Icons.stop_circle_outlined),
+                label: const Text('시험 종료'),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

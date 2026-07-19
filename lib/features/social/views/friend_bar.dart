@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/toast.dart';
 import '../../../models/app_user.dart';
 import '../../chat/views/chat_view.dart';
 import '../repositories/friend_repository.dart';
@@ -39,12 +40,7 @@ class _FriendBarBody extends StatelessWidget {
   }
 
   void _showStatus(BuildContext context, AppUser user, {bool isMe = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${isMe ? "나" : user.name} · ${_statusText(user)}'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    showToast(context, '${isMe ? "나" : user.name} · ${_statusText(user)}');
   }
 
   void _openChat(BuildContext context, AppUser friend) {
@@ -108,10 +104,9 @@ class _FriendBarBody extends StatelessWidget {
       FriendAddResult.alreadyFriend => '이미 친구예요!',
       FriendAddResult.alreadyPending => '이미 초대장을 보냈어요.',
       FriendAddResult.error =>
-        '초대 저장에 실패했어요. Firestore 규칙에 friendInvites 권한이 있는지 확인해 주세요.',
+        '초대 저장에 실패했어요. (friendInvites 규칙 확인)',
     };
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    showToast(context, message, isError: result != FriendAddResult.success);
   }
 
   @override

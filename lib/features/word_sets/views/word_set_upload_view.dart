@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../core/utils/toast.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/word_tile.dart';
 import '../../../models/app_user.dart';
@@ -69,17 +71,39 @@ class _UploadScreenState extends State<_UploadScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'GPT나 엑셀에서 만든 단어 표를 그대로 붙여넣으세요.\n(영어 - 뜻 순서, 표·목록 모두 인식돼요)',
+                'GPT나 엑셀에서 만든 단어 표를 복사한 뒤,\n아래 버튼을 누르면 한 번에 붙여넣어져요.',
                 style: TextStyle(fontSize: 13.sp, color: AppColors.gray),
               ),
               SizedBox(height: 12.h),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    final data =
+                        await Clipboard.getData(Clipboard.kTextPlain);
+                    final text = data?.text ?? '';
+                    if (text.trim().isEmpty) {
+                      if (dialogContext.mounted) {
+                        showToast(dialogContext,
+                            '복사된 내용이 없어요. 표를 먼저 복사해 주세요.');
+                      }
+                      return;
+                    }
+                    controller.text = text;
+                    controller.selection = TextSelection.collapsed(
+                        offset: controller.text.length);
+                  },
+                  icon: const Icon(Icons.content_paste_rounded, size: 18),
+                  label: const Text('클립보드에서 붙여넣기'),
+                ),
+              ),
+              SizedBox(height: 10.h),
               TextField(
                 controller: controller,
-                autofocus: true,
-                maxLines: 8,
-                minLines: 5,
+                maxLines: 7,
+                minLines: 4,
                 decoration: const InputDecoration(
-                  hintText: '| apple | 사과 |\n| banana | 바나나 |\n또는\napple, 사과\nbanana, 바나나',
+                  hintText: '여기에 붙여넣어도 돼요\n예) apple, 사과',
                 ),
               ),
             ],
@@ -119,14 +143,10 @@ class _UploadScreenState extends State<_UploadScreen> {
     final success = await viewModel.save();
     if (!mounted) return;
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('단어 세트를 저장했어요!')),
-      );
       Navigator.of(context).pop();
+      showToast(context, '단어 세트를 저장했어요!');
     } else if (viewModel.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(viewModel.errorMessage!)),
-      );
+      showToast(context, viewModel.errorMessage!, isError: true);
     }
   }
 

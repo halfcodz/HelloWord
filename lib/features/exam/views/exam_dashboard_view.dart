@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_reload.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../core/utils/toast.dart';
 import '../../../models/app_user.dart';
 import '../../social/views/friend_bar.dart';
 import '../../social/views/notification_bell.dart';
@@ -30,9 +31,7 @@ class ExamDashboardView extends StatelessWidget {
     final sets = await _wordSets(context).watchByCreator(user.uid).first;
     if (!context.mounted) return;
     if (sets.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('먼저 단어 세트를 만들어 주세요. (자료 탭)')),
-      );
+      showToast(context, '먼저 단어 세트를 만들어 주세요. (자료 탭)');
       return;
     }
     final assigned = await showDialog<_Assignment>(
@@ -51,17 +50,10 @@ class ExamDashboardView extends StatelessWidget {
         wordCount: assigned.set.wordCount,
         scheduledDate: assigned.date,
       ));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('시험을 배정했어요!')),
-        );
-      }
+      if (context.mounted) showToast(context, '시험을 배정했어요!');
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('배정에 실패했어요. (Firestore 규칙에 examPlans 권한 확인)')),
-        );
+        showToast(context, '배정에 실패했어요. (examPlans 규칙 확인)', isError: true);
       }
     }
   }
@@ -70,9 +62,7 @@ class ExamDashboardView extends StatelessWidget {
     final set = await _wordSets(context).getById(plan.wordSetId);
     if (!context.mounted) return;
     if (set == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('단어 세트를 찾을 수 없어요. 삭제되었을 수 있어요.')),
-      );
+      showToast(context, '단어 세트를 찾을 수 없어요. 삭제되었을 수 있어요.', isError: true);
       return;
     }
     Navigator.of(context).push(MaterialPageRoute(

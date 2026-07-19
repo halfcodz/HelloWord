@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
@@ -11,6 +10,7 @@ import '../../chat/views/chat_view.dart';
 import '../models/exam_session.dart';
 import '../repositories/exam_repository.dart';
 import '../viewmodels/session_exam_viewmodel.dart';
+import 'exam_result_widgets.dart';
 
 /// 동생(응시자)의 시험 응시 화면.
 class SessionExamView extends StatelessWidget {
@@ -46,6 +46,7 @@ class _ExamBody extends StatefulWidget {
 
 class _ExamBodyState extends State<_ExamBody> {
   final _answerController = TextEditingController();
+  int _shownIndex = -1;
   bool _leaving = false;
 
   @override
@@ -54,37 +55,72 @@ class _ExamBodyState extends State<_ExamBody> {
     super.dispose();
   }
 
-  Future<void> _submit(SessionExamViewModel viewModel) async {
-    if (_answerController.text.trim().isEmpty) return;
-    await viewModel.submit(_answerController.text);
-    _answerController.clear();
+  /// 현재 문제로 이동할 때 입력칸을 그 문제의 저장된 답으로 채운다.
+  void _syncField(SessionExamViewModel vm) {
+    if (_shownIndex != vm.currentIndex) {
+      _shownIndex = vm.currentIndex;
+      _answerController.text = vm.submittedTextAt(vm.currentIndex);
+    }
   }
 
-  Future<void> _confirmEnd(SessionExamViewModel viewModel) async {
+  Future<void> _goPrev(SessionExamViewModel vm) async {
+    await vm.saveAnswer(_answerController.text);
+    vm.goTo(vm.currentIndex - 1);
+  }
+
+  Future<void> _goNext(SessionExamViewModel vm) async {
+    await vm.saveAnswer(_answerController.text);
+    vm.goTo(vm.currentIndex + 1);
+  }
+
+  Future<void> _finish(SessionExamViewModel vm) async {
+    await vm.saveAnswer(_answerController.text);
+    if (!mounted) return;
+    if (!vm.allAnswered) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('아직 안 푼 문제가 있어요'),
+          content: Text(
+              '${vm.total - vm.submittedCount}문제가 비어 있어요. 그래도 완료할까요?'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('더 풀기')),
+            FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('완료')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+    await vm.finishExam();
+  }
+
+  Future<void> _confirmQuit(SessionExamViewModel vm) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('시험을 종료할까요?'),
-        content: const Text('종료하면 카메라·마이크가 꺼지고 홈으로 이동해요.'),
+        title: const Text('시험에서 나갈까요?'),
+        content: const Text('나가면 카메라·마이크가 꺼지고 홈으로 이동해요.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
-          ),
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('취소')),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('종료'),
-          ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('나가기')),
         ],
       ),
     );
     if (ok == true) {
-      await viewModel.endSession();
+      await vm.endSession();
       if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
     }
   }
 
-  /// 상대가 종료해 세션이 사라지면 자동으로 홈으로 나간다.
+  /// 언니가 종료해 세션이 사라지면 자동으로 홈으로 나간다.
   void _leaveHome() {
     if (_leaving) return;
     _leaving = true;
@@ -95,15 +131,15 @@ class _ExamBodyState extends State<_ExamBody> {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<SessionExamViewModel>();
-    final session = viewModel.session;
+    final vm = context.watch<SessionExamViewModel>();
+    final session = vm.session;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(session?.title ?? '시험'),
         automaticallyImplyLeading: false,
         actions: [
-          if (session != null && !viewModel.isFinished) ...[
+          if (session != null) ...[
             IconButton(
               tooltip: '채팅',
               icon: const Icon(Icons.chat_bubble_outline),
@@ -117,111 +153,120 @@ class _ExamBodyState extends State<_ExamBody> {
                 ),
               ),
             ),
-            IconButton(
-              tooltip: '시험 종료',
-              icon: const Icon(Icons.stop_circle_outlined),
-              onPressed: () => _confirmEnd(viewModel),
-            ),
+            if (!vm.isFinished)
+              IconButton(
+                tooltip: '나가기',
+                icon: const Icon(Icons.logout),
+                onPressed: () => _confirmQuit(vm),
+              ),
           ],
         ],
       ),
-      body: SafeArea(child: _buildBody(context, viewModel, session)),
+      body: SafeArea(child: _buildBody(context, vm, session)),
     );
   }
 
   Widget _buildBody(
     BuildContext context,
-    SessionExamViewModel viewModel,
+    SessionExamViewModel vm,
     ExamSession? session,
   ) {
-    if (!viewModel.loaded) {
+    if (!vm.loaded) {
       return const Center(child: CircularProgressIndicator());
     }
     if (session == null) {
-      // 상대(언니)가 시험을 종료해 세션이 사라진 경우 → 자동으로 홈 이동.
       _leaveHome();
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (viewModel.isFinished) {
-      return _ResultView(
-        score: session.score ?? viewModel.correctCount,
-        total: session.total,
-      );
-    }
+    // 영상통화는 응시 중·완료 후 모두 같은 위치에 유지해 끊기지 않게 한다.
+    return Column(
+      children: [
+        CallPanel(
+          key: const ValueKey('exam-call'),
+          sessionId: session.id,
+          isCaller: false,
+        ),
+        Expanded(
+          child: vm.isFinished
+              ? _buildFinished(vm, session)
+              : _buildActive(vm, session),
+        ),
+      ],
+    );
+  }
 
-    final word = viewModel.currentWord;
+  Widget _buildActive(SessionExamViewModel vm, ExamSession session) {
+    _syncField(vm);
+    final word = vm.currentWord;
     if (word == null) {
       return const Center(child: CircularProgressIndicator());
     }
+    final isLast = vm.currentIndex + 1 == vm.total;
 
-    final theme = Theme.of(context);
     return Column(
       children: [
-        // 시험 보는 동안 언니와 영상통화.
-        CallPanel(sessionId: session.id, isCaller: false),
-        LinearProgressIndicator(
-          value: session.total == 0
-              ? 0
-              : viewModel.currentIndex / session.total,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4.r),
+          child: LinearProgressIndicator(
+            value: vm.total == 0 ? 0 : (vm.currentIndex + 1) / vm.total,
+            minHeight: 5.h,
+            backgroundColor: AppColors.fieldBg,
+            valueColor: AlwaysStoppedAnimation(AppColors.pink),
+          ),
         ),
         Expanded(
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(24.w),
+            padding: EdgeInsets.all(20.w),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(height: 8.h),
-                Text(
-                  '${viewModel.currentIndex + 1} / ${session.total}',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium,
-                ),
-                SizedBox(height: 24.h),
+                SizedBox(height: 4.h),
+                Text('${vm.currentIndex + 1} / ${vm.total}',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.gray)),
+                SizedBox(height: 16.h),
                 Container(
-                  key: ValueKey(viewModel.currentIndex),
                   width: double.infinity,
                   padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 40.h),
+                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 34.h),
                   decoration: BoxDecoration(
                     color: AppColors.cream,
-                    borderRadius: BorderRadius.circular(18.r),
+                    borderRadius: BorderRadius.circular(20.r),
+                    border: Border.all(color: AppColors.border),
                     boxShadow: AppColors.softShadow(),
                   ),
                   child: Column(
                     children: [
                       Text('이 뜻의 영어 단어는?',
                           style: TextStyle(
-                              fontSize: 13.sp, color: AppColors.lavender)),
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.hint)),
                       SizedBox(height: 14.h),
-                      Text(
-                        word.korean,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 30.sp, color: AppColors.ink),
-                      ),
+                      Text(word.korean,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: 30.sp,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.ink)),
                     ],
                   ),
-                )
-                    .animate(key: ValueKey(viewModel.currentIndex))
-                    .fadeIn(duration: 300.ms)
-                    .scale(
-                      begin: const Offset(0.95, 0.95),
-                      end: const Offset(1, 1),
-                      curve: Curves.easeOutBack,
-                    ),
-                SizedBox(height: 24.h),
+                ),
+                SizedBox(height: 20.h),
                 TextField(
                   controller: _answerController,
                   autofocus: true,
-                  textInputAction: TextInputAction.done,
+                  textInputAction:
+                      isLast ? TextInputAction.done : TextInputAction.next,
                   autocorrect: false,
                   enableSuggestions: false,
-                  decoration: const InputDecoration(
-                    labelText: '영어로 입력',
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: viewModel.onTyped,
-                  onSubmitted: (_) => _submit(viewModel),
+                  decoration: const InputDecoration(hintText: '영어로 입력'),
+                  onChanged: vm.onTyped,
+                  onSubmitted: (_) => isLast ? _finish(vm) : _goNext(vm),
                 ),
               ],
             ),
@@ -230,73 +275,82 @@ class _ExamBodyState extends State<_ExamBody> {
         SafeArea(
           top: false,
           child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: GradientButton(
-              label: viewModel.currentIndex + 1 == session.total
-                  ? '제출하고 완료 🎉'
-                  : '제출',
-              icon: Icons.send_rounded,
-              onPressed: () => _submit(viewModel),
+            padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 12.h),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: vm.currentIndex > 0
+                            ? () => _goPrev(vm)
+                            : null,
+                        icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                        label: const Text('이전'),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                          side: BorderSide(color: AppColors.border),
+                          foregroundColor: AppColors.grayText,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: isLast ? null : () => _goNext(vm),
+                        icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                        label: const Text('다음'),
+                        style: FilledButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10.h),
+                GradientButton(
+                  label: '시험 완료 🎉',
+                  icon: Icons.check_rounded,
+                  onPressed: () => _finish(vm),
+                ),
+              ],
             ),
           ),
         ),
       ],
     );
   }
-}
 
-class _ResultView extends StatelessWidget {
-  const _ResultView({required this.score, required this.total});
-
-  final int score;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(24.w),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('🎉', style: TextStyle(fontSize: 72.sp))
-              .animate()
-              .scale(
-                begin: const Offset(0.5, 0.5),
-                end: const Offset(1, 1),
-                duration: 500.ms,
-                curve: Curves.easeOutBack,
+  Widget _buildFinished(SessionExamViewModel vm, ExamSession session) {
+    return Column(
+      children: [
+        ExamScoreBanner(score: vm.correctCount, total: session.total),
+        Expanded(
+          child: ExamReviewList(
+            words: session.words,
+            resolve: vm.answerAt,
+          ),
+        ),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 14.h),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 16.w,
+                height: 16.w,
+                child: const CircularProgressIndicator(strokeWidth: 2),
               ),
-          SizedBox(height: 16.h),
-          Text('시험 완료!',
-              style: TextStyle(fontSize: 24.sp, color: AppColors.ink)),
-          SizedBox(height: 16.h),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 28.w, vertical: 14.h),
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryButton,
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: AppColors.softShadow(),
-            ),
-            child: Text(
-              '$score / $total 개 맞았어요',
-              style: TextStyle(fontSize: 22.sp, color: Colors.white),
-            ),
+              SizedBox(width: 10.w),
+              Flexible(
+                child: Text('언니가 시험을 마치면 홈으로 이동해요',
+                    style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+              ),
+            ],
           ),
-          SizedBox(height: 40.h),
-          SizedBox(
-            width: 200.w,
-            child: GradientButton(
-              label: '홈으로',
-              icon: Icons.home_rounded,
-              onPressed: () =>
-                  Navigator.of(context).popUntil((r) => r.isFirst),
-            ),
-          ),
-        ],
-      )
-          .animate()
-          .fadeIn(duration: 500.ms)
-          .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic),
+        ),
+      ],
     );
   }
 }

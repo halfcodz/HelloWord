@@ -127,12 +127,12 @@ class ExamRepository {
     await _sessions.doc(sessionId).update({'currentIndex': index});
   }
 
-  Future<void> finish({
-    required String sessionId,
-    required int score,
-  }) async {
+  /// 시험을 완료 처리한다. 답안에서 점수를 직접 계산하므로,
+  /// 동생이 이전 문제로 돌아가 답을 고쳐도 최종 점수에 반영된다.
+  Future<void> finish({required String sessionId}) async {
     // 세션과 답안을 모아 영구 결과(examResults)로 기록한 뒤 세션 상태를 갱신한다.
-    // 세션이 나중에 삭제돼도 결과는 남아 언니가 확인할 수 있다.
+    // 세션이 나중에 삭제돼도 결과는 남아 언니·동생이 확인할 수 있다.
+    var score = 0;
     final sessionDoc = await _sessions.doc(sessionId).get();
     if (sessionDoc.exists) {
       final session = ExamSession.fromDoc(sessionDoc);
@@ -146,12 +146,14 @@ class ExamRepository {
       for (var i = 0; i < session.words.length; i++) {
         final w = session.words[i];
         final a = byIndex[i];
+        final correct = a?.correct ?? false;
+        if (correct) score++;
         items.add(ExamResultItem(
           index: i,
           english: w.english,
           korean: w.korean,
           submitted: a?.submitted ?? '',
-          correct: a?.correct ?? false,
+          correct: correct,
         ));
       }
       final result = ExamResult(
