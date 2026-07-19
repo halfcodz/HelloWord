@@ -109,7 +109,7 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
                     alignment: Alignment.center,
                     padding: EdgeInsets.all(24.w),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.cream,
                       borderRadius: BorderRadius.circular(24.r),
                       border: Border.all(color: AppColors.border),
                       boxShadow: AppColors.softShadow(blur: 20, y: 6),

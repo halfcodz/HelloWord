@@ -78,16 +78,18 @@ class AppColors {
 
   static const Color mint = Color(0xFF20C997);
   static const Color peach = Color(0xFFFF922B);
-  static const Color cream = Colors.white; // 다이얼로그/시트 흰색
-  static const Color ink = Color(0xFF191F28); // 거의 검정 텍스트
 
-  // ── 디자인 토큰(HelloWord 토스풍) ──
-  static const Color grayText = Color(0xFF4E5968); // 진한 보조 텍스트
-  static const Color gray = Color(0xFF8B95A1); // 보조 텍스트
+  // ── 중성 토큰(라이트/다크 모드에 따라 [applyMode]로 스왑) ──
+  static Color cream = Colors.white; // 카드/다이얼로그/시트 표면
+  static Color ink = const Color(0xFF191F28); // 본문 텍스트
+  static Color grayText = const Color(0xFF4E5968); // 진한 보조 텍스트
+  static Color rowBg = const Color(0xFFF8F9FA); // 리스트 행 배경
+  static Color fieldBg = const Color(0xFFF2F4F6); // 입력/칩 배경
+  static Color border = const Color(0xFFE5E8EB); // 얇은 테두리
+
+  // ── 고정 토큰(양쪽 모드에서 그대로 사용) ──
+  static const Color gray = Color(0xFF8B95A1); // 보조 텍스트(중간 회색)
   static const Color hint = Color(0xFFB0B8C1); // 힌트/비활성
-  static const Color rowBg = Color(0xFFF8F9FA); // 리스트 행 배경
-  static const Color fieldBg = Color(0xFFF2F4F6); // 입력/칩 배경
-  static const Color border = Color(0xFFE5E8EB); // 얇은 테두리
   static const Color blueSoft = Color(0xFFE8F3FF); // 블루 소프트
   static const Color green = Color(0xFF20C997); // 접속/정답
   static const Color greenSoft = Color(0xFFE6FCF5);
@@ -96,6 +98,9 @@ class AppColors {
   static const Color orangeSoft = Color(0xFFFFF0E1); // 동생 아바타 배경
   static const Color sunday = Color(0xFFFF6B8A); // 달력 일요일
 
+  /// 현재 다크 모드 여부(테마 생성 시 참조).
+  static bool isDark = false;
+
   static void apply(AppPalette palette) {
     final s = _specs[palette]!;
     pink = s.primary;
@@ -103,6 +108,33 @@ class AppColors {
     primaryButton =
         LinearGradient(colors: [s.primary, s.primary]);
     // 배경/보조 회색은 팔레트와 무관하게 유지.
+  }
+
+  /// 라이트/다크 모드에 맞춰 중성 토큰과 배경을 스왑한다.
+  /// (포인트 색 [apply]와 독립적으로 동작)
+  static void applyMode(bool dark) {
+    isDark = dark;
+    if (dark) {
+      ink = const Color(0xFFE8EAED);
+      cream = const Color(0xFF1B1E24); // 카드/시트 표면
+      grayText = const Color(0xFFAEB6BF);
+      rowBg = const Color(0xFF22262D);
+      fieldBg = const Color(0xFF2A2F37);
+      border = const Color(0xFF363B44);
+      lavenderSoft = const Color(0xFF2A2F37);
+      background = const LinearGradient(
+        colors: [Color(0xFF0F1115), Color(0xFF0F1115)],
+      );
+    } else {
+      ink = const Color(0xFF191F28);
+      cream = Colors.white;
+      grayText = const Color(0xFF4E5968);
+      rowBg = const Color(0xFFF8F9FA);
+      fieldBg = const Color(0xFFF2F4F6);
+      border = const Color(0xFFE5E8EB);
+      lavenderSoft = const Color(0xFFF2F4F6);
+      background = const LinearGradient(colors: [Colors.white, Colors.white]);
+    }
   }
 
   /// 아주 은은한 회색 그림자(흰 배경 위에서도 보이도록).
@@ -118,17 +150,19 @@ class AppColors {
 class AppTheme {
   AppTheme._();
 
-  static ThemeData light() {
+  /// 라이트/다크 공통 테마. [AppColors.applyMode]로 토큰을 스왑한 뒤 호출한다.
+  static ThemeData build({bool dark = false}) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.pink,
       primary: AppColors.pink,
       secondary: AppColors.pink,
       tertiary: AppColors.mint,
-      surface: Colors.white,
-      brightness: Brightness.light,
+      surface: AppColors.cream,
+      brightness: dark ? Brightness.dark : Brightness.light,
     ).copyWith(
       primaryContainer: AppColors.pinkSoft,
       secondaryContainer: AppColors.lavenderSoft,
+      surface: AppColors.cream,
       onSurface: AppColors.ink,
     );
 
@@ -139,6 +173,7 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      brightness: dark ? Brightness.dark : Brightness.light,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: Colors.transparent,
       textTheme: baseText,
@@ -153,7 +188,7 @@ class AppTheme {
         },
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.cream,
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         elevation: 0,
@@ -166,7 +201,7 @@ class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        color: Colors.white,
+        color: AppColors.cream,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
@@ -195,7 +230,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFF2F4F6),
+        fillColor: AppColors.fieldBg,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
@@ -210,19 +245,19 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: AppColors.pink, width: 1.5),
         ),
-        labelStyle: const TextStyle(color: Color(0xFF8B95A1)),
+        labelStyle: const TextStyle(color: AppColors.gray),
         floatingLabelStyle: TextStyle(color: AppColors.pink),
-        hintStyle: const TextStyle(color: Color(0xFFB0B8C1)),
+        hintStyle: const TextStyle(color: AppColors.hint),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.lavenderSoft,
-        labelStyle: const TextStyle(color: AppColors.ink),
+        labelStyle: TextStyle(color: AppColors.ink),
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         side: BorderSide.none,
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.cream,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       snackBarTheme: SnackBarThemeData(

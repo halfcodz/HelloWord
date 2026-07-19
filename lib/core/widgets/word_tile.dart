@@ -19,7 +19,7 @@ class WordTile extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cream,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: AppColors.softShadow(blur: 8, y: 3),
       ),

@@ -165,7 +165,7 @@ class _AddFriendButton extends StatelessWidget {
             child: Container(
               width: 52.w,
               height: 52.w,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: AppColors.fieldBg,
                 shape: BoxShape.circle,
               ),

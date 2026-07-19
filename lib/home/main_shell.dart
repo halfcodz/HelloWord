@@ -11,7 +11,6 @@ import '../features/exam/views/session_join_view.dart';
 import '../features/profile/views/profile_view.dart';
 import '../features/study/views/study_list_view.dart';
 import '../features/todo/views/todo_home_view.dart';
-import '../features/word_sets/views/calendar_home_view.dart';
 import '../features/word_sets/views/word_set_list_view.dart';
 import '../models/app_user.dart';
 
@@ -48,7 +47,7 @@ class _MainShellState extends State<MainShell> {
     if (user.role == UserRole.elder) {
       return (
         pages: [
-          CalendarHomeView(user: user),
+          TodoHomeView(user: user),
           WordSetListView(user: user, title: '공부자료', enableAdd: true),
           ChatListView(user: user),
           ProfileView(user: user),
@@ -137,7 +136,7 @@ class _BlingBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cream,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(16.r),
           topRight: Radius.circular(16.r),

@@ -36,10 +36,10 @@ class HelloWordApp extends StatelessWidget {
       ],
       // 팔레트가 바뀌면 테마를 다시 계산해 앱 전체에 반영한다.
       child: Consumer<ThemeController>(
-        builder: (context, _, child) => MaterialApp(
+        builder: (context, controller, child) => MaterialApp(
           title: 'HelloWord',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.light(),
+          theme: AppTheme.build(dark: controller.isDark),
           builder: (context, child) => _ResponsiveShell(child: child),
           home: const AuthGate(),
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/theme/app_theme.dart';
 import 'auth_service.dart';
@@ -20,6 +21,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _loading = false;
   bool _obscure = true;
+  bool _rememberMe = true;
+
+  static const _prefRemember = 'auto_login';
+  static const _prefEmail = 'saved_email';
+
+  @override
+  void initState() {
+    super.initState();
+    _restorePrefs();
+  }
+
+  Future<void> _restorePrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final remember = prefs.getBool(_prefRemember) ?? true;
+    final email = prefs.getString(_prefEmail) ?? '';
+    if (!mounted) return;
+    setState(() {
+      _rememberMe = remember;
+      if (remember && email.isNotEmpty) _emailController.text = email;
+    });
+  }
 
   @override
   void dispose() {
@@ -35,8 +57,15 @@ class _LoginScreenState extends State<LoginScreen> {
       await _auth.signIn(
         email: _emailController.text,
         password: _passwordController.text,
-        rememberMe: true,
+        rememberMe: _rememberMe,
       );
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefRemember, _rememberMe);
+      if (_rememberMe) {
+        await prefs.setString(_prefEmail, _emailController.text.trim());
+      } else {
+        await prefs.remove(_prefEmail);
+      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -129,6 +158,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       validator: (v) =>
                           (v == null || v.isEmpty) ? '비밀번호를 입력해 주세요.' : null,
                     ),
+                    SizedBox(height: 14.h),
+                    _RememberToggle(
+                      value: _rememberMe,
+                      onChanged: _loading
+                          ? null
+                          : (v) => setState(() => _rememberMe = v),
+                    ),
                     SizedBox(height: 16.h),
                     BlueButton(
                       label: '로그인',
@@ -166,6 +202,49 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 자동 로그인 토글. 체크박스 + 라벨을 탭하면 켜고 끈다.
+class _RememberToggle extends StatelessWidget {
+  const _RememberToggle({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onChanged == null ? null : () => onChanged!(!value),
+      child: Row(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: 22.w,
+            height: 22.w,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: value ? AppColors.pink : AppColors.cream,
+              borderRadius: BorderRadius.circular(7.r),
+              border: Border.all(
+                color: value ? AppColors.pink : AppColors.border,
+                width: 1.5,
+              ),
+            ),
+            child: value
+                ? Icon(Icons.check, size: 15.sp, color: Colors.white)
+                : null,
+          ),
+          SizedBox(width: 8.w),
+          Text('자동 로그인',
+              style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.grayText)),
+        ],
       ),
     );
   }

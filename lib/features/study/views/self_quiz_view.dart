@@ -82,7 +82,7 @@ class _SelfQuizViewState extends State<SelfQuizView> {
                       padding: EdgeInsets.symmetric(
                           horizontal: 20.w, vertical: 36.h),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.cream,
                         borderRadius: BorderRadius.circular(18.r),
                         boxShadow: AppColors.softShadow(),
                       ),
