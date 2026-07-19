@@ -98,6 +98,7 @@ class ProfileView extends StatelessWidget {
           children: [
             SizedBox(height: 8.h),
             GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () => _changePhoto(context),
               child: Stack(
                 children: [

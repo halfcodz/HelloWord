@@ -184,6 +184,7 @@ class _InputBar extends StatelessWidget {
           ),
           SizedBox(width: 8.w),
           GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: onSend,
             child: Container(
               width: 48.w,

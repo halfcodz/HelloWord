@@ -161,6 +161,7 @@ class _AddFriendButton extends StatelessWidget {
       child: Column(
         children: [
           GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: onTap,
             child: Container(
               width: 52.w,

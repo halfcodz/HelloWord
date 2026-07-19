@@ -173,6 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     SizedBox(height: 16.h),
                     GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: _loading
                           ? null
                           : () => Navigator.of(context).push(MaterialPageRoute(
@@ -266,6 +267,7 @@ class BlueButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
         height: 54.h,
