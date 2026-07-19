@@ -11,10 +11,14 @@ class CallPanel extends StatefulWidget {
     super.key,
     required this.sessionId,
     required this.isCaller,
+    this.height,
   });
 
   final String sessionId;
   final bool isCaller;
+
+  /// 패널 높이. 키보드가 열릴 때 작게 줄이는 용도.
+  final double? height;
 
   @override
   State<CallPanel> createState() => _CallPanelState();
@@ -90,8 +94,10 @@ class _CallPanelState extends State<CallPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 200.h,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      height: widget.height ?? 200.h,
       margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(

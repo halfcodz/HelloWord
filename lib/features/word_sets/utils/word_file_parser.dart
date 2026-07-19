@@ -67,29 +67,82 @@ class WordFileParser {
     final pairs = <WordPair>[];
     var skipped = 0;
 
+    // 기본 열 배치: 0=영어, 1=뜻, 2=발음, 3=예문. 헤더가 있으면 그에 맞춰 갱신.
+    var enIdx = 0, koIdx = 1, pronIdx = 2, exIdx = 3;
+    var hadHeader = false;
+
     for (final rawLine in content.split(RegExp(r'\r?\n'))) {
       final line = rawLine.trim();
       if (line.isEmpty) continue;
       if (_isMarkdownSeparator(line)) continue; // |---|---| 구분선
 
-      // 여러 칸으로 나눈 뒤 '앞의 두 칸'(단어·뜻)만 사용한다.
-      // 발음·예문 등 3번째 이후 칸은 버려 타일이 길어지지 않게 한다.
       final cells = _columns(line);
       if (cells.length < 2) {
         // 구분자가 없는 안내 문구/제목 줄은 조용히 건너뛴다.
         if (cells.isNotEmpty) skipped++;
         continue;
       }
-      final en = cells[0];
-      final ko = cells[1];
+
+      // 헤더행이면 열 역할(단어/뜻/발음/예문)을 파악하고 건너뛴다.
+      final roles = _headerRoles(cells);
+      if (roles != null) {
+        enIdx = roles['en'] ?? enIdx;
+        koIdx = roles['ko'] ?? koIdx;
+        pronIdx = roles['pron'] ?? -1; // 헤더에 발음 열이 없으면 발음 없음
+        exIdx = roles['ex'] ?? -1;
+        hadHeader = true;
+        continue;
+      }
+
+      String cell(int i) => (i >= 0 && i < cells.length) ? cells[i] : '';
+      final en = cell(enIdx);
+      final ko = cell(koIdx);
       if (en.isEmpty || ko.isEmpty) {
         skipped++;
         continue;
       }
-      if (_looksLikeHeader(en, ko)) continue; // 단어/뜻/숙어 같은 헤더행
-      pairs.add(WordPair(english: en, korean: ko));
+      // 헤더가 없던 표에서도 흔한 헤더 문구는 걸러낸다.
+      if (!hadHeader && _looksLikeHeader(en, ko)) continue;
+      pairs.add(WordPair(
+        english: en,
+        korean: ko,
+        pronunciation: cell(pronIdx),
+        example: cell(exIdx),
+      ));
     }
     return ParsedWords(pairs: pairs, skippedLines: skipped);
+  }
+
+  static const _enHeaders = {
+    '영어', '영단어', '단어', '숙어', '표현', '어휘', 'english', 'word',
+    'eng', '스펠링', 'idiom', 'phrase', 'expression'
+  };
+  static const _koHeaders = {
+    '뜻', '의미', '해석', '한글', '뜻(한글)', 'korean', 'meaning'
+  };
+  static const _pronHeaders = {'발음', 'pronunciation', 'pron', '소리', '읽기'};
+  static const _exHeaders = {
+    '예문', '예시', 'example', '문장', 'sentence', 'ex', '예'
+  };
+
+  /// 한 줄이 표 헤더면 각 열의 역할(en/ko/pron/ex) 인덱스를 반환. 아니면 null.
+  static Map<String, int>? _headerRoles(List<String> cells) {
+    final roles = <String, int>{};
+    for (var i = 0; i < cells.length; i++) {
+      final c = cells[i].toLowerCase();
+      if (!roles.containsKey('en') && _enHeaders.contains(c)) {
+        roles['en'] = i;
+      } else if (!roles.containsKey('ko') && _koHeaders.contains(c)) {
+        roles['ko'] = i;
+      } else if (!roles.containsKey('pron') && _pronHeaders.contains(c)) {
+        roles['pron'] = i;
+      } else if (!roles.containsKey('ex') && _exHeaders.contains(c)) {
+        roles['ex'] = i;
+      }
+    }
+    // 단어·뜻 열이 모두 있어야 헤더로 인정.
+    if (roles.containsKey('en') && roles.containsKey('ko')) return roles;
+    return null;
   }
 
   /// 한 줄을 칸(cell) 목록으로 나눈다. 우선순위: 파이프 → 탭 → 2칸 이상 공백 →
@@ -120,13 +173,8 @@ class WordFileParser {
 
   /// `단어 | 뜻`, `숙어 | 뜻` 같은 헤더행으로 보이면 제외한다.
   static bool _looksLikeHeader(String en, String ko) {
-    const enHeaders = {
-      '영어', '영단어', '단어', '숙어', '표현', '어휘', 'english', 'word',
-      'eng', '스펠링', 'idiom', 'phrase', 'expression'
-    };
-    const koHeaders = {'뜻', '의미', '해석', '한글', '뜻(한글)', 'korean', 'meaning'};
-    return enHeaders.contains(en.toLowerCase()) ||
-        koHeaders.contains(ko.toLowerCase());
+    return _enHeaders.contains(en.toLowerCase()) ||
+        _koHeaders.contains(ko.toLowerCase());
   }
 
   static ParsedWords _parseExcel(Uint8List bytes) {
@@ -150,12 +198,16 @@ class WordFileParser {
     for (final row in firstSheet.rows) {
       final en = _cellText(row.isNotEmpty ? row[0]?.value : null);
       final ko = _cellText(row.length > 1 ? row[1]?.value : null);
+      final pron = _cellText(row.length > 2 ? row[2]?.value : null);
+      final ex = _cellText(row.length > 3 ? row[3]?.value : null);
       if (en.isEmpty && ko.isEmpty) continue; // 빈 줄
       if (en.isEmpty || ko.isEmpty) {
         skipped++;
         continue;
       }
-      pairs.add(WordPair(english: en, korean: ko));
+      if (_looksLikeHeader(en, ko)) continue; // A1:영어 B1:뜻 같은 헤더행
+      pairs.add(WordPair(
+          english: en, korean: ko, pronunciation: pron, example: ex));
     }
     return ParsedWords(pairs: pairs, skippedLines: skipped);
   }

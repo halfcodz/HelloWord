@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../core/services/tts_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bouncy_tap.dart';
 import '../../word_sets/models/word_pair.dart';
@@ -135,7 +136,50 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
                             color: AppColors.ink,
                           ),
                         ),
-                        SizedBox(height: 24.h),
+                        if (!_showKorean &&
+                            word.pronunciation.isNotEmpty) ...[
+                          SizedBox(height: 6.h),
+                          Text('[${word.pronunciation}]',
+                              style: TextStyle(
+                                  fontSize: 14.sp, color: AppColors.gray)),
+                        ],
+                        SizedBox(height: 14.h),
+                        // 미국 발음 듣기 버튼.
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => TtsService.speak(word.english),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16.w, vertical: 8.h),
+                            decoration: BoxDecoration(
+                              color: AppColors.blueSoft,
+                              borderRadius: BorderRadius.circular(20.r),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.volume_up_rounded,
+                                    size: 18.sp, color: AppColors.pink),
+                                SizedBox(width: 6.w),
+                                Text('발음 듣기',
+                                    style: TextStyle(
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.pink)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (_showKorean && word.example.isNotEmpty) ...[
+                          SizedBox(height: 16.h),
+                          Text(word.example,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 13.sp,
+                                  height: 1.4,
+                                  color: AppColors.grayText)),
+                        ],
+                        SizedBox(height: 14.h),
                         Text(
                           _showKorean ? '카드를 탭하면 영어가 보여요' : '카드를 탭하면 뜻이 보여요',
                           style: TextStyle(
