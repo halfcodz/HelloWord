@@ -6,6 +6,9 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bouncy_tap.dart';
 import '../../../models/app_user.dart';
+import '../../exam/models/exam_result.dart';
+import '../../exam/repositories/exam_repository.dart';
+import '../../word_sets/models/word_pair.dart';
 import '../../word_sets/models/word_set.dart';
 import '../../word_sets/repositories/word_set_repository.dart';
 import '../viewmodels/study_viewmodel.dart';
@@ -26,13 +29,32 @@ class StudyListView extends StatelessWidget {
         wordSetRepository: context.read<WordSetRepository>(),
         myUid: user.uid,
       ),
-      child: const _StudyBody(),
+      child: _StudyBody(uid: user.uid),
     );
   }
 }
 
 class _StudyBody extends StatelessWidget {
-  const _StudyBody();
+  const _StudyBody({required this.uid});
+
+  final String uid;
+
+  /// 지난 시험들에서 틀린 단어를 중복 없이 모은다.
+  List<WordPair> _wrongWords(List<ExamResult> results) {
+    final seen = <String>{};
+    final out = <WordPair>[];
+    for (final r in results) {
+      for (final it in r.items) {
+        if (!it.correct) {
+          final key = it.english.toLowerCase().trim();
+          if (key.isNotEmpty && seen.add(key)) {
+            out.add(WordPair(english: it.english, korean: it.korean));
+          }
+        }
+      }
+    }
+    return out;
+  }
 
   void _openStudyMenu(BuildContext context, WordSet set) {
     showModalBottomSheet<void>(
@@ -98,7 +120,82 @@ class _StudyBody extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('공부하기')),
-      body: SafeArea(child: _content(context, viewModel)),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _reviewBanner(context),
+            Expanded(child: _content(context, viewModel)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 틀린 단어가 있으면 상단에 '틀린 단어 복습' 카드를 띄운다.
+  Widget _reviewBanner(BuildContext context) {
+    final exam = context.read<ExamRepository>();
+    return StreamBuilder<List<ExamResult>>(
+      stream: exam.watchResultsForGuest(uid),
+      builder: (context, snap) {
+        final wrong = _wrongWords(snap.data ?? const []);
+        if (wrong.isEmpty) return const SizedBox.shrink();
+        final set = WordSet(
+          id: 'review',
+          title: '틀린 단어 복습',
+          date: DateTime.now(),
+          message: '',
+          words: wrong,
+          createdBy: '',
+        );
+        return Padding(
+          padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 4.h),
+          child: BouncyTap(
+            onTap: () => _openStudyMenu(context, set),
+            child: Container(
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: AppColors.dangerSoft,
+                borderRadius: BorderRadius.circular(18.r),
+                border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 46.w,
+                    height: 46.w,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.danger,
+                      borderRadius: BorderRadius.circular(13.r),
+                    ),
+                    child: Icon(Icons.refresh_rounded,
+                        color: Colors.white, size: 24.sp),
+                  ),
+                  SizedBox(width: 14.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('틀린 단어 복습',
+                            style: TextStyle(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.ink)),
+                        SizedBox(height: 2.h),
+                        Text('지난 시험에서 틀린 ${wrong.length}개 · 다시 외워봐요',
+                            style: TextStyle(
+                                fontSize: 12.sp, color: AppColors.grayText)),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right,
+                      color: AppColors.danger, size: 22.sp),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

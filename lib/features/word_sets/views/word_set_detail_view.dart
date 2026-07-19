@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/date_format.dart';
+import '../../../core/utils/toast.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/word_tile.dart';
 import '../../../models/app_user.dart';
@@ -98,9 +99,7 @@ class _StartExamButtonState extends State<_StartExamButton> {
       );
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('시험을 시작하지 못했어요. 다시 시도해 주세요.')),
-        );
+        showToast(context, '시험을 시작하지 못했어요. 다시 시도해 주세요.', isError: true);
       }
     } finally {
       if (mounted) setState(() => _creating = false);

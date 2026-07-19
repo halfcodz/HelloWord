@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../models/exam_result.dart';
+import 'exam_result_widgets.dart';
 
 /// 지난 시험의 문항별 정오답 상세. 언니가 동생의 답을 확인한다.
 class ExamResultDetailView extends StatelessWidget {
@@ -16,74 +17,32 @@ class ExamResultDetailView extends StatelessWidget {
       appBar: AppBar(title: Text(result.title)),
       body: SafeArea(
         child: ListView(
-          padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 24.h),
+          padding: EdgeInsets.fromLTRB(4.w, 8.h, 4.w, 24.h),
           children: [
-            _ScoreCard(result: result),
-            SizedBox(height: 20.h),
-            Text('문항별 채점',
-                style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.grayText)),
+            ExamScoreBanner(
+              score: result.score,
+              total: result.total,
+              name: result.guestName.isEmpty ? null : result.guestName,
+            ),
+            SizedBox(height: 16.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Text('문항별 채점',
+                  style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.grayText)),
+            ),
             SizedBox(height: 10.h),
             for (final item in result.items) ...[
-              _ItemRow(item: item),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: _ItemRow(item: item),
+              ),
               SizedBox(height: 8.h),
             ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ScoreCard extends StatelessWidget {
-  const _ScoreCard({required this.result});
-
-  final ExamResult result;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: AppColors.blueSoft,
-        borderRadius: BorderRadius.circular(20.r),
-      ),
-      child: Row(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('${result.guestName.isEmpty ? "동생" : result.guestName}의 점수',
-                  style: TextStyle(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.grayText)),
-              SizedBox(height: 6.h),
-              Text('${result.score} / ${result.total}',
-                  style: TextStyle(
-                      fontSize: 28.sp,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.pink)),
-            ],
-          ),
-          const Spacer(),
-          Container(
-            width: 62.w,
-            height: 62.w,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.cream,
-              shape: BoxShape.circle,
-            ),
-            child: Text('${result.percent}%',
-                style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.pink)),
-          ),
-        ],
       ),
     );
   }

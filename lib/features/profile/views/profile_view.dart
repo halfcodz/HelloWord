@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../auth/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../../core/utils/toast.dart';
 import '../../../models/app_user.dart';
 import '../services/avatar_service.dart';
 
@@ -38,11 +39,7 @@ class ProfileView extends StatelessWidget {
     );
     if (newName == null || newName.isEmpty || newName == user.name) return;
     await AuthService().updateName(uid: user.uid, name: newName);
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('이름을 변경했어요!')),
-      );
-    }
+    if (context.mounted) showToast(context, '이름을 변경했어요!');
   }
 
   Future<void> _changePhoto(BuildContext context) async {
@@ -50,20 +47,10 @@ class ProfileView extends StatelessWidget {
       final base64 = await AvatarService.pickAndEncode();
       if (base64 == null) return;
       await AuthService().updatePhoto(uid: user.uid, base64: base64);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..clearSnackBars()
-          ..showSnackBar(const SnackBar(
-              content: Text('프로필 사진을 바꿨어요!'),
-              duration: Duration(seconds: 2)));
-      }
+      if (context.mounted) showToast(context, '프로필 사진을 바꿨어요!');
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..clearSnackBars()
-          ..showSnackBar(const SnackBar(
-              content: Text('사진을 불러오지 못했어요.'),
-              duration: Duration(seconds: 2)));
+        showToast(context, '사진을 불러오지 못했어요.', isError: true);
       }
     }
   }
