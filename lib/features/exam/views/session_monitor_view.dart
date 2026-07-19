@@ -334,14 +334,14 @@ class _AnswerRow extends StatelessWidget {
             answer!.submitted!,
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              color: correct ? Colors.green.shade700 : theme.colorScheme.error,
+              color: correct ? AppColors.green : theme.colorScheme.error,
             ),
           ),
           SizedBox(width: 6.w),
           Icon(
             correct ? Icons.check_circle : Icons.cancel,
             size: 18.sp,
-            color: correct ? Colors.green.shade700 : theme.colorScheme.error,
+            color: correct ? AppColors.green : theme.colorScheme.error,
           ),
         ],
       );
