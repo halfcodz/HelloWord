@@ -10,6 +10,8 @@ class CallService {
   CallService({
     required this.sessionId,
     required this.isCaller,
+    this.onRemoteStream,
+    this.onConnectionState,
     FirebaseFirestore? firestore,
   }) : _firestore = firestore ?? FirebaseFirestore.instance;
 
@@ -17,6 +19,12 @@ class CallService {
   final String sessionId;
   final bool isCaller;
   final FirebaseFirestore _firestore;
+
+  /// 원격(상대) 영상이 도착했을 때 호출된다. (UI 갱신용)
+  final void Function()? onRemoteStream;
+
+  /// 연결 상태가 바뀔 때 호출된다. (connected / failed 등)
+  final void Function(String state)? onConnectionState;
 
   final RTCVideoRenderer localRenderer = RTCVideoRenderer();
   final RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
@@ -40,14 +48,18 @@ class CallService {
       _callDoc.collection('calleeCandidates');
 
   static const Map<String, dynamic> _config = {
+    // Unified Plan을 명시해 addTrack/onTrack 흐름을 보장한다.
+    'sdpSemantics': 'unified-plan',
     'iceServers': [
       {
         'urls': [
           'stun:stun.l.google.com:19302',
           'stun:stun1.l.google.com:19302',
+          'stun:stun2.l.google.com:19302',
+          'stun:stun.relay.metered.ca:80',
         ],
       },
-      // 무료 TURN(OpenRelay) — 직접(P2P) 연결이 막히는 망에서도 우회 연결.
+      // 무료 TURN(Metered OpenRelay) — 직접(P2P) 연결이 막히는 망에서도 우회 연결.
       {
         'urls': 'turn:openrelay.metered.ca:80',
         'username': 'openrelayproject',
@@ -60,6 +72,11 @@ class CallService {
       },
       {
         'urls': 'turn:openrelay.metered.ca:443?transport=tcp',
+        'username': 'openrelayproject',
+        'credential': 'openrelayproject',
+      },
+      {
+        'urls': 'turns:openrelay.metered.ca:443?transport=tcp',
         'username': 'openrelayproject',
         'credential': 'openrelayproject',
       },
@@ -84,9 +101,30 @@ class CallService {
       await pc.addTrack(track, _localStream!);
     }
 
+    // 원격 트랙 수신 → 렌더러에 연결하고 UI에 알린다.
     pc.onTrack = (event) {
       if (event.streams.isNotEmpty) {
         remoteRenderer.srcObject = event.streams.first;
+        onRemoteStream?.call();
+      }
+    };
+
+    // 구형(Plan B) 대비 fallback: 스트림 단위 수신도 처리.
+    pc.onAddStream = (stream) {
+      remoteRenderer.srcObject = stream;
+      onRemoteStream?.call();
+    };
+
+    // 연결 상태 알림(연결됨/실패 등).
+    pc.onConnectionState = (state) {
+      onConnectionState?.call(state.name);
+    };
+    pc.onIceConnectionState = (state) {
+      if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
+          state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
+        onConnectionState?.call('connected');
+      } else if (state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
+        onConnectionState?.call('failed');
       }
     };
 
