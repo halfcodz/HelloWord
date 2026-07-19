@@ -27,12 +27,11 @@ class WordSetRepository {
     });
   }
 
-  /// 여러 작성자(친구=언니)의 단어 세트를 최신순으로 구독한다.
-  /// 동생이 언니가 올린 단어를 혼자 공부할 때 쓴다.
-  Stream<List<WordSet>> watchByCreators(List<String> uids) {
-    if (uids.isEmpty) return Stream.value(const []);
+  /// 나에게 공유된(sharedWith에 내 uid가 든) 단어 세트를 구독한다.
+  /// 동생이 언니가 보낸 단어를 공부할 때 쓴다.
+  Stream<List<WordSet>> watchSharedWith(String uid) {
     return _collection
-        .where('createdBy', whereIn: uids.take(10).toList())
+        .where('sharedWith', arrayContains: uid)
         .snapshots()
         .map((snap) {
       final list = snap.docs.map(WordSet.fromDoc).toList();
@@ -48,6 +47,7 @@ class WordSetRepository {
     required String message,
     required List<WordPair> words,
     required String createdBy,
+    List<String> sharedWith = const [],
   }) async {
     final draft = WordSet(
       id: '',
@@ -56,6 +56,7 @@ class WordSetRepository {
       message: message,
       words: words,
       createdBy: createdBy,
+      sharedWith: sharedWith,
     );
     final ref = await _collection.add(draft.toMap());
     return ref.id;

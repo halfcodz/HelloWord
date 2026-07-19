@@ -11,6 +11,7 @@ class WordSet {
     required this.message,
     required this.words,
     required this.createdBy,
+    this.sharedWith = const [],
     this.createdAt,
   });
 
@@ -30,6 +31,9 @@ class WordSet {
   /// 만든 사람(언니)의 uid.
   final String createdBy;
 
+  /// 이 세트를 공부할 수 있는 친구(동생)들의 uid.
+  final List<String> sharedWith;
+
   /// 서버 저장 시각.
   final DateTime? createdAt;
 
@@ -42,6 +46,7 @@ class WordSet {
         'words': words.map((w) => w.toMap()).toList(),
         'wordCount': words.length,
         'createdBy': createdBy,
+        'sharedWith': sharedWith,
         'createdAt': FieldValue.serverTimestamp(),
       };
 
@@ -57,6 +62,8 @@ class WordSet {
           .map((e) => WordPair.fromMap(Map<String, dynamic>.from(e as Map)))
           .toList(),
       createdBy: data['createdBy'] as String? ?? '',
+      sharedWith:
+          (data['sharedWith'] as List?)?.cast<String>() ?? const [],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
   }

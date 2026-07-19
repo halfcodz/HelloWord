@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../../models/app_user.dart';
+import '../../social/repositories/friend_repository.dart';
 import '../models/word_pair.dart';
 import '../repositories/word_set_repository.dart';
 import '../utils/word_file_parser.dart';
@@ -11,12 +15,38 @@ enum UploadStatus { idle, parsing, ready, saving, saved, error }
 class WordSetUploadViewModel extends ChangeNotifier {
   WordSetUploadViewModel({
     required WordSetRepository repository,
+    required FriendRepository friendRepository,
     required String uid,
   })  : _repository = repository,
-        _uid = uid;
+        _uid = uid {
+    _friendSub = friendRepository.watchFriends(uid).listen((friends) {
+      _friends = friends;
+      // 기본값: 모든 친구에게 전송(대개 동생 1명).
+      _selectedFriendUids = friends.map((f) => f.uid).toSet();
+      notifyListeners();
+    });
+  }
 
   final WordSetRepository _repository;
   final String _uid;
+
+  StreamSubscription<List<AppUser>>? _friendSub;
+
+  List<AppUser> _friends = const [];
+  List<AppUser> get friends => _friends;
+
+  Set<String> _selectedFriendUids = {};
+  Set<String> get selectedFriendUids => _selectedFriendUids;
+
+  void toggleFriend(String uid) {
+    _selectedFriendUids = {..._selectedFriendUids};
+    if (_selectedFriendUids.contains(uid)) {
+      _selectedFriendUids.remove(uid);
+    } else {
+      _selectedFriendUids.add(uid);
+    }
+    notifyListeners();
+  }
 
   UploadStatus _status = UploadStatus.idle;
   UploadStatus get status => _status;
@@ -140,6 +170,7 @@ class WordSetUploadViewModel extends ChangeNotifier {
         message: _message.trim(),
         words: _words,
         createdBy: _uid,
+        sharedWith: _selectedFriendUids.toList(),
       );
       _status = UploadStatus.saved;
       notifyListeners();
@@ -150,5 +181,11 @@ class WordSetUploadViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  @override
+  void dispose() {
+    _friendSub?.cancel();
+    super.dispose();
   }
 }

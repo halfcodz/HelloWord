@@ -7,6 +7,7 @@ import '../../../core/utils/date_format.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/word_tile.dart';
 import '../../../models/app_user.dart';
+import '../../social/repositories/friend_repository.dart';
 import '../repositories/word_set_repository.dart';
 import '../viewmodels/word_set_upload_viewmodel.dart';
 
@@ -21,6 +22,7 @@ class WordSetUploadView extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => WordSetUploadViewModel(
         repository: context.read<WordSetRepository>(),
+        friendRepository: context.read<FriendRepository>(),
         uid: user.uid,
       ),
       child: const _UploadScreen(),
@@ -163,6 +165,8 @@ class _UploadScreenState extends State<_UploadScreen> {
                   ),
                 ),
                 SizedBox(height: 24.h),
+                _RecipientPicker(viewModel: viewModel),
+                SizedBox(height: 20.h),
                 Text(
                   '단어 미리보기',
                   style: Theme.of(context).textTheme.titleSmall,
@@ -189,6 +193,42 @@ class _UploadScreenState extends State<_UploadScreen> {
           ),
         ),
         SliverToBoxAdapter(child: SizedBox(height: 16.h)),
+      ],
+    );
+  }
+}
+
+/// 이 단어를 보낼 친구(동생) 선택.
+class _RecipientPicker extends StatelessWidget {
+  const _RecipientPicker({required this.viewModel});
+
+  final WordSetUploadViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final friends = viewModel.friends;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('받는 사람', style: Theme.of(context).textTheme.titleSmall),
+        SizedBox(height: 4.h),
+        if (friends.isEmpty)
+          Text('아직 친구가 없어요. 내 정보에서 동생을 초대하면 여기서 선택할 수 있어요.',
+              style: TextStyle(fontSize: 12.sp, color: AppColors.lavender))
+        else
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 4.h,
+            children: [
+              for (final friend in friends)
+                FilterChip(
+                  label: Text(friend.name),
+                  selected: viewModel.selectedFriendUids.contains(friend.uid),
+                  onSelected: (_) => viewModel.toggleFriend(friend.uid),
+                  showCheckmark: true,
+                ),
+            ],
+          ),
       ],
     );
   }

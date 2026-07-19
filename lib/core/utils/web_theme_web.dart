@@ -7,9 +7,17 @@ void applyWebThemeColor(Color color) {
   final argb = color.toARGB32();
   final hex = '#${(argb & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
 
-  final body = web.document.body;
-  if (body != null) body.style.backgroundColor = hex;
+  // html/body 배경(노치·카메라 영역이 이 색을 보여준다).
+  (web.document.documentElement as web.HTMLElement?)?.style.backgroundColor =
+      hex;
+  web.document.body?.style.backgroundColor = hex;
 
-  final meta = web.document.querySelector('meta[name="theme-color"]');
-  if (meta != null) meta.setAttribute('content', hex);
+  // theme-color 메타(iOS 상태바 틴트). 없으면 새로 만든다.
+  var meta = web.document.querySelector('meta[name="theme-color"]');
+  if (meta == null) {
+    meta = web.document.createElement('meta');
+    meta.setAttribute('name', 'theme-color');
+    web.document.head?.appendChild(meta);
+  }
+  meta.setAttribute('content', hex);
 }

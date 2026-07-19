@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bouncy_tap.dart';
 import '../../../models/app_user.dart';
-import '../../social/repositories/friend_repository.dart';
 import '../../word_sets/models/word_set.dart';
 import '../../word_sets/repositories/word_set_repository.dart';
 import '../viewmodels/study_viewmodel.dart';
@@ -24,7 +23,6 @@ class StudyListView extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) => StudyViewModel(
-        friendRepository: context.read<FriendRepository>(),
         wordSetRepository: context.read<WordSetRepository>(),
         myUid: user.uid,
       ),
@@ -99,7 +97,7 @@ class _StudyBody extends StatelessWidget {
     final viewModel = context.watch<StudyViewModel>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('공부하기 📖')),
+      appBar: AppBar(title: const Text('공부하기')),
       body: SafeArea(child: _content(context, viewModel)),
     );
   }
