@@ -7,6 +7,9 @@ extension UserRoleX on UserRole {
 
   String get label => this == UserRole.elder ? '언니 (출제자)' : '동생 (응시자)';
 
+  /// 자매 마스코트: 언니 🐰 · 동생 🐥.
+  String get mascot => this == UserRole.elder ? '🐰' : '🐥';
+
   static UserRole? fromStorage(String? value) {
     if (value == null) return null;
     for (final role in UserRole.values) {
