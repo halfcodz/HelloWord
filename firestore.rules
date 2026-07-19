@@ -1,0 +1,75 @@
+rules_version = '2';
+
+// HelloWord Firestore 보안 규칙
+// - 로그인한 사용자만 접근 가능
+// - 시험 일정(examPlans)은 언니(host)만 생성·수정·삭제, 동생은 조회만
+// - 단어 세트는 만든 언니만 수정, 그 외 로그인 사용자는 조회 가능
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // 사용자 프로필: 로그인하면 조회 가능(친구 이름·사진·접속상태).
+    // 본인 문서만 수정. 단, 친구 승인 시 상대 문서의 'friends'만 추가하는 것은 허용.
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.auth.uid == uid;
+      allow update: if signedIn() && (
+        request.auth.uid == uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['friends'])
+      );
+      allow delete: if false;
+
+      // 개인 할 일(본인만).
+      match /todos/{todoId} {
+        allow read, write: if signedIn() && request.auth.uid == uid;
+      }
+    }
+
+    // 친구 초대: 보낸 사람만 생성, 조회·삭제는 로그인 사용자.
+    match /friendInvites/{inviteId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.fromUid == request.auth.uid;
+      allow update, delete: if signedIn();
+    }
+
+    // 단어 세트: 조회는 로그인 사용자, 생성·수정·삭제는 만든 언니(createdBy)만.
+    match /wordSets/{setId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.createdBy == request.auth.uid;
+    }
+
+    // 실시간 시험 세션(언니·동생이 함께 사용) + 하위(answers·rtc 등).
+    match /sessions/{sessionId} {
+      allow read, write: if signedIn();
+      match /{document=**} {
+        allow read, write: if signedIn();
+      }
+    }
+
+    // 채팅방 + 메시지.
+    match /chats/{roomId} {
+      allow read, write: if signedIn();
+      match /messages/{messageId} {
+        allow read, write: if signedIn();
+      }
+    }
+
+    // 예정된 시험: 조회는 로그인 사용자(동생 포함), 생성·수정·삭제는 언니(hostUid)만.
+    match /examPlans/{planId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.hostUid == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.hostUid == request.auth.uid;
+    }
+
+    // 시험 결과: 조회는 로그인 사용자, 생성은 응시자(동생) 본인, 수정·삭제는 낸 언니(hostUid).
+    match /examResults/{resultId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.guestUid == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.hostUid == request.auth.uid;
+    }
+  }
+}

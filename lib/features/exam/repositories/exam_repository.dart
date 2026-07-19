@@ -166,9 +166,6 @@ class ExamRepository {
         items: items,
       );
       await _results.add(result.toMap());
-      // 같은 단어세트의 예정 시험이 있으면 완료 처리.
-      await _markPlansDone(
-          hostUid: session.hostUid, wordSetId: session.wordSetId);
     }
 
     await _sessions.doc(sessionId).update({
@@ -202,34 +199,29 @@ class ExamRepository {
 
   Future<void> deletePlan(String id) => _plans.doc(id).delete();
 
-  Future<void> _markPlansDone({
-    required String hostUid,
-    required String wordSetId,
-  }) async {
-    // 단일 필드(hostUid) 쿼리 후 클라이언트에서 걸러 복합 색인을 피한다.
-    final snap = await _plans.where('hostUid', isEqualTo: hostUid).get();
-    for (final doc in snap.docs) {
-      final plan = ExamPlan.fromDoc(doc);
-      if (plan.wordSetId == wordSetId && !plan.done) {
-        await doc.reference.update({'done': true});
-      }
-    }
-  }
-
   // ── 시험 결과(examResults) ─────────────────────────
 
+  List<ExamResult> _sortedResults(Iterable<ExamResult> results) {
+    final list = results.toList();
+    list.sort((a, b) {
+      final ad = a.createdAt ?? DateTime(2000);
+      final bd = b.createdAt ?? DateTime(2000);
+      return bd.compareTo(ad); // 최신순
+    });
+    return list;
+  }
+
+  /// 언니(출제자)가 낸 시험의 결과.
   Stream<List<ExamResult>> watchResultsByHost(String uid) => _results
       .where('hostUid', isEqualTo: uid)
       .snapshots()
-      .map((snap) {
-        final list = snap.docs.map(ExamResult.fromDoc).toList();
-        list.sort((a, b) {
-          final ad = a.createdAt ?? DateTime(2000);
-          final bd = b.createdAt ?? DateTime(2000);
-          return bd.compareTo(ad); // 최신순
-        });
-        return list;
-      });
+      .map((snap) => _sortedResults(snap.docs.map(ExamResult.fromDoc)));
+
+  /// 동생(응시자) 본인이 친 시험의 결과.
+  Stream<List<ExamResult>> watchResultsForGuest(String uid) => _results
+      .where('guestUid', isEqualTo: uid)
+      .snapshots()
+      .map((snap) => _sortedResults(snap.docs.map(ExamResult.fromDoc)));
 
   /// 동생이 시험(공부) 중인지 상태를 표시한다. 친구 프로필의 불꽃 표시에 쓰인다.
   Future<void> setStudying({
