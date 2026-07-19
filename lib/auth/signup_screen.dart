@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../core/widgets/gradient_button.dart';
+import '../core/theme/app_theme.dart';
 import '../models/app_user.dart';
 import 'auth_service.dart';
+import 'login_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -56,11 +56,11 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('회원가입 💕')),
+      appBar: AppBar(title: const Text('회원가입')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(24.w),
+            padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 40.h),
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: 420.w),
               child: Form(
@@ -68,13 +68,22 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    Text('반가워요! 🌱',
+                        style: TextStyle(
+                            fontSize: 22.sp,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink)),
+                    SizedBox(height: 6.h),
+                    Text('정보를 입력하고 역할을 골라 주세요',
+                        style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.gray)),
+                    SizedBox(height: 24.h),
                     TextFormField(
                       controller: _nameController,
                       textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: '이름 (별명)',
-                        prefixIcon: Icon(Icons.person_outline),
-                      ),
+                      decoration: const InputDecoration(hintText: '이름 (별명)'),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return '이름을 입력해 주세요.';
@@ -82,14 +91,11 @@ class _SignupScreenState extends State<SignupScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 16.h),
+                    SizedBox(height: 10.h),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: '이메일',
-                        prefixIcon: Icon(Icons.email_outlined),
-                      ),
+                      decoration: const InputDecoration(hintText: '이메일'),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return '이메일을 입력해 주세요.';
@@ -100,18 +106,18 @@ class _SignupScreenState extends State<SignupScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 16.h),
+                    SizedBox(height: 10.h),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscure,
                       decoration: InputDecoration(
-                        labelText: '비밀번호 (6자 이상)',
-                        prefixIcon: const Icon(Icons.lock_outline),
+                        hintText: '비밀번호 (6자 이상)',
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscure
                                 ? Icons.visibility_off_outlined
                                 : Icons.visibility_outlined,
+                            color: AppColors.hint,
                           ),
                           onPressed: () =>
                               setState(() => _obscure = !_obscure),
@@ -129,23 +135,23 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     SizedBox(height: 24.h),
                     Text('나의 역할',
-                        style: TextStyle(fontSize: 15.sp)),
+                        style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.grayText)),
                     SizedBox(height: 10.h),
                     _RolePicker(
                       role: _role,
                       onChanged: (r) => setState(() => _role = r),
                     ),
                     SizedBox(height: 28.h),
-                    GradientButton(
+                    BlueButton(
                       label: '회원가입',
                       loading: _loading,
-                      onPressed: _loading ? null : _submit,
+                      onTap: _loading ? null : _submit,
                     ),
                   ],
-                )
-                    .animate()
-                    .fadeIn(duration: 450.ms)
-                    .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
+                ),
               ),
             ),
           ),
@@ -167,9 +173,10 @@ class _RolePicker extends StatelessWidget {
       children: [
         Expanded(
           child: _RoleCard(
-            emoji: '👩‍🏫',
+            mascot: '🐰',
             label: '언니',
             hint: '단어를 내요',
+            bg: AppColors.blueSoft,
             selected: role == UserRole.elder,
             onTap: () => onChanged(UserRole.elder),
           ),
@@ -177,9 +184,10 @@ class _RolePicker extends StatelessWidget {
         SizedBox(width: 12.w),
         Expanded(
           child: _RoleCard(
-            emoji: '🧒',
+            mascot: '🐥',
             label: '동생',
             hint: '시험을 봐요',
+            bg: AppColors.orangeSoft,
             selected: role == UserRole.younger,
             onTap: () => onChanged(UserRole.younger),
           ),
@@ -191,45 +199,54 @@ class _RolePicker extends StatelessWidget {
 
 class _RoleCard extends StatelessWidget {
   const _RoleCard({
-    required this.emoji,
+    required this.mascot,
     required this.label,
     required this.hint,
+    required this.bg,
     required this.selected,
     required this.onTap,
   });
 
-  final String emoji;
+  final String mascot;
   final String label;
   final String hint;
+  final Color bg;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(vertical: 16.h),
+        duration: const Duration(milliseconds: 180),
+        padding: EdgeInsets.symmetric(vertical: 20.h),
         decoration: BoxDecoration(
-          color: selected
-              ? theme.colorScheme.primaryContainer
-              : Colors.white.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(20.r),
+          color: selected ? AppColors.blueSoft : Colors.white,
+          borderRadius: BorderRadius.circular(18.r),
           border: Border.all(
-            color: selected ? theme.colorScheme.primary : Colors.transparent,
-            width: 2,
+            color: selected ? AppColors.pink : AppColors.border,
+            width: selected ? 2 : 1,
           ),
         ),
         child: Column(
           children: [
-            Text(emoji, style: TextStyle(fontSize: 30.sp)),
-            SizedBox(height: 6.h),
-            Text(label, style: TextStyle(fontSize: 16.sp)),
+            Container(
+              width: 56.w,
+              height: 56.w,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+              child: Text(mascot, style: TextStyle(fontSize: 30.sp)),
+            ),
+            SizedBox(height: 10.h),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w800,
+                    color: selected ? AppColors.pink : AppColors.ink)),
             SizedBox(height: 2.h),
             Text(hint,
-                style: TextStyle(fontSize: 12.sp, color: theme.hintColor)),
+                style: TextStyle(fontSize: 12.sp, color: AppColors.gray)),
           ],
         ),
       ),

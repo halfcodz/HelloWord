@@ -255,7 +255,7 @@ class _TodoTile extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: EdgeInsets.only(right: 20.w),
         decoration: BoxDecoration(
-          color: Colors.red.shade300,
+          color: AppColors.danger,
           borderRadius: BorderRadius.circular(16.r),
         ),
         child: const Icon(Icons.delete, color: Colors.white),
