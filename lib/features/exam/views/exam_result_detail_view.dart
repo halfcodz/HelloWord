@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../word_sets/models/word_pair.dart';
 import '../models/exam_result.dart';
 import 'exam_result_widgets.dart';
 
@@ -13,85 +14,57 @@ class ExamResultDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 틀린 문항을 먼저(위) → 맞은 문항을 아래로 정렬.
+    final items = [...result.items]..sort((a, b) {
+        if (a.correct == b.correct) return a.index.compareTo(b.index);
+        return a.correct ? 1 : -1;
+      });
+    final wrongCount = items.where((e) => !e.correct).length;
+
+    final children = <Widget>[
+      ExamScoreBanner(
+        score: result.score,
+        total: result.total,
+        name: result.guestName.isEmpty ? null : result.guestName,
+      ),
+      SizedBox(height: 16.h),
+    ];
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i];
+      if (i == 0 && wrongCount > 0) {
+        children.add(_label('틀린 문제 $wrongCount개', AppColors.danger));
+      }
+      if (i == wrongCount && wrongCount < items.length) {
+        children.add(_label('맞은 문제 ${items.length - wrongCount}개', AppColors.green));
+      }
+      children.add(Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        child: ExamReviewRow(
+          number: item.index + 1,
+          word: WordPair(english: item.english, korean: item.korean),
+          submitted: item.submitted,
+          correct: item.correct,
+          source: item.correct ? null : result.title,
+        ),
+      ));
+      children.add(SizedBox(height: 8.h));
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(result.title)),
       body: SafeArea(
         child: ListView(
           padding: EdgeInsets.fromLTRB(4.w, 8.h, 4.w, 24.h),
-          children: [
-            ExamScoreBanner(
-              score: result.score,
-              total: result.total,
-              name: result.guestName.isEmpty ? null : result.guestName,
-            ),
-            SizedBox(height: 16.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Text('문항별 채점',
-                  style: TextStyle(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.grayText)),
-            ),
-            SizedBox(height: 10.h),
-            for (final item in result.items) ...[
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: _ItemRow(item: item),
-              ),
-              SizedBox(height: 8.h),
-            ],
-          ],
+          children: children,
         ),
       ),
     );
   }
-}
 
-class _ItemRow extends StatelessWidget {
-  const _ItemRow({required this.item});
-
-  final ExamResultItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final correct = item.correct;
-    final color = correct ? AppColors.green : AppColors.danger;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        color: AppColors.cream,
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Icon(correct ? Icons.check_circle : Icons.cancel,
-              color: color, size: 22.sp),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${item.english}  ·  ${item.korean}',
-                    style: TextStyle(
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.ink)),
-                SizedBox(height: 3.h),
-                Text(
-                  item.submitted.isEmpty
-                      ? '입력한 답: (빈칸)'
-                      : '입력한 답: ${item.submitted}',
-                  style: TextStyle(
-                      fontSize: 13.sp,
-                      color: correct ? AppColors.gray : AppColors.danger),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _label(String text, Color color) => Padding(
+        padding: EdgeInsets.fromLTRB(18.w, 4.h, 16.w, 8.h),
+        child: Text(text,
+            style: TextStyle(
+                fontSize: 13.sp, fontWeight: FontWeight.w800, color: color)),
+      );
 }

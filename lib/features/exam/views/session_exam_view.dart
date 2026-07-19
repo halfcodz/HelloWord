@@ -179,20 +179,31 @@ class _ExamBodyState extends State<_ExamBody> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // 영상통화는 응시 중·완료 후 모두 같은 위치에 유지해 끊기지 않게 한다.
-    return Column(
-      children: [
-        CallPanel(
-          key: const ValueKey('exam-call'),
-          sessionId: session.id,
-          isCaller: false,
-        ),
-        Expanded(
-          child: vm.isFinished
-              ? _buildFinished(vm, session)
-              : _buildActive(vm, session),
-        ),
-      ],
+    // 키보드가 열리면 영상을 작게 줄여 문제·입력칸이 잘 보이게 한다.
+    final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+    final callHeight =
+        (!vm.isFinished && keyboardOpen) ? 84.h : 190.h;
+
+    // 바깥(입력칸 밖)을 터치하면 키보드를 내린다.
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Column(
+        children: [
+          // 영상통화는 응시 중·완료 후 모두 같은 위치에 유지해 끊기지 않게 한다.
+          CallPanel(
+            key: const ValueKey('exam-call'),
+            sessionId: session.id,
+            isCaller: false,
+            height: callHeight,
+          ),
+          Expanded(
+            child: vm.isFinished
+                ? _buildFinished(vm, session)
+                : _buildActive(vm, session),
+          ),
+        ],
+      ),
     );
   }
 
@@ -329,6 +340,7 @@ class _ExamBodyState extends State<_ExamBody> {
           child: ExamReviewList(
             words: session.words,
             resolve: vm.answerAt,
+            sourceTitle: session.title,
           ),
         ),
         Container(
