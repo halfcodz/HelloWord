@@ -27,9 +27,6 @@ class WordFileParseException implements Exception {
 /// - csv/txt: 각 줄을 탭 → 쉼표 → 하이픈 순서로 구분자를 자동 감지해 분리.
 /// - xlsx/xls: 첫 시트의 A열=영단어, B열=해석.
 class WordFileParser {
-  /// csv/txt에서 구분자로 인식할 후보 (우선순위 순).
-  static const _delimiters = ['\t', ',', '-'];
-
   static ParsedWords parse({
     required String fileName,
     required Uint8List bytes,
@@ -74,30 +71,45 @@ class WordFileParser {
       final line = rawLine.trim();
       if (line.isEmpty) continue;
       if (_isMarkdownSeparator(line)) continue; // |---|---| 구분선
-      final pair =
-          line.contains('|') ? _splitPipe(line) : _splitLine(line);
-      if (pair == null) {
+
+      // 여러 칸으로 나눈 뒤 '앞의 두 칸'(단어·뜻)만 사용한다.
+      // 발음·예문 등 3번째 이후 칸은 버려 타일이 길어지지 않게 한다.
+      final cells = _columns(line);
+      if (cells.length < 2) {
+        // 구분자가 없는 안내 문구/제목 줄은 조용히 건너뛴다.
+        if (cells.isNotEmpty) skipped++;
+        continue;
+      }
+      final en = cells[0];
+      final ko = cells[1];
+      if (en.isEmpty || ko.isEmpty) {
         skipped++;
         continue;
       }
-      if (_looksLikeHeader(pair)) continue; // 영어/뜻 같은 헤더행
-      pairs.add(pair);
+      if (_looksLikeHeader(en, ko)) continue; // 단어/뜻/숙어 같은 헤더행
+      pairs.add(WordPair(english: en, korean: ko));
     }
     return ParsedWords(pairs: pairs, skippedLines: skipped);
   }
 
-  /// `| apple | 사과 |` 형태의 마크다운/파이프 표 한 줄을 분리한다.
-  static WordPair? _splitPipe(String line) {
-    final cells = line
-        .split('|')
-        .map((c) => c.trim())
-        .where((c) => c.isNotEmpty)
-        .toList();
-    if (cells.length < 2) return null;
-    final en = cells[0];
-    final ko = cells[1];
-    if (en.isEmpty || ko.isEmpty) return null;
-    return WordPair(english: en, korean: ko);
+  /// 한 줄을 칸(cell) 목록으로 나눈다. 우선순위: 파이프 → 탭 → 2칸 이상 공백 →
+  /// 쉼표 → 하이픈. 앞뒤 공백을 제거하고 빈 칸은 버린다.
+  static List<String> _columns(String line) {
+    List<String> raw;
+    if (line.contains('|')) {
+      raw = line.split('|');
+    } else if (line.contains('\t')) {
+      raw = line.split('\t');
+    } else if (RegExp(r'\s{2,}').hasMatch(line)) {
+      raw = line.split(RegExp(r'\s{2,}'));
+    } else if (line.contains(',')) {
+      raw = line.split(',');
+    } else if (line.contains('-')) {
+      raw = line.split(RegExp(r'\s*-\s*'));
+    } else {
+      raw = [line];
+    }
+    return raw.map((c) => c.trim()).where((c) => c.isNotEmpty).toList();
   }
 
   /// `|---|:--:|` 같은 마크다운 표 구분선인지.
@@ -106,28 +118,15 @@ class WordFileParser {
     return stripped.isEmpty && line.contains('-');
   }
 
-  /// `영어 | 뜻` 같은 헤더행으로 보이면 제외한다.
-  static bool _looksLikeHeader(WordPair pair) {
-    const enHeaders = {'영어', '영단어', '단어', 'english', 'word', 'eng', '스펠링'};
+  /// `단어 | 뜻`, `숙어 | 뜻` 같은 헤더행으로 보이면 제외한다.
+  static bool _looksLikeHeader(String en, String ko) {
+    const enHeaders = {
+      '영어', '영단어', '단어', '숙어', '표현', '어휘', 'english', 'word',
+      'eng', '스펠링', 'idiom', 'phrase', 'expression'
+    };
     const koHeaders = {'뜻', '의미', '해석', '한글', '뜻(한글)', 'korean', 'meaning'};
-    final en = pair.english.toLowerCase();
-    final ko = pair.korean.toLowerCase();
-    return enHeaders.contains(en) && koHeaders.contains(ko);
-  }
-
-  static WordPair? _splitLine(String line) {
-    for (final delim in _delimiters) {
-      final idx = line.indexOf(delim);
-      // 구분자가 줄 맨 앞/뒤가 아니어야 유효.
-      if (idx > 0 && idx < line.length - 1) {
-        final en = line.substring(0, idx).trim();
-        final ko = line.substring(idx + 1).trim();
-        if (en.isNotEmpty && ko.isNotEmpty) {
-          return WordPair(english: en, korean: ko);
-        }
-      }
-    }
-    return null;
+    return enHeaders.contains(en.toLowerCase()) ||
+        koHeaders.contains(ko.toLowerCase());
   }
 
   static ParsedWords _parseExcel(Uint8List bytes) {

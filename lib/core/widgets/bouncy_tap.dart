@@ -28,6 +28,8 @@ class _BouncyTapState extends State<BouncyTap> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      // 투명한 여백까지 탭이 잡히도록 opaque로 히트 영역을 넓힌다.
+      behavior: HitTestBehavior.opaque,
       onTapDown: (_) => _setPressed(true),
       onTapUp: (_) => _setPressed(false),
       onTapCancel: () => _setPressed(false),

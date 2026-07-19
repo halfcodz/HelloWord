@@ -31,6 +31,7 @@ class FriendAvatar extends StatelessWidget {
     final photo = AvatarService.decode(user.photoBase64);
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
