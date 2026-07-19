@@ -129,7 +129,7 @@ class _Bubble extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
         constraints: BoxConstraints(maxWidth: 260.w),
         decoration: BoxDecoration(
-          color: isMine ? AppColors.pink : Colors.white,
+          color: isMine ? AppColors.pink : AppColors.cream,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(isMine ? 18.r : 4.r),
             topRight: Radius.circular(isMine ? 4.r : 18.r),

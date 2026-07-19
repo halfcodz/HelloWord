@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 
 import '../../../auth/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_controller.dart';
 import '../../../models/app_user.dart';
 import '../services/avatar_service.dart';
 
@@ -127,7 +129,7 @@ class ProfileView extends StatelessWidget {
                       height: 28.w,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.cream,
                         shape: BoxShape.circle,
                         boxShadow: AppColors.softShadow(blur: 6, y: 2),
                       ),
@@ -173,6 +175,7 @@ class ProfileView extends StatelessWidget {
                     label: '이메일',
                     value: user.email,
                   ),
+                  const _ThemeToggleRow(),
                   _SettingRow(
                     icon: Icons.logout,
                     label: '로그아웃',
@@ -182,6 +185,46 @@ class ProfileView extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 다크 모드 토글 행. 스위치로 라이트/다크를 전환한다.
+class _ThemeToggleRow extends StatelessWidget {
+  const _ThemeToggleRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.watch<ThemeController>();
+    final dark = controller.isDark;
+    return InkWell(
+      onTap: () => controller.setDark(!dark),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 4.w),
+        decoration: BoxDecoration(
+          border: Border(
+              bottom: BorderSide(color: AppColors.border, width: 1)),
+        ),
+        child: Row(
+          children: [
+            Icon(dark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                size: 22.sp, color: AppColors.grayText),
+            SizedBox(width: 12.w),
+            Text('다크 모드',
+                style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink)),
+            const Spacer(),
+            Switch.adaptive(
+              value: dark,
+              activeThumbColor: Colors.white,
+              activeTrackColor: AppColors.pink,
+              onChanged: (v) => controller.setDark(v),
             ),
           ],
         ),
@@ -217,8 +260,8 @@ class _SettingRow extends StatelessWidget {
         decoration: BoxDecoration(
           border: isLast
               ? null
-              : const Border(
-                  bottom: BorderSide(color: AppColors.fieldBg, width: 1)),
+              : Border(
+                  bottom: BorderSide(color: AppColors.border, width: 1)),
         ),
         child: Row(
           children: [

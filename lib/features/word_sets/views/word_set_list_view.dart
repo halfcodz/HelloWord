@@ -158,7 +158,7 @@ class _WordSetCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cream,
           borderRadius: BorderRadius.circular(16.r),
           boxShadow: AppColors.softShadow(blur: 20, y: 8),
         ),

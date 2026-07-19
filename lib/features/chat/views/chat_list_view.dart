@@ -81,7 +81,7 @@ class _ChatFriendTile extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.all(12.w),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cream,
           borderRadius: BorderRadius.circular(20.r),
           boxShadow: AppColors.softShadow(blur: 12, y: 5),
         ),
