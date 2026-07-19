@@ -8,10 +8,10 @@ import '../core/theme/app_theme.dart';
 import '../core/widgets/bouncy_tap.dart';
 import '../features/chat/views/chat_list_view.dart';
 import '../features/exam/views/exam_dashboard_view.dart';
+import '../features/exam/views/exam_schedule_view.dart';
 import '../features/exam/views/session_join_view.dart';
 import '../features/profile/views/profile_view.dart';
 import '../features/study/views/study_list_view.dart';
-import '../features/todo/views/todo_home_view.dart';
 import '../features/word_sets/views/word_set_list_view.dart';
 import '../models/app_user.dart';
 
@@ -63,7 +63,7 @@ class _MainShellState extends State<MainShell> {
     }
     return (
       pages: [
-        TodoHomeView(user: user),
+        ExamScheduleView(user: user),
         StudyListView(user: user),
         SessionJoinView(user: user),
         ChatListView(user: user),
