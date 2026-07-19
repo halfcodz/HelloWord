@@ -192,8 +192,8 @@ class _BarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 선택: 진한 핑크 / 비선택: 옅은 회보라 — 대비를 확실히.
-    final color = selected ? AppColors.pink : const Color(0xFFB7B0C7);
+    // 선택: 포인트 색 / 비선택: 뉴트럴 그레이(토스풍).
+    final color = selected ? AppColors.pink : const Color(0xFF8B95A1);
     return BouncyTap(
       onTap: onTap,
       child: Padding(
@@ -202,38 +202,27 @@ class _BarItem extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
-              decoration: BoxDecoration(
-                color: selected
-                    ? AppColors.pinkSoft.withValues(alpha: 0.5)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(16.r),
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(icon, size: 22.sp, color: color),
-                  if (showBadge)
-                    Positioned(
-                      right: -2.w,
-                      top: -2.h,
-                      child: Container(
-                        width: 9.w,
-                        height: 9.w,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF4D6D),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1.5),
-                        ),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(icon, size: 24.sp, color: color),
+                if (showBadge)
+                  Positioned(
+                    right: -2.w,
+                    top: -2.h,
+                    child: Container(
+                      width: 9.w,
+                      height: 9.w,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF4D6D),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
-            SizedBox(height: 3.h),
+            SizedBox(height: 4.h),
             Text(
               label,
               textAlign: TextAlign.center,

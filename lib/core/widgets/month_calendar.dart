@@ -191,36 +191,38 @@ class _DayCell extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        height: 38.h,
+        height: 46.h,
         margin: EdgeInsets.all(1.5.w),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.pinkSoft.withValues(alpha: 0.35)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12.r),
-          border: isSelected
-              ? Border.all(color: AppColors.pink, width: 1.5)
-              : null,
-        ),
         // 날짜 원은 칸 중앙에, 점 표시는 아래쪽에 겹쳐 배치한다.
         child: Stack(
           alignment: Alignment.center,
           children: [
             Container(
-              width: 24.w,
-              height: 24.w,
+              width: 30.w,
+              height: 30.w,
               alignment: Alignment.center,
               decoration: isToday
                   ? BoxDecoration(
-                      gradient: AppColors.primaryButton,
+                      color: AppColors.pink,
                       shape: BoxShape.circle,
                     )
-                  : null,
+                  : (isSelected
+                      ? BoxDecoration(
+                          color: AppColors.pinkSoft,
+                          shape: BoxShape.circle,
+                        )
+                      : null),
               child: Text(
                 '${date.day}',
                 style: TextStyle(
-                  fontSize: 12.sp,
-                  color: isToday ? Colors.white : dayColor,
+                  fontSize: 13.sp,
+                  fontWeight:
+                      (isToday || isSelected) ? FontWeight.w700 : FontWeight.w500,
+                  color: isToday
+                      ? Colors.white
+                      : isSelected
+                          ? AppColors.pink
+                          : dayColor,
                 ),
               ),
             ),
