@@ -107,7 +107,8 @@ class _FriendBarBody extends StatelessWidget {
       FriendAddResult.self => '내 이메일은 초대할 수 없어요.',
       FriendAddResult.alreadyFriend => '이미 친구예요!',
       FriendAddResult.alreadyPending => '이미 초대장을 보냈어요.',
-      FriendAddResult.error => '초대 중 오류가 발생했어요.',
+      FriendAddResult.error =>
+        '초대 저장에 실패했어요. Firestore 규칙에 friendInvites 권한이 있는지 확인해 주세요.',
     };
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));

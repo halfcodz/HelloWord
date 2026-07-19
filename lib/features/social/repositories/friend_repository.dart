@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../models/app_user.dart';
 import '../models/friend_invite.dart';
@@ -51,7 +52,9 @@ class FriendRepository {
         'createdAt': FieldValue.serverTimestamp(),
       });
       return FriendAddResult.success;
-    } catch (_) {
+    } catch (e) {
+      // 대부분 Firestore 규칙(friendInvites 권한) 문제. 콘솔에 원인을 남긴다.
+      debugPrint('sendInvite 오류: $e');
       return FriendAddResult.error;
     }
   }
