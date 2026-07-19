@@ -4,8 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_reload.dart';
+import '../../../core/utils/date_format.dart';
 import '../../../core/widgets/month_calendar.dart';
 import '../../../models/app_user.dart';
+import '../../exam/models/exam_plan.dart';
+import '../../exam/repositories/exam_repository.dart';
 import '../../social/views/friend_bar.dart';
 import '../../social/views/notification_bell.dart';
 import '../models/todo.dart';
@@ -125,6 +128,7 @@ class _TodoHomeViewState extends State<TodoHomeView> {
             return Column(
               children: [
                 FriendBar(me: widget.user),
+                _UpcomingExamBanner(uid: widget.user.uid),
                 MonthCalendar(
                   month: _month,
                   selectedDay: _selectedDay,
@@ -186,6 +190,78 @@ class _TodoHomeViewState extends State<TodoHomeView> {
           },
         ),
       ),
+    );
+  }
+}
+
+/// 동생 홈 상단: 언니가 배정한 가장 가까운 예정 시험을 D-DAY로 보여준다.
+class _UpcomingExamBanner extends StatelessWidget {
+  const _UpcomingExamBanner({required this.uid});
+
+  final String uid;
+
+  @override
+  Widget build(BuildContext context) {
+    final exam = context.read<ExamRepository>();
+    final today = DateTime.now();
+    return StreamBuilder<List<ExamPlan>>(
+      stream: exam.watchPlansForGuest(uid),
+      builder: (context, snap) {
+        final plans = (snap.data ?? const <ExamPlan>[])
+            .where((p) => !p.done && p.dDay(today) >= 0)
+            .toList();
+        if (plans.isEmpty) return const SizedBox.shrink();
+        final plan = plans.first; // 저장소에서 예정일 오름차순 정렬됨
+        final d = plan.dDay(today);
+        final label = d == 0 ? 'D-DAY' : 'D-$d';
+        return Container(
+          margin: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 8.h),
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: AppColors.blueSoft,
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46.w,
+                height: 46.w,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.pink,
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Text(label,
+                    style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white)),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('다가오는 시험 📣',
+                        style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.grayText)),
+                    SizedBox(height: 2.h),
+                    Text('${plan.title} · ${formatYmd(plan.scheduledDate)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
