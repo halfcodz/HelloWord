@@ -24,6 +24,8 @@ class _CallPanelState extends State<CallPanel> {
   CallService? _service;
   String? _error;
   bool _ready = false;
+  bool _remoteActive = false;
+  bool _connected = false;
   bool _camOn = true;
   bool _micOn = true;
 
@@ -37,6 +39,17 @@ class _CallPanelState extends State<CallPanel> {
     final service = CallService(
       sessionId: widget.sessionId,
       isCaller: widget.isCaller,
+      onRemoteStream: () {
+        // 원격 영상이 도착하면 UI를 강제로 다시 그린다.
+        if (mounted) setState(() => _remoteActive = true);
+      },
+      onConnectionState: (state) {
+        if (!mounted) return;
+        setState(() {
+          _connected = state == 'connected';
+          if (state == 'failed') _error = '상대와 연결하지 못했어요. 네트워크를 확인해 다시 시도해 주세요.';
+        });
+      },
     );
     try {
       await service.start();
@@ -51,9 +64,22 @@ class _CallPanelState extends State<CallPanel> {
     } catch (_) {
       await service.dispose();
       if (mounted) {
-        setState(() => _error = '카메라를 켤 수 없어요. 권한을 확인해 주세요.');
+        setState(() => _error = '카메라·마이크를 켤 수 없어요. 권한을 확인해 주세요.');
       }
     }
+  }
+
+  Future<void> _retry() async {
+    await _service?.dispose();
+    if (!mounted) return;
+    setState(() {
+      _service = null;
+      _error = null;
+      _ready = false;
+      _remoteActive = false;
+      _connected = false;
+    });
+    await _init();
   }
 
   @override
@@ -82,9 +108,20 @@ class _CallPanelState extends State<CallPanel> {
       return Center(
         child: Padding(
           padding: EdgeInsets.all(16.w),
-          child: Text(_error!,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontSize: 13.sp)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_error!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 13.sp)),
+              SizedBox(height: 12.h),
+              FilledButton.icon(
+                onPressed: _retry,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('다시 연결'),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -112,8 +149,25 @@ class _CallPanelState extends State<CallPanel> {
             service.remoteRenderer,
             objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
             placeholderBuilder: (_) => Center(
-              child: Text('상대 영상 기다리는 중…',
-                  style: TextStyle(color: Colors.white54, fontSize: 12.sp)),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white54)),
+                  ),
+                  SizedBox(height: 10.h),
+                  Text(
+                    _remoteActive
+                        ? '상대 영상 불러오는 중…'
+                        : (_connected ? '상대 영상 불러오는 중…' : '상대가 들어오길 기다리는 중…'),
+                    style: TextStyle(color: Colors.white54, fontSize: 12.sp),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
