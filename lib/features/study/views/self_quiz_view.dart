@@ -153,7 +153,8 @@ class _Feedback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = correct ? Colors.green.shade600 : Theme.of(context).colorScheme.error;
+    final color =
+        correct ? AppColors.green : Theme.of(context).colorScheme.error;
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(14.w),

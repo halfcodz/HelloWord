@@ -214,7 +214,7 @@ class _BarItem extends StatelessWidget {
                       width: 9.w,
                       height: 9.w,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF4D6D),
+                        color: AppColors.danger,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 1.5),
                       ),
