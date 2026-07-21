@@ -10,6 +10,7 @@ import '../../exam/models/exam_result.dart';
 import '../../exam/repositories/exam_repository.dart';
 import '../../word_sets/models/word_set.dart';
 import '../../word_sets/repositories/word_set_repository.dart';
+import '../services/memorized_store.dart';
 import '../viewmodels/study_viewmodel.dart';
 import 'exam_review_study_view.dart';
 import 'flashcard_study_view.dart';
@@ -310,52 +311,107 @@ class _MenuTile extends StatelessWidget {
   }
 }
 
+/// 공부 세트 커버 카드(진행 바 포함). 다 외우면 흰 카드, 아니면 민트 그라디언트.
 class _StudyCard extends StatelessWidget {
   const _StudyCard({required this.set, required this.onTap});
 
   final WordSet set;
   final VoidCallback onTap;
 
+  int get _memorized =>
+      set.words.where((w) => MemorizedStore.isMemorized(w.english)).length;
+
   @override
   Widget build(BuildContext context) {
+    final total = set.wordCount;
+    final done = _memorized;
+    final complete = total > 0 && done >= total;
+    final progress = total == 0 ? 0.0 : done / total;
+
+    final onCard = complete ? AppColors.ink : Colors.white;
+    final subColor = complete
+        ? AppColors.gray
+        : Colors.white.withValues(alpha: 0.85);
+
     return BouncyTap(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.all(18.w),
+        padding: EdgeInsets.all(20.w),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: AppColors.cream,
-          borderRadius: BorderRadius.circular(16.r),
-          boxShadow: AppColors.softShadow(blur: 16, y: 7),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 46.w,
-              height: 46.w,
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryButton,
-                borderRadius: BorderRadius.circular(14.r),
-              ),
-              child: Icon(Icons.school_rounded, color: Colors.white, size: 24.sp),
-            ),
-            SizedBox(width: 14.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(set.title,
-                      style: TextStyle(fontSize: 16.sp, color: AppColors.ink),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  SizedBox(height: 2.h),
-                  Text('${set.wordCount}개 단어 · 혼자 공부',
-                      style: TextStyle(
-                          fontSize: 12.sp, color: AppColors.lavender)),
+          color: complete ? AppColors.cream : null,
+          gradient: complete ? null : AppColors.primaryButton,
+          borderRadius: BorderRadius.circular(26.r),
+          boxShadow: complete
+              ? AppColors.softShadow()
+              : [
+                  BoxShadow(
+                      color: AppColors.mint.withValues(alpha: 0.3),
+                      blurRadius: 22,
+                      offset: const Offset(0, 10)),
                 ],
-              ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -12.w,
+              bottom: -18.h,
+              child: Text('📚',
+                  style: TextStyle(
+                      fontSize: 82.sp,
+                      color: Colors.white.withValues(
+                          alpha: complete ? 0.06 : 0.22))),
             ),
-            Icon(Icons.play_circle_fill_rounded,
-                color: AppColors.pink, size: 28.sp),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(complete ? '완료' : 'STUDY',
+                    style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 2,
+                        color: subColor)),
+                SizedBox(height: 4.h),
+                Text(set.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 19.sp,
+                        fontWeight: FontWeight.w800,
+                        color: onCard)),
+                SizedBox(height: 2.h),
+                Text(complete ? '$total단어 · 다 외웠어요 🎉' : '$total단어 · 혼자 공부',
+                    style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w700,
+                        color: subColor)),
+                SizedBox(height: 14.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4.r),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 7.h,
+                          backgroundColor: complete
+                              ? AppColors.border
+                              : Colors.white.withValues(alpha: 0.25),
+                          valueColor: AlwaysStoppedAnimation(
+                              complete ? AppColors.mint : Colors.white),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Text('$done/$total',
+                        style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w800,
+                            color: onCard)),
+                  ],
+                ),
+              ],
+            ),
           ],
         ),
       ),

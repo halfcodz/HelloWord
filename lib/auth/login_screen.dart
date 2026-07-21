@@ -270,18 +270,19 @@ class BlueButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        height: 54.h,
+        height: 56.h,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: onTap == null ? AppColors.hint : AppColors.pink,
-          borderRadius: BorderRadius.circular(16.r),
+          gradient: onTap == null ? null : AppColors.primaryButton,
+          color: onTap == null ? AppColors.hint : null,
+          borderRadius: BorderRadius.circular(999.r),
           boxShadow: onTap == null
               ? null
               : [
                   BoxShadow(
-                    color: AppColors.pink.withValues(alpha: 0.3),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
+                    color: AppColors.mint.withValues(alpha: 0.35),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
                 ],
         ),
