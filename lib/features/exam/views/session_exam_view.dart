@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/gradient_button.dart';
 import '../../../models/app_user.dart';
 import '../../call/views/call_panel.dart';
 import '../../chat/views/chat_view.dart';
@@ -226,24 +225,24 @@ class _ExamBodyState extends State<_ExamBody> {
             valueColor: AlwaysStoppedAnimation(AppColors.pink),
           ),
         ),
+        // 문제(뜻)는 위쪽에서 스크롤로 보여준다.
         Expanded(
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(20.w),
+            padding: EdgeInsets.fromLTRB(20.w, 14.h, 20.w, 8.h),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(height: 4.h),
                 Text('${vm.currentIndex + 1} / ${vm.total}',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w700,
                         color: AppColors.gray)),
-                SizedBox(height: 16.h),
+                SizedBox(height: 12.h),
                 Container(
                   width: double.infinity,
                   padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 34.h),
+                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
                   decoration: BoxDecoration(
                     color: AppColors.cream,
                     borderRadius: BorderRadius.circular(20.r),
@@ -257,76 +256,30 @@ class _ExamBodyState extends State<_ExamBody> {
                               fontSize: 13.sp,
                               fontWeight: FontWeight.w600,
                               color: AppColors.hint)),
-                      SizedBox(height: 14.h),
+                      SizedBox(height: 12.h),
                       Text(word.korean,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                              fontSize: 30.sp,
+                              fontSize: 28.sp,
                               fontWeight: FontWeight.w800,
                               color: AppColors.ink)),
                     ],
                   ),
                 ),
-                SizedBox(height: 20.h),
-                TextField(
-                  controller: _answerController,
-                  autofocus: true,
-                  textInputAction:
-                      isLast ? TextInputAction.done : TextInputAction.next,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  decoration: const InputDecoration(hintText: '영어로 입력'),
-                  onChanged: vm.onTyped,
-                  onSubmitted: (_) => isLast ? _finish(vm) : _goNext(vm),
-                ),
               ],
             ),
           ),
         ),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 12.h),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: vm.currentIndex > 0
-                            ? () => _goPrev(vm)
-                            : null,
-                        icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                        label: const Text('이전'),
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 14.h),
-                          side: BorderSide(color: AppColors.border),
-                          foregroundColor: AppColors.grayText,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 10.w),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: isLast ? null : () => _goNext(vm),
-                        icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                        label: const Text('다음'),
-                        style: FilledButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 14.h),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10.h),
-                GradientButton(
-                  label: '시험 완료 🎉',
-                  icon: Icons.check_rounded,
-                  onPressed: () => _finish(vm),
-                ),
-              ],
-            ),
-          ),
+        // 입력칸을 키보드 '바로 위'에 고정해 무엇을 쓰는지 항상 보이게 한다.
+        _InputBar(
+          controller: _answerController,
+          canPrev: vm.currentIndex > 0,
+          isLast: isLast,
+          onPrev: () => _goPrev(vm),
+          onNext: () => _goNext(vm),
+          onFinish: () => _finish(vm),
+          onTyped: vm.onTyped,
+          onSubmitted: () => isLast ? _finish(vm) : _goNext(vm),
         ),
       ],
     );
@@ -363,6 +316,101 @@ class _ExamBodyState extends State<_ExamBody> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 시험 입력 바. 입력칸을 키보드 바로 위에 고정하고, 위에 이전/다음/완료 버튼을 둔다.
+class _InputBar extends StatelessWidget {
+  const _InputBar({
+    required this.controller,
+    required this.canPrev,
+    required this.isLast,
+    required this.onPrev,
+    required this.onNext,
+    required this.onFinish,
+    required this.onTyped,
+    required this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final bool canPrev;
+  final bool isLast;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+  final VoidCallback onFinish;
+  final ValueChanged<String> onTyped;
+  final VoidCallback onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cream,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(14.w, 10.h, 14.w, 8.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: canPrev ? onPrev : null,
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 11.h),
+                        side: BorderSide(color: AppColors.border),
+                        foregroundColor: AppColors.grayText,
+                      ),
+                      child: const Text('← 이전'),
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: isLast ? null : onNext,
+                      style: FilledButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 11.h),
+                      ),
+                      child: const Text('다음 →'),
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: onFinish,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.green,
+                        padding: EdgeInsets.symmetric(vertical: 11.h),
+                      ),
+                      child: const Text('완료'),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10.h),
+              // 이 입력칸이 키보드 바로 위에 위치해 항상 보인다.
+              TextField(
+                controller: controller,
+                autofocus: true,
+                textInputAction:
+                    isLast ? TextInputAction.done : TextInputAction.next,
+                autocorrect: false,
+                enableSuggestions: false,
+                textCapitalization: TextCapitalization.none,
+                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
+                decoration: const InputDecoration(hintText: '영어로 입력'),
+                onChanged: onTyped,
+                onSubmitted: (_) => onSubmitted(),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

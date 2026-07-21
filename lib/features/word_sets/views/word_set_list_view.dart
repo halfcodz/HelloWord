@@ -91,6 +91,7 @@ class _WordSetListBody extends StatelessWidget {
     }
 
     return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 90.h),
       itemCount: viewModel.sets.length,
       separatorBuilder: (_, _) => SizedBox(height: 14.h),

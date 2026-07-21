@@ -254,10 +254,21 @@ class _UploadScreenState extends State<_UploadScreen> {
             itemBuilder: (context, index) => WordTile(
               word: viewModel.words[index],
               index: index + 1,
-              trailing: IconButton(
-                icon: Icon(Icons.close, size: 18.sp),
-                tooltip: '이 단어 제외',
-                onPressed: () => viewModel.removeWordAt(index),
+              trailing: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => viewModel.removeWordAt(index),
+                child: Container(
+                  margin: EdgeInsets.only(left: 8.w),
+                  width: 40.w,
+                  height: 40.w,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.dangerSoft,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.close_rounded,
+                      size: 22.sp, color: AppColors.danger),
+                ),
               ),
             ),
           ),
