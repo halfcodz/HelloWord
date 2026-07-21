@@ -6,6 +6,7 @@ import '../core/services/presence_service.dart';
 import '../features/chat/repositories/chat_repository.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/theme_controller.dart';
+import '../core/utils/app_refresh.dart';
 import '../core/widgets/bouncy_tap.dart';
 import '../features/chat/views/chat_list_view.dart';
 import '../features/exam/views/exam_dashboard_view.dart';
@@ -34,6 +35,15 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     _presence.start(widget.user.uid);
+    _updateStudying();
+    _restoreTabAfterReload();
+  }
+
+  /// 새로고침(리로드) 직후라면 보던 탭으로 복원한다.
+  Future<void> _restoreTabAfterReload() async {
+    final tab = await AppRefresh.consumeRestoreTab();
+    if (tab == null || !mounted) return;
+    setState(() => _index = tab);
     _updateStudying();
   }
 
@@ -90,6 +100,7 @@ class _MainShellState extends State<MainShell> {
   void _onTab(int i) {
     setState(() => _index = i);
     _updateStudying();
+    AppRefresh.saveCurrentTab(i); // 새로고침 후 이 탭으로 복원되도록 저장
   }
 
   @override
@@ -98,9 +109,21 @@ class _MainShellState extends State<MainShell> {
     context.watch<ThemeController>();
     final config = _config();
     final chatIndex = config.items.indexWhere((it) => it.label == '채팅');
+    // 각 탭을 당겨서 새로고침으로 감싼다. 새로고침 시 캐시를 비우고 리로드하되
+    // 같은 탭으로 돌아온다(위 initState의 복원).
+    final edgeOffset = MediaQuery.of(context).padding.top + kToolbarHeight;
+    final pages = [
+      for (final page in config.pages)
+        RefreshIndicator(
+          edgeOffset: edgeOffset,
+          color: AppColors.pink,
+          onRefresh: AppRefresh.refreshKeepingTab,
+          child: page,
+        ),
+    ];
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: IndexedStack(index: _index, children: config.pages),
+      body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: StreamBuilder<bool>(
         stream: context.read<ChatRepository>().watchHasUnread(widget.user.uid),
         builder: (context, snapshot) {

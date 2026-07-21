@@ -150,6 +150,7 @@ class ProfileView extends StatelessWidget {
             SizedBox(height: 24.h),
             Expanded(
               child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.symmetric(horizontal: 20.w),
                 children: [
                   _SettingRow(

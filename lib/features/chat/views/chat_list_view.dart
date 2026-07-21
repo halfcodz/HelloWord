@@ -44,6 +44,7 @@ class _ChatListBody extends StatelessWidget {
         child: friends.isEmpty
             ? _EmptyFriends()
             : ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.all(16.w),
                 itemCount: friends.length,
                 separatorBuilder: (_, _) => SizedBox(height: 10.h),

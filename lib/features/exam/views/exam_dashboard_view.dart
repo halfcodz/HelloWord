@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/app_reload.dart';
+import '../../../core/utils/app_refresh.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/toast.dart';
 import '../../../models/app_user.dart';
@@ -115,7 +115,7 @@ class ExamDashboardView extends StatelessWidget {
           NotificationBell(user: user),
           IconButton(
             tooltip: '새로고침',
-            onPressed: reloadApp,
+            onPressed: AppRefresh.refreshKeepingTab,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -127,6 +127,7 @@ class ExamDashboardView extends StatelessWidget {
       ),
       body: SafeArea(
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(bottom: 90.h),
           children: [
             FriendBar(me: user),

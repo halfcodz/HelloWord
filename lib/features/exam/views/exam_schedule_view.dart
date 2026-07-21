@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/app_reload.dart';
+import '../../../core/utils/app_refresh.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../models/app_user.dart';
 import '../../social/views/friend_bar.dart';
@@ -32,13 +32,14 @@ class ExamScheduleView extends StatelessWidget {
           NotificationBell(user: user),
           IconButton(
             tooltip: '새로고침',
-            onPressed: reloadApp,
+            onPressed: AppRefresh.refreshKeepingTab,
             icon: const Icon(Icons.refresh),
           ),
         ],
       ),
       body: SafeArea(
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(bottom: 24.h),
           children: [
             FriendBar(me: user),

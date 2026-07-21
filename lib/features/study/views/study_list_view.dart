@@ -205,6 +205,7 @@ class _StudyBody extends StatelessWidget {
         }
 
         return ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
           children: children,
         );
