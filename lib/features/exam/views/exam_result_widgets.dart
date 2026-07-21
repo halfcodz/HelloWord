@@ -61,6 +61,44 @@ class ExamScoreBanner extends StatelessWidget {
   }
 }
 
+/// 시험 결과 카드 왼쪽에 놓는 점수 이모지 뱃지.
+/// 점수에 따라 이모지와 배경색이 달라진다. (초록 네모 대체)
+class ResultEmojiBadge extends StatelessWidget {
+  const ResultEmojiBadge({super.key, required this.percent, this.size = 52});
+
+  final int percent;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final String emoji;
+    final Color bg;
+    if (percent == 100) {
+      emoji = '💯';
+      bg = AppColors.blueSoft;
+    } else if (percent >= 80) {
+      emoji = '🎉';
+      bg = AppColors.greenSoft;
+    } else if (percent >= 60) {
+      emoji = '😊';
+      bg = AppColors.greenSoft;
+    } else {
+      emoji = '💪';
+      bg = AppColors.dangerSoft;
+    }
+    return Container(
+      width: size.w,
+      height: size.w,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(size * 0.32),
+      ),
+      child: Text(emoji, style: TextStyle(fontSize: (size * 0.46).sp)),
+    );
+  }
+}
+
 /// 말해보카풍 점수 링(민트 원형 게이지 + 가운데 점수).
 class ScoreRing extends StatelessWidget {
   const ScoreRing(
