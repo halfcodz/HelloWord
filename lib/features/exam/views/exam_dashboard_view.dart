@@ -157,24 +157,57 @@ class ExamDashboardView extends StatelessWidget {
             ),
             SizedBox(height: 16.h),
             _SectionTitle(
-                icon: Icons.fact_check_rounded, label: '지난 시험 결과'),
+                icon: Icons.fact_check_rounded, label: '오늘 시험 결과'),
             StreamBuilder<List<ExamResult>>(
               stream: exam.watchResultsByHost(user.uid),
               builder: (context, snap) {
                 final results = snap.data ?? const <ExamResult>[];
-                if (results.isEmpty) {
-                  return const _EmptyHint(
-                      text: '아직 채점된 시험이 없어요.\n동생이 시험을 마치면 여기에 쌓여요.');
-                }
+                final today =
+                    results.where((r) => _isToday(r.createdAt)).toList();
+                final past =
+                    results.where((r) => !_isToday(r.createdAt)).toList();
                 return Column(
                   children: [
-                    for (final result in results)
-                      _ResultCard(
-                        result: result,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                ExamResultDetailView(result: result),
+                    if (today.isEmpty)
+                      const _EmptyHint(text: '오늘 채점된 시험이 없어요.')
+                    else
+                      for (final result in today)
+                        _ResultCard(
+                          result: result,
+                          onTap: () => _openResult(context, result),
+                        ),
+                    if (past.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(20.w, 6.h, 20.w, 0),
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  _ResultHistoryView(results: past),
+                            ),
+                          ),
+                          borderRadius: BorderRadius.circular(12.r),
+                          child: Container(
+                            padding: EdgeInsets.all(14.w),
+                            decoration: BoxDecoration(
+                              color: AppColors.rowBg,
+                              borderRadius: BorderRadius.circular(14.r),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.history_rounded,
+                                    size: 18.sp, color: AppColors.grayText),
+                                SizedBox(width: 8.w),
+                                Text('지난 시험 결과 이력 (${past.length})',
+                                    style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.ink)),
+                                const Spacer(),
+                                Icon(Icons.chevron_right,
+                                    color: AppColors.hint, size: 20.sp),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -182,6 +215,44 @@ class ExamDashboardView extends StatelessWidget {
                 );
               },
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool _isToday(DateTime? d) {
+    if (d == null) return false;
+    final n = DateTime.now();
+    return d.year == n.year && d.month == n.month && d.day == n.day;
+  }
+
+  void _openResult(BuildContext context, ExamResult result) {
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => ExamResultDetailView(result: result)));
+  }
+}
+
+/// 지난 시험 결과 이력 화면.
+class _ResultHistoryView extends StatelessWidget {
+  const _ResultHistoryView({required this.results});
+
+  final List<ExamResult> results;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('지난 시험 결과')),
+      body: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.symmetric(vertical: 8.h),
+          children: [
+            for (final result in results)
+              _ResultCard(
+                result: result,
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => ExamResultDetailView(result: result))),
+              ),
           ],
         ),
       ),

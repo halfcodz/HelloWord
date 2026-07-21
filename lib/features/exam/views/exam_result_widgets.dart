@@ -263,7 +263,7 @@ class ExamReviewRow extends StatelessWidget {
                       style: TextStyle(fontSize: 13.sp, color: AppColors.gray))
                 else
                   AnswerDiffText(
-                      correct: word.english, submitted: submitted),
+                      correct: word.quizAnswer, submitted: submitted),
                 if (source != null && source!.isNotEmpty) ...[
                   SizedBox(height: 3.h),
                   Row(

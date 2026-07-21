@@ -41,7 +41,10 @@ class ExamResultDetailView extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 16.w),
         child: ExamReviewRow(
           number: item.index + 1,
-          word: WordPair(english: item.english, korean: item.korean),
+          word: WordPair(
+              english: item.english,
+              korean: item.korean,
+              askMeaning: item.askMeaning),
           submitted: item.submitted,
           correct: item.correct,
           source: item.correct ? null : result.title,
