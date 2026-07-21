@@ -20,8 +20,8 @@ class HelloWordApp extends StatelessWidget {
   /// 이 폭의 "폰 컬럼"이 가운데 정렬된다.
   static const double maxContentWidth = 480;
 
-  /// 반응형 계산 기준(iPhone 13/14).
-  static const Size _designSize = Size(390, 844);
+  /// 반응형 계산 기준(디자인 프레임 402×874).
+  static const Size _designSize = Size(402, 874);
 
   @override
   Widget build(BuildContext context) {
