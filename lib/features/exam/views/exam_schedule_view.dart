@@ -262,7 +262,6 @@ class _ResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pass = result.percent >= 60;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
       child: InkWell(
@@ -277,11 +276,7 @@ class _ResultCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              ScoreRing(
-                percent: result.percent,
-                accent: pass ? AppColors.mint : AppColors.danger,
-                size: 52,
-              ),
+              ResultEmojiBadge(percent: result.percent, size: 52),
               SizedBox(width: 14.w),
               Expanded(
                 child: Column(
@@ -296,7 +291,7 @@ class _ResultCard extends StatelessWidget {
                             color: AppColors.ink)),
                     SizedBox(height: 3.h),
                     Text(
-                        '${result.score}/${result.total} 정답${result.createdAt != null ? " · ${formatYmd(result.createdAt!)} 시험" : ""}',
+                        '${result.percent}점 · ${result.score}/${result.total} 정답${result.createdAt != null ? " · ${formatYmd(result.createdAt!)}" : ""}',
                         style:
                             TextStyle(fontSize: 12.sp, color: AppColors.gray)),
                   ],
