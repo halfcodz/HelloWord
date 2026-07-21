@@ -283,17 +283,21 @@ class _RoundCardButton extends StatelessWidget {
           color: primary ? null : AppColors.cream,
           gradient: primary ? AppColors.primaryButton : null,
           shape: BoxShape.circle,
+          border: primary
+              ? null
+              : Border.all(color: AppColors.border, width: 1.5),
           boxShadow: [
             BoxShadow(
               color: (primary ? AppColors.mint : AppColors.navy)
-                  .withValues(alpha: primary ? 0.4 : 0.1),
-              blurRadius: primary ? 20 : 14,
-              offset: Offset(0, primary ? 8 : 5),
+                  .withValues(alpha: primary ? 0.4 : 0.12),
+              blurRadius: primary ? 20 : 16,
+              offset: Offset(0, primary ? 8 : 6),
             ),
           ],
         ),
         child: Icon(icon,
-            size: 30.sp,
+            size: 34.sp,
+            weight: 800,
             color: primary ? Colors.white : AppColors.danger),
       ),
     );
