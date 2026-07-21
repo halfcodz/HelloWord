@@ -7,7 +7,6 @@ import '../../../core/services/tts_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/word_tile.dart' show englishLead;
 import '../../call/views/call_panel.dart';
-import '../../chat/views/chat_view.dart';
 import '../../word_sets/models/word_pair.dart';
 import '../models/exam_answer.dart';
 import '../models/exam_session.dart';
@@ -74,25 +73,7 @@ class _MonitorBody extends StatelessWidget {
     final session = viewModel.session;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(session?.title ?? '시험 감독'),
-        actions: [
-          if (session?.guestUid != null)
-            IconButton(
-              tooltip: '채팅',
-              icon: const Icon(Icons.chat_bubble_outline),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ChatView(
-                    myUid: session!.hostUid,
-                    otherUid: session.guestUid!,
-                    otherName: session.guestName ?? '동생',
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+      appBar: AppBar(title: Text(session?.title ?? '시험 감독')),
       body: SafeArea(child: _buildContent(context, viewModel, session)),
     );
   }
@@ -225,33 +206,39 @@ class _DeclinedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(24.w),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('😢', style: TextStyle(fontSize: 52.sp)),
-          SizedBox(height: 16.h),
-          Text('$name이(가) 초대를 거절했어요',
-              style: TextStyle(
-                  fontSize: 17.sp,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.ink)),
-          SizedBox(height: 8.h),
-          Text('나중에 다시 시험을 내볼 수 있어요.',
-              style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
-          SizedBox(height: 32.h),
-          SizedBox(
-            width: 200.w,
-            child: FilledButton(
-              onPressed: onClose,
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 10.h),
-                child: const Text('닫기'),
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(24.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text('😢', style: TextStyle(fontSize: 52.sp)),
+            SizedBox(height: 16.h),
+            Text('$name이(가) 초대를 거절했어요',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.ink)),
+            SizedBox(height: 8.h),
+            Text('나중에 다시 시험을 내볼 수 있어요.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+            SizedBox(height: 32.h),
+            SizedBox(
+              width: 200.w,
+              child: FilledButton(
+                onPressed: onClose,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10.h),
+                  child: const Text('닫기'),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

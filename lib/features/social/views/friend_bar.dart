@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/toast.dart';
 import '../../../models/app_user.dart';
-import '../../chat/views/chat_view.dart';
 import '../repositories/friend_repository.dart';
 import '../viewmodels/friends_viewmodel.dart';
 import 'friend_avatar.dart';
@@ -41,18 +40,6 @@ class _FriendBarBody extends StatelessWidget {
 
   void _showStatus(BuildContext context, AppUser user, {bool isMe = false}) {
     showToast(context, '${isMe ? "나" : user.name} · ${_statusText(user)}');
-  }
-
-  void _openChat(BuildContext context, AppUser friend) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ChatView(
-          myUid: me.uid,
-          otherUid: friend.uid,
-          otherName: friend.name,
-        ),
-      ),
-    );
   }
 
   /// 언니는 '동생', 동생은 '웅니'를 초대한다.
@@ -129,7 +116,7 @@ class _FriendBarBody extends StatelessWidget {
           for (final friend in friends) ...[
             FriendAvatar(
               user: friend,
-              onTap: () => _openChat(context, friend),
+              onTap: () => _showStatus(context, friend),
             ),
             SizedBox(width: 8.w),
           ],
