@@ -142,7 +142,6 @@ class _StudyBody extends StatelessWidget {
           if (pastResults.isNotEmpty) {
             children.add(_historyButton(
               context,
-              '지난 시험 기록 (${pastResults.length})',
               '지난 시험',
               [
                 for (final r in pastResults)
@@ -168,7 +167,6 @@ class _StudyBody extends StatelessWidget {
         if (pastSets.isNotEmpty) {
           children.add(_historyButton(
             context,
-            '지난 단어 기록 (${pastSets.length})',
             '지난 단어',
             [
               for (final set in pastSets)
@@ -203,35 +201,15 @@ class _StudyBody extends StatelessWidget {
         child: _StudyCard(set: set, onTap: () => _openStudyMenu(context, set)),
       );
 
-  Widget _historyButton(BuildContext context, String label, String title,
-      List<DatedItem> items) {
+  Widget _historyButton(
+      BuildContext context, String title, List<DatedItem> items) {
     return Padding(
       padding: EdgeInsets.only(bottom: 10.h),
-      child: InkWell(
+      child: HistoryEntryButton(
+        title: title,
+        count: items.length,
         onTap: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) =>
-                HistoryCalendarView(title: title, items: items))),
-        borderRadius: BorderRadius.circular(14.r),
-        child: Container(
-          padding: EdgeInsets.all(14.w),
-          decoration: BoxDecoration(
-            color: AppColors.rowBg,
-            borderRadius: BorderRadius.circular(14.r),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.history_rounded, size: 18.sp, color: AppColors.grayText),
-              SizedBox(width: 8.w),
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.ink)),
-              const Spacer(),
-              Icon(Icons.chevron_right, color: AppColors.hint, size: 20.sp),
-            ],
-          ),
-        ),
+            builder: (_) => HistoryCalendarView(title: title, items: items))),
       ),
     );
   }
