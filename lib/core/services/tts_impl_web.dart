@@ -2,41 +2,67 @@ import 'dart:js_interop';
 
 import 'package:web/web.dart' as web;
 
-web.HTMLAudioElement? _audio;
+web.SpeechSynthesisVoice? _voice;
+bool _warmed = false;
 
-/// 웹(PWA 포함): 깨끗한 발음을 위해 구글 번역 TTS의 mp3를 오디오로 재생한다.
-/// (시스템 음성은 먹먹하게 들려서, 네이버 사전처럼 또렷한 녹음 음성을 쓴다)
-/// 실패하면 브라우저 내장 SpeechSynthesis로 대체한다.
+/// 웹(PWA 포함): 브라우저 내장 SpeechSynthesis로 또렷하게 재생한다.
+/// (iOS 홈화면 앱에서는 외부 mp3 재생이 막히는 경우가 많아 내장 음성을 쓴다)
+/// - 속도 1.0 + 고품질 en 보이스 선택으로 '먹먹함'을 줄인다.
 Future<void> speakImpl(String text) async {
   final t = text.trim();
   if (t.isEmpty) return;
-  final url =
-      'https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=${Uri.encodeComponent(t)}';
-  try {
-    _audio?.pause();
-    final a = web.HTMLAudioElement();
-    // CORS 모드를 켜지 않아야(anonymous 미설정) 크로스도메인 mp3가 재생된다.
-    a.src = url;
-    _audio = a;
-    // play()는 Promise를 반환. 자동재생 차단/네트워크 실패 시 내장 음성으로 대체.
-    a.play().toDart.then((_) {}).catchError((Object _) {
-      _synth(t);
-      return null;
-    });
-  } catch (_) {
-    _synth(t);
-  }
-}
-
-/// 대체: 브라우저 내장 SpeechSynthesis (사용자 탭 안에서 바로 호출).
-void _synth(String t) {
   try {
     final synth = web.window.speechSynthesis;
+    // 사용자 제스처 안에서 바로 호출(iOS 재생 잠금 해제).
     synth.cancel();
+    _voice ??= _pickVoice(synth);
+
     final u = web.SpeechSynthesisUtterance(t)
       ..lang = 'en-US'
-      ..rate = 0.95
+      ..rate = 1.0
+      ..pitch = 1.0
       ..volume = 1.0;
+    final v = _voice;
+    if (v != null) u.voice = v;
     synth.speak(u);
+
+    // 첫 호출 때 보이스 목록이 아직 안 왔으면 로드 후 캐시.
+    if (!_warmed && _voice == null) {
+      _warmed = true;
+      synth.onvoiceschanged = ((web.Event _) {
+        _voice = _pickVoice(synth);
+      }).toJS;
+    }
   } catch (_) {}
+}
+
+/// 고품질 영어 보이스를 고른다. (compact/저품질 제외, en-US 우선)
+web.SpeechSynthesisVoice? _pickVoice(web.SpeechSynthesis synth) {
+  List<web.SpeechSynthesisVoice> voices;
+  try {
+    voices = synth.getVoices().toDart;
+  } catch (_) {
+    return null;
+  }
+  web.SpeechSynthesisVoice? best;
+  for (final v in voices) {
+    final lang = v.lang.toLowerCase();
+    if (!lang.startsWith('en')) continue;
+    final name = v.name.toLowerCase();
+    if (name.contains('compact') || name.contains('eloquence')) continue;
+    // 애플/구글 고품질 보이스 우선.
+    if (lang == 'en-us' &&
+        (name.contains('samantha') ||
+            name.contains('google') ||
+            name.contains('aaron') ||
+            name.contains('nicky'))) {
+      return v;
+    }
+    if (lang == 'en-us') {
+      best = v;
+    } else {
+      best ??= v;
+    }
+  }
+  return best;
 }
