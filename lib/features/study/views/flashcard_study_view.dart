@@ -237,12 +237,10 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _RoundCardButton(
-                    icon: Icons.close_rounded,
                     onTap: () => _advance(memorized: false),
                   ),
                   SizedBox(width: 20.w),
                   _RoundCardButton(
-                    icon: Icons.check_rounded,
                     primary: true,
                     onTap: () => _advance(memorized: true),
                   ),
@@ -259,14 +257,13 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
 }
 
 /// 플래시카드 하단 원형 버튼: 헷갈려요(빨간 X) / 외웠어요(민트 체크).
+/// 웹에서 아이콘 폰트 글리프가 비어 보이는 문제를 피하려고 X/체크를 직접 그린다.
 class _RoundCardButton extends StatelessWidget {
   const _RoundCardButton({
-    required this.icon,
     required this.onTap,
     this.primary = false,
   });
 
-  final IconData icon;
   final VoidCallback onTap;
   final bool primary;
 
@@ -285,7 +282,7 @@ class _RoundCardButton extends StatelessWidget {
           shape: BoxShape.circle,
           border: primary
               ? null
-              : Border.all(color: AppColors.danger.withValues(alpha: 0.4), width: 2),
+              : Border.all(color: AppColors.danger, width: 2),
           boxShadow: [
             BoxShadow(
               color: (primary ? AppColors.mint : AppColors.navy)
@@ -295,10 +292,50 @@ class _RoundCardButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(icon,
-            size: 34.sp,
-            color: primary ? Colors.white : AppColors.danger),
+        child: CustomPaint(
+          size: Size(30.w, 30.w),
+          painter: _MarkPainter(
+            check: primary,
+            color: primary ? Colors.white : AppColors.danger,
+          ),
+        ),
       ),
     );
   }
+}
+
+/// 폰트 없이 X(헷갈려요) 또는 체크(외웠어요)를 직접 그린다.
+class _MarkPainter extends CustomPainter {
+  _MarkPainter({required this.check, required this.color});
+
+  final bool check;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 4.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+    final w = size.width;
+    final h = size.height;
+    if (check) {
+      // 체크 표시.
+      final path = Path()
+        ..moveTo(w * 0.18, h * 0.52)
+        ..lineTo(w * 0.42, h * 0.74)
+        ..lineTo(w * 0.84, h * 0.28);
+      canvas.drawPath(path, paint);
+    } else {
+      // X 표시.
+      canvas.drawLine(Offset(w * 0.22, h * 0.22), Offset(w * 0.78, h * 0.78), paint);
+      canvas.drawLine(Offset(w * 0.78, h * 0.22), Offset(w * 0.22, h * 0.78), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_MarkPainter old) =>
+      old.check != check || old.color != color;
 }
