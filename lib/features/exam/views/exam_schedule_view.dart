@@ -257,7 +257,8 @@ class _ResultCard extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                             color: AppColors.ink)),
                     SizedBox(height: 3.h),
-                    Text('${result.score}/${result.total} 정답',
+                    Text(
+                        '${result.score}/${result.total} 정답${result.createdAt != null ? " · ${formatYmd(result.createdAt!)} 시험" : ""}',
                         style:
                             TextStyle(fontSize: 12.sp, color: AppColors.gray)),
                   ],

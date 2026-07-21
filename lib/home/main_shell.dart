@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -9,9 +11,13 @@ import '../core/theme/theme_controller.dart';
 import '../core/utils/app_refresh.dart';
 import '../core/widgets/bouncy_tap.dart';
 import '../features/chat/views/chat_list_view.dart';
+import '../features/exam/models/exam_session.dart';
+import '../features/exam/repositories/exam_repository.dart';
 import '../features/exam/views/exam_dashboard_view.dart';
 import '../features/exam/views/exam_schedule_view.dart';
+import '../features/exam/views/session_exam_view.dart';
 import '../features/exam/views/session_join_view.dart';
+import '../features/exam/views/session_monitor_view.dart';
 import '../features/profile/views/profile_view.dart';
 import '../features/study/views/study_list_view.dart';
 import '../features/word_sets/views/word_set_list_view.dart';
@@ -37,6 +43,22 @@ class _MainShellState extends State<MainShell> {
     _presence.start(widget.user.uid);
     _updateStudying();
     _restoreTabAfterReload();
+    _reconnectIfNeeded();
+  }
+
+  /// 앱 시작(재접속) 시 진행 중인 시험이 있으면 자동으로 다시 들어간다.
+  Future<void> _reconnectIfNeeded() async {
+    final repo = context.read<ExamRepository>();
+    final elder = widget.user.role == UserRole.elder;
+    final session = elder
+        ? await repo.watchMyActiveExamAsHost(widget.user.uid).first
+        : await repo.watchMyActiveExamAsGuest(widget.user.uid).first;
+    if (session == null || !mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => elder
+          ? SessionMonitorView(sessionId: session.id)
+          : SessionExamView(sessionId: session.id, user: widget.user),
+    ));
   }
 
   /// 새로고침(리로드) 직후라면 보던 탭으로 복원한다.
@@ -121,9 +143,15 @@ class _MainShellState extends State<MainShell> {
           child: page,
         ),
     ];
+    // 동생이면 어느 탭에서든 시험 초대가 오면 팝업으로 알린다.
+    Widget body = IndexedStack(index: _index, children: pages);
+    if (widget.user.role == UserRole.younger) {
+      body = _InviteWatcher(user: widget.user, child: body);
+    }
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: IndexedStack(index: _index, children: pages),
+      body: body,
       bottomNavigationBar: StreamBuilder<bool>(
         stream: context.read<ChatRepository>().watchHasUnread(widget.user.uid),
         builder: (context, snapshot) {
@@ -265,4 +293,98 @@ class _BarItem extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 동생 화면 전역: 언니가 보낸 시험 초대가 오면 팝업으로 승인/거절을 받는다.
+class _InviteWatcher extends StatefulWidget {
+  const _InviteWatcher({required this.user, required this.child});
+
+  final AppUser user;
+  final Widget child;
+
+  @override
+  State<_InviteWatcher> createState() => _InviteWatcherState();
+}
+
+class _InviteWatcherState extends State<_InviteWatcher> {
+  StreamSubscription<List<ExamSession>>? _sub;
+  final _handled = <String>{};
+  bool _dialogOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = context
+        .read<ExamRepository>()
+        .watchInvitesForGuest(widget.user.uid)
+        .listen(_onInvites);
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  void _onInvites(List<ExamSession> invites) {
+    if (_dialogOpen || !mounted) return;
+    ExamSession? fresh;
+    for (final s in invites) {
+      if (!_handled.contains(s.id)) {
+        fresh = s;
+        break;
+      }
+    }
+    if (fresh == null) return;
+    _handled.add(fresh.id);
+    _showInvite(fresh);
+  }
+
+  Future<void> _showInvite(ExamSession s) async {
+    _dialogOpen = true;
+    final choice = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Text('🐰', style: TextStyle(fontSize: 26.sp)),
+            SizedBox(width: 8.w),
+            const Expanded(child: Text('시험 초대가 왔어요!')),
+          ],
+        ),
+        content: Text(
+            '${s.hostName}에게서 "${s.title}" 시험 초대가 왔어요.\n(${s.total}문제) 지금 승인하면 영상통화로 시험을 시작해요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('거절'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('승인'),
+          ),
+        ],
+      ),
+    );
+    _dialogOpen = false;
+    if (!mounted) return;
+    final repo = context.read<ExamRepository>();
+    if (choice == true) {
+      await repo.joinSession(
+        sessionId: s.id,
+        guestUid: widget.user.uid,
+        guestName: widget.user.name,
+      );
+      if (!mounted) return;
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => SessionExamView(sessionId: s.id, user: widget.user),
+      ));
+    } else if (choice == false) {
+      await repo.declineInvite(s.id);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

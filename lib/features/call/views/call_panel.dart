@@ -24,7 +24,7 @@ class CallPanel extends StatefulWidget {
   State<CallPanel> createState() => _CallPanelState();
 }
 
-class _CallPanelState extends State<CallPanel> {
+class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
   CallService? _service;
   String? _error;
   bool _ready = false;
@@ -32,11 +32,26 @@ class _CallPanelState extends State<CallPanel> {
   bool _connected = false;
   bool _camOn = true;
   bool _micOn = true;
+  bool _restarting = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _init();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 마이크(음성입력) 버튼 등으로 앱이 백그라운드에 갔다 돌아오면
+    // 카메라·마이크가 꺼진 채 멈추므로, 돌아왔을 때 자동으로 다시 연결한다.
+    if (state == AppLifecycleState.resumed &&
+        _ready &&
+        !_restarting &&
+        mounted) {
+      _restarting = true;
+      _retry().whenComplete(() => _restarting = false);
+    }
   }
 
   Future<void> _init() async {
@@ -88,6 +103,7 @@ class _CallPanelState extends State<CallPanel> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _service?.dispose();
     super.dispose();
   }

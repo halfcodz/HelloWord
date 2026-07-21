@@ -117,12 +117,22 @@ class _MonitorBody extends StatelessWidget {
     switch (session.status) {
       case SessionStatus.waiting:
         return _WaitingView(
-          joinCode: session.joinCode,
+          invitedName: session.invitedName ?? '동생',
           onCancel: () => _confirmClose(
             context,
             viewModel,
             title: '시험을 취소할까요?',
-            message: '아직 동생이 참여하지 않았어요.',
+            message: '아직 동생이 수락하지 않았어요.',
+          ),
+        );
+      case SessionStatus.declined:
+        return _DeclinedView(
+          name: session.invitedName ?? '동생',
+          onClose: () => _confirmClose(
+            context,
+            viewModel,
+            title: '닫을까요?',
+            message: '시험을 닫고 목록으로 돌아갑니다.',
           ),
         );
       case SessionStatus.active:
@@ -146,9 +156,9 @@ class _MonitorBody extends StatelessWidget {
 }
 
 class _WaitingView extends StatelessWidget {
-  const _WaitingView({required this.joinCode, required this.onCancel});
+  const _WaitingView({required this.invitedName, required this.onCancel});
 
-  final String joinCode;
+  final String invitedName;
   final VoidCallback onCancel;
 
   @override
@@ -159,33 +169,30 @@ class _WaitingView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('동생에게 이 코드를 알려주세요',
-              style: TextStyle(fontSize: 16.sp, color: AppColors.ink)),
-          SizedBox(height: 24.h),
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 36.w, vertical: 24.h),
+            width: 96.w,
+            height: 96.w,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryButton,
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: AppColors.softShadow(),
+              color: AppColors.blueSoft,
+              shape: BoxShape.circle,
             ),
-            child: Text(
-              joinCode,
-              style: TextStyle(
-                fontSize: 44.sp,
-                letterSpacing: 8.w,
-                color: Colors.white,
-              ),
-            ),
+            child: Text('📨', style: TextStyle(fontSize: 44.sp)),
           )
               .animate(onPlay: (c) => c.repeat(reverse: true))
               .scale(
                 begin: const Offset(1, 1),
-                end: const Offset(1.04, 1.04),
-                duration: 1200.ms,
+                end: const Offset(1.06, 1.06),
+                duration: 1000.ms,
                 curve: Curves.easeInOut,
               ),
           SizedBox(height: 24.h),
+          Text('$invitedName에게 시험 초대를 보냈어요',
+              style: TextStyle(
+                  fontSize: 17.sp,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.ink)),
+          SizedBox(height: 20.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -195,15 +202,54 @@ class _WaitingView extends StatelessWidget {
                 child: const CircularProgressIndicator(strokeWidth: 2),
               ),
               SizedBox(width: 12.w),
-              Text('동생이 참여하길 기다리는 중…',
-                  style: theme.textTheme.bodyMedium),
+              Text('수락을 기다리는 중…', style: theme.textTheme.bodyMedium),
             ],
           ),
           SizedBox(height: 40.h),
           TextButton.icon(
             onPressed: onCancel,
             icon: const Icon(Icons.close),
-            label: const Text('시험 취소'),
+            label: const Text('초대 취소'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeclinedView extends StatelessWidget {
+  const _DeclinedView({required this.name, required this.onClose});
+
+  final String name;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.all(24.w),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text('😢', style: TextStyle(fontSize: 52.sp)),
+          SizedBox(height: 16.h),
+          Text('$name이(가) 초대를 거절했어요',
+              style: TextStyle(
+                  fontSize: 17.sp,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.ink)),
+          SizedBox(height: 8.h),
+          Text('나중에 다시 시험을 내볼 수 있어요.',
+              style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+          SizedBox(height: 32.h),
+          SizedBox(
+            width: 200.w,
+            child: FilledButton(
+              onPressed: onClose,
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 10.h),
+                child: const Text('닫기'),
+              ),
+            ),
           ),
         ],
       ),
