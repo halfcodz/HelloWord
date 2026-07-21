@@ -116,32 +116,56 @@ class _StudyBody extends StatelessWidget {
       stream: exam.watchResultsForGuest(uid),
       builder: (context, snap) {
         final results = snap.data ?? const <ExamResult>[];
+        final todayResults =
+            results.where((r) => _isToday(r.createdAt)).toList();
+        final pastResults =
+            results.where((r) => !_isToday(r.createdAt)).toList();
+
+        final todaySets =
+            viewModel.sets.where((s) => _isToday(s.date)).toList();
+        final pastSets =
+            viewModel.sets.where((s) => !_isToday(s.date)).toList();
+
         final children = <Widget>[];
 
-        // ── 지난 시험(눌러서 틀린 것 확인·공부) ──
+        // ── 오늘 시험(눌러서 틀린 것 확인·공부) ──
         if (results.isNotEmpty) {
-          children.add(_sectionLabel('지난 시험'));
-          for (final r in results) {
-            children.add(_ExamResultTile(
-              result: r,
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => ExamReviewStudyView(result: r))),
+          children.add(_sectionLabel('오늘 시험'));
+          if (todayResults.isEmpty) {
+            children.add(_hint('오늘 본 시험이 없어요.'));
+          } else {
+            for (final r in todayResults) {
+              children.add(_examTile(context, r));
+            }
+          }
+          if (pastResults.isNotEmpty) {
+            children.add(_historyButton(
+              context,
+              '지난 시험 기록 (${pastResults.length})',
+              '지난 시험',
+              [for (final r in pastResults) _examTile(context, r)],
             ));
           }
         }
 
-        // ── 받은 단어 ──
-        children.add(_sectionLabel('받은 단어'));
+        // ── 오늘 받은 단어 ──
+        children.add(_sectionLabel('오늘 받은 단어'));
         if (viewModel.sets.isEmpty) {
           children.add(_emptySets());
+        } else if (todaySets.isEmpty) {
+          children.add(_hint('오늘 받은 단어가 없어요.'));
         } else {
-          for (final set in viewModel.sets) {
-            children.add(Padding(
-              padding: EdgeInsets.only(bottom: 12.h),
-              child:
-                  _StudyCard(set: set, onTap: () => _openStudyMenu(context, set)),
-            ));
+          for (final set in todaySets) {
+            children.add(_setCard(context, set));
           }
+        }
+        if (pastSets.isNotEmpty) {
+          children.add(_historyButton(
+            context,
+            '지난 단어 기록 (${pastSets.length})',
+            '지난 단어',
+            [for (final set in pastSets) _setCard(context, set)],
+          ));
         }
 
         return ListView(
@@ -152,6 +176,68 @@ class _StudyBody extends StatelessWidget {
       },
     );
   }
+
+  bool _isToday(DateTime? d) {
+    if (d == null) return false;
+    final n = DateTime.now();
+    return d.year == n.year && d.month == n.month && d.day == n.day;
+  }
+
+  Widget _examTile(BuildContext context, ExamResult r) => _ExamResultTile(
+        result: r,
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => ExamReviewStudyView(result: r))),
+      );
+
+  Widget _setCard(BuildContext context, WordSet set) => Padding(
+        padding: EdgeInsets.only(bottom: 12.h),
+        child: _StudyCard(set: set, onTap: () => _openStudyMenu(context, set)),
+      );
+
+  Widget _historyButton(
+      BuildContext context, String label, String title, List<Widget> items) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 10.h),
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => _StudyHistoryView(title: title, items: items))),
+        borderRadius: BorderRadius.circular(14.r),
+        child: Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: AppColors.rowBg,
+            borderRadius: BorderRadius.circular(14.r),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.history_rounded, size: 18.sp, color: AppColors.grayText),
+              SizedBox(width: 8.w),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink)),
+              const Spacer(),
+              Icon(Icons.chevron_right, color: AppColors.hint, size: 20.sp),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _hint(String text) => Container(
+        width: double.infinity,
+        margin: EdgeInsets.only(bottom: 10.h),
+        padding: EdgeInsets.symmetric(vertical: 22.h, horizontal: 16.w),
+        decoration: BoxDecoration(
+          color: AppColors.rowBg,
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        child: Text(text,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+      );
 
   Widget _sectionLabel(String text) => Padding(
         padding: EdgeInsets.fromLTRB(4.w, 14.h, 4.w, 10.h),
@@ -413,6 +499,28 @@ class _StudyCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 지난 단어/시험 기록 화면.
+class _StudyHistoryView extends StatelessWidget {
+  const _StudyHistoryView({required this.title, required this.items});
+
+  final String title;
+  final List<Widget> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: SafeArea(
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
+          children: items,
         ),
       ),
     );
