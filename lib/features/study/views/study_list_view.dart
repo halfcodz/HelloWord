@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
@@ -11,7 +10,9 @@ import '../../exam/repositories/exam_repository.dart';
 import '../../word_sets/models/word_pair.dart';
 import '../../word_sets/models/word_set.dart';
 import '../../word_sets/repositories/word_set_repository.dart';
+import '../services/memorized_store.dart';
 import '../viewmodels/study_viewmodel.dart';
+import 'exam_review_study_view.dart';
 import 'flashcard_study_view.dart';
 import 'self_quiz_view.dart';
 import 'word_list_view.dart';
@@ -114,132 +115,279 @@ class _StudyBody extends StatelessWidget {
     );
   }
 
+  /// 받은 단어 세트 중 아직 안 외운 단어를 중복 없이 모은다.
+  List<WordPair> _notMemorizedWords(List<WordSet> sets) {
+    final seen = <String>{};
+    final out = <WordPair>[];
+    for (final s in sets) {
+      for (final w in s.words) {
+        final key = w.english.toLowerCase().trim();
+        if (key.isEmpty || seen.contains(key)) continue;
+        seen.add(key);
+        if (!MemorizedStore.isMemorized(w.english)) out.add(w);
+      }
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<StudyViewModel>();
-
     return Scaffold(
       appBar: AppBar(title: const Text('공부하기')),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _reviewBanner(context),
-            Expanded(child: _content(context, viewModel)),
-          ],
-        ),
-      ),
+      body: SafeArea(child: _body(context, viewModel)),
     );
   }
 
-  /// 틀린 단어가 있으면 상단에 '틀린 단어 복습' 카드를 띄운다.
-  Widget _reviewBanner(BuildContext context) {
+  Widget _body(BuildContext context, StudyViewModel viewModel) {
+    if (viewModel.loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
     final exam = context.read<ExamRepository>();
     return StreamBuilder<List<ExamResult>>(
       stream: exam.watchResultsForGuest(uid),
       builder: (context, snap) {
-        final wrong = _wrongWords(snap.data ?? const []);
-        if (wrong.isEmpty) return const SizedBox.shrink();
-        final set = WordSet(
-          id: 'review',
-          title: '틀린 단어 복습',
-          date: DateTime.now(),
-          message: '',
-          words: wrong,
-          createdBy: '',
-        );
-        return Padding(
-          padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 4.h),
-          child: BouncyTap(
-            onTap: () => _openStudyMenu(context, set),
-            child: Container(
-              padding: EdgeInsets.all(16.w),
-              decoration: BoxDecoration(
-                color: AppColors.dangerSoft,
-                borderRadius: BorderRadius.circular(18.r),
-                border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 46.w,
-                    height: 46.w,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.danger,
-                      borderRadius: BorderRadius.circular(13.r),
-                    ),
-                    child: Icon(Icons.refresh_rounded,
-                        color: Colors.white, size: 24.sp),
-                  ),
-                  SizedBox(width: 14.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('틀린 단어 복습',
-                            style: TextStyle(
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.ink)),
-                        SizedBox(height: 2.h),
-                        Text('지난 시험에서 틀린 ${wrong.length}개 · 다시 외워봐요',
-                            style: TextStyle(
-                                fontSize: 12.sp, color: AppColors.grayText)),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.chevron_right,
-                      color: AppColors.danger, size: 22.sp),
-                ],
-              ),
-            ),
-          ),
+        final results = snap.data ?? const <ExamResult>[];
+        final wrong = _wrongWords(results);
+        final notMemorized = _notMemorizedWords(viewModel.sets);
+
+        final children = <Widget>[];
+
+        // ── 복습 카드(안 외운 단어 / 틀린 단어) ──
+        if (notMemorized.isNotEmpty) {
+          children.add(_ReviewCard(
+            color: AppColors.pink,
+            softColor: AppColors.blueSoft,
+            icon: Icons.psychology_alt_rounded,
+            title: '안 외운 단어 모아 공부',
+            subtitle: '아직 안 외운 ${notMemorized.length}개 · 집중 복습',
+            onTap: () => _openStudyMenu(
+                context,
+                _quickSet('not-memorized', '안 외운 단어', notMemorized)),
+          ));
+        }
+        if (wrong.isNotEmpty) {
+          children.add(_ReviewCard(
+            color: AppColors.danger,
+            softColor: AppColors.dangerSoft,
+            icon: Icons.refresh_rounded,
+            title: '틀린 단어 모아 복습',
+            subtitle: '지난 시험에서 틀린 ${wrong.length}개 · 다시 외워봐요',
+            onTap: () =>
+                _openStudyMenu(context, _quickSet('wrong', '틀린 단어', wrong)),
+          ));
+        }
+
+        // ── 지난 시험(눌러서 틀린 것 확인·공부) ──
+        if (results.isNotEmpty) {
+          children.add(_sectionLabel('지난 시험'));
+          for (final r in results) {
+            children.add(_ExamResultTile(
+              result: r,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => ExamReviewStudyView(result: r))),
+            ));
+          }
+        }
+
+        // ── 받은 단어 ──
+        children.add(_sectionLabel('받은 단어'));
+        if (viewModel.sets.isEmpty) {
+          children.add(_emptySets());
+        } else {
+          for (final set in viewModel.sets) {
+            children.add(Padding(
+              padding: EdgeInsets.only(bottom: 12.h),
+              child:
+                  _StudyCard(set: set, onTap: () => _openStudyMenu(context, set)),
+            ));
+          }
+        }
+
+        return ListView(
+          padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
+          children: children,
         );
       },
     );
   }
 
-  Widget _content(BuildContext context, StudyViewModel viewModel) {
-    if (viewModel.loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (viewModel.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('📚', style: TextStyle(fontSize: 56.sp)),
-              SizedBox(height: 16.h),
-              Text('공부할 단어가 아직 없어요',
-                  style: TextStyle(fontSize: 17.sp, color: AppColors.ink)),
-              SizedBox(height: 8.h),
-              Text(
-                '내 정보에서 언니와 친구를 맺으면\n언니가 올린 단어로 공부할 수 있어요!',
+  WordSet _quickSet(String id, String title, List<WordPair> words) => WordSet(
+        id: id,
+        title: title,
+        date: DateTime.now(),
+        message: '',
+        words: words,
+        createdBy: '',
+      );
+
+  Widget _sectionLabel(String text) => Padding(
+        padding: EdgeInsets.fromLTRB(4.w, 14.h, 4.w, 10.h),
+        child: Text(text,
+            style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w800,
+                color: AppColors.ink)),
+      );
+
+  Widget _emptySets() => Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(vertical: 28.h, horizontal: 16.w),
+        decoration: BoxDecoration(
+          color: AppColors.rowBg,
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        child: Column(
+          children: [
+            Text('📚', style: TextStyle(fontSize: 40.sp)),
+            SizedBox(height: 10.h),
+            Text('받은 단어가 아직 없어요',
+                style: TextStyle(fontSize: 15.sp, color: AppColors.ink)),
+            SizedBox(height: 6.h),
+            Text('언니가 단어를 보내주면 여기서 공부할 수 있어요!',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13.sp, color: AppColors.lavender),
+                style: TextStyle(fontSize: 12.sp, color: AppColors.gray)),
+          ],
+        ),
+      );
+}
+
+/// 상단 복습 카드(안 외운 단어 / 틀린 단어).
+class _ReviewCard extends StatelessWidget {
+  const _ReviewCard({
+    required this.color,
+    required this.softColor,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final Color color;
+  final Color softColor;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 10.h),
+      child: BouncyTap(
+        onTap: onTap,
+        child: Container(
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: softColor,
+            borderRadius: BorderRadius.circular(18.r),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46.w,
+                height: 46.w,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(13.r),
+                ),
+                child: Icon(icon, color: Colors.white, size: 24.sp),
               ),
+              SizedBox(width: 14.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: TextStyle(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink)),
+                    SizedBox(height: 2.h),
+                    Text(subtitle,
+                        style: TextStyle(
+                            fontSize: 12.sp, color: AppColors.grayText)),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: color, size: 22.sp),
             ],
           ),
         ),
-      );
-    }
+      ),
+    );
+  }
+}
 
-    return ListView.separated(
-      padding: EdgeInsets.all(16.w),
-      itemCount: viewModel.sets.length,
-      separatorBuilder: (_, _) => SizedBox(height: 12.h),
-      itemBuilder: (context, index) {
-        final set = viewModel.sets[index];
-        return _StudyCard(
-          set: set,
-          onTap: () => _openStudyMenu(context, set),
-        )
-            .animate()
-            .fadeIn(duration: 300.ms, delay: (index * 50).ms)
-            .slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic);
-      },
+/// 지난 시험 한 줄(점수 + 틀린 개수). 누르면 틀린 것 확인·공부.
+class _ExamResultTile extends StatelessWidget {
+  const _ExamResultTile({required this.result, required this.onTap});
+
+  final ExamResult result;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final wrong = result.total - result.score;
+    final pass = result.percent >= 60;
+    return Padding(
+      padding: EdgeInsets.only(bottom: 10.h),
+      child: BouncyTap(
+        onTap: onTap,
+        child: Container(
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: AppColors.cream,
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48.w,
+                height: 48.w,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: pass ? AppColors.greenSoft : AppColors.dangerSoft,
+                  shape: BoxShape.circle,
+                ),
+                child: Text('${result.percent}점',
+                    style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w800,
+                        color: pass ? AppColors.green : AppColors.danger)),
+              ),
+              SizedBox(width: 14.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(result.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink)),
+                    SizedBox(height: 2.h),
+                    Text(
+                        wrong > 0
+                            ? '틀린 $wrong개 · 눌러서 확인·공부'
+                            : '다 맞았어요 🎉',
+                        style: TextStyle(
+                            fontSize: 12.sp,
+                            color:
+                                wrong > 0 ? AppColors.danger : AppColors.green)),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: AppColors.hint, size: 20.sp),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

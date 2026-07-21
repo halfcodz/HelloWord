@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'app.dart';
 import 'core/theme/theme_controller.dart';
+import 'features/study/services/memorized_store.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -19,6 +20,9 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // 외운 단어 기록을 미리 불러온다(공부 진행).
+  await MemorizedStore.load();
 
   // 저장된 테마 팔레트를 적용한 컨트롤러를 준비한다.
   final themeController = await ThemeController.load();
