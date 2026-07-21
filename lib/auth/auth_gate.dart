@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../core/theme/app_theme.dart';
 import '../home/main_shell.dart';
 import '../models/app_user.dart';
 import '../role/role_selection_screen.dart';
@@ -51,8 +53,55 @@ class _LoadingScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 76.w,
+              height: 76.w,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryButton,
+                borderRadius: BorderRadius.circular(24.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.mint.withValues(alpha: 0.35),
+                    blurRadius: 28,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: Text('📖', style: TextStyle(fontSize: 38.sp)),
+            ),
+            SizedBox(height: 18.h),
+            Text('HelloWord',
+                style: TextStyle(
+                    fontSize: 26.sp,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    color: AppColors.ink)),
+            SizedBox(height: 6.h),
+            Text('자매 영어 단어 시험',
+                style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.grayText)),
+            SizedBox(height: 28.h),
+            SizedBox(
+              width: 34.w,
+              height: 34.w,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation(AppColors.mint),
+                backgroundColor: AppColors.mint.withValues(alpha: 0.2),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

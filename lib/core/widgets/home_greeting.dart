@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../theme/app_theme.dart';
 
-/// 홈 상단 인사 헤더(말해보카풍). 날짜 + "○○아, 안녕! 🐥" + 우측 알림.
+/// 홈 상단 인사 헤더(말해보카풍). 날짜 + "○○, 안녕! 🐥" + 우측 알림.
 class HomeGreeting extends StatelessWidget {
   const HomeGreeting({
     super.key,
@@ -42,7 +42,7 @@ class HomeGreeting extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: AppColors.gray)),
                 SizedBox(height: 3.h),
-                Text('$name아, 안녕! $mascot',
+                Text('$name, 안녕! $mascot',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
