@@ -8,6 +8,7 @@ class ExamResultItem {
     required this.korean,
     required this.submitted,
     required this.correct,
+    this.askMeaning = false,
   });
 
   final int index;
@@ -15,6 +16,7 @@ class ExamResultItem {
   final String korean;
   final String submitted;
   final bool correct;
+  final bool askMeaning;
 
   Map<String, dynamic> toMap() => {
         'index': index,
@@ -22,6 +24,7 @@ class ExamResultItem {
         'ko': korean,
         'submitted': submitted,
         'correct': correct,
+        if (askMeaning) 'askMeaning': true,
       };
 
   factory ExamResultItem.fromMap(Map<String, dynamic> m) => ExamResultItem(
@@ -30,6 +33,7 @@ class ExamResultItem {
         korean: m['ko'] as String? ?? '',
         submitted: m['submitted'] as String? ?? '',
         correct: m['correct'] as bool? ?? false,
+        askMeaning: m['askMeaning'] as bool? ?? false,
       );
 }
 

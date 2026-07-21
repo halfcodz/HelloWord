@@ -235,13 +235,13 @@ class _ExamBodyState extends State<_ExamBody> {
                   ),
                   child: Column(
                     children: [
-                      Text('이 뜻의 영어 단어는?',
+                      Text(word.quizHint,
                           style: TextStyle(
                               fontSize: 13.sp,
                               fontWeight: FontWeight.w600,
                               color: AppColors.hint)),
                       SizedBox(height: 12.h),
-                      Text(word.korean,
+                      Text(word.quizPrompt,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                               fontSize: 28.sp,
@@ -257,6 +257,7 @@ class _ExamBodyState extends State<_ExamBody> {
         // 입력칸을 키보드 '바로 위'에 고정해 무엇을 쓰는지 항상 보이게 한다.
         _InputBar(
           controller: _answerController,
+          hintText: word.quizInputHint,
           canPrev: vm.currentIndex > 0,
           isLast: isLast,
           onPrev: () => _goPrev(vm),
@@ -308,6 +309,7 @@ class _ExamBodyState extends State<_ExamBody> {
 class _InputBar extends StatelessWidget {
   const _InputBar({
     required this.controller,
+    required this.hintText,
     required this.canPrev,
     required this.isLast,
     required this.onPrev,
@@ -318,6 +320,7 @@ class _InputBar extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final String hintText;
   final bool canPrev;
   final bool isLast;
   final VoidCallback onPrev;
@@ -387,7 +390,7 @@ class _InputBar extends StatelessWidget {
                 enableSuggestions: false,
                 textCapitalization: TextCapitalization.none,
                 style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
-                decoration: const InputDecoration(hintText: '영어로 입력'),
+                decoration: InputDecoration(hintText: hintText),
                 onChanged: onTyped,
                 onSubmitted: (_) => onSubmitted(),
               ),

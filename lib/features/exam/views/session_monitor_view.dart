@@ -427,7 +427,9 @@ class _AnswerRow extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      word.korean,
+                      word.askMeaning
+                          ? '${word.english} (뜻)'
+                          : word.korean,
                       style: theme.textTheme.bodyLarge,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

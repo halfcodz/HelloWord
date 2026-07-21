@@ -100,7 +100,7 @@ class SessionExamViewModel extends ChangeNotifier {
     final trimmed = answer.trim();
     if (trimmed.isEmpty) return;
     _debounce?.cancel();
-    final correct = _normalize(trimmed) == _normalize(word.english);
+    final correct = _normalize(trimmed) == _normalize(word.quizAnswer);
     await _repository.submitAnswer(
       sessionId: _sessionId,
       index: _currentIndex,

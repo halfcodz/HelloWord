@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../word_sets/models/word_pair.dart';
 import '../../word_sets/models/word_set.dart';
 import '../models/exam_answer.dart';
 import '../models/exam_plan.dart';
@@ -33,10 +34,12 @@ class ExamRepository {
   }
 
   /// 언니가 단어 세트로 새 시험 세션을 만들고, 특정 동생에게 초대를 보낸다.
+  /// [words]를 주면 그 목록(방향 지정 포함)으로 시험을 낸다.
   Future<ExamSession> createSession({
     required WordSet wordSet,
     required String hostUid,
     required String hostName,
+    List<WordPair>? words,
     String? invitedUid,
     String? invitedName,
   }) async {
@@ -46,7 +49,7 @@ class ExamRepository {
       joinCode: _generateJoinCode(),
       wordSetId: wordSet.id,
       title: wordSet.title,
-      words: wordSet.words,
+      words: words ?? wordSet.words,
       hostUid: hostUid,
       hostName: hostName,
       status: SessionStatus.waiting,
@@ -200,6 +203,7 @@ class ExamRepository {
           korean: w.korean,
           submitted: a?.submitted ?? '',
           correct: correct,
+          askMeaning: w.askMeaning,
         ));
       }
       final result = ExamResult(
