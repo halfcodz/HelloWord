@@ -176,34 +176,36 @@ class _BlingBottomBar extends StatelessWidget {
     // 말해보카풍: 하단 중앙에 떠 있는 네이비 필 탭바(아이콘 전용).
     return SafeArea(
       top: false,
-      minimum: EdgeInsets.only(bottom: 14.h),
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: Container(
-          padding: EdgeInsets.all(7.w),
-          decoration: BoxDecoration(
-            color: AppColors.navy,
-            borderRadius: BorderRadius.circular(999.r),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.navy.withValues(alpha: 0.35),
-                blurRadius: 26,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < items.length; i++)
-                _BarItem(
-                  icon: items[i].icon,
-                  selected: index == i,
-                  onTap: () => onTap(i),
+      minimum: EdgeInsets.only(bottom: 14.h, top: 6.h),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(7.w),
+            decoration: BoxDecoration(
+              color: AppColors.navy,
+              borderRadius: BorderRadius.circular(999.r),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.navy.withValues(alpha: 0.35),
+                  blurRadius: 26,
+                  offset: const Offset(0, 10),
                 ),
-            ],
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < items.length; i++)
+                  _BarItem(
+                    icon: items[i].icon,
+                    selected: index == i,
+                    onTap: () => onTap(i),
+                  ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
