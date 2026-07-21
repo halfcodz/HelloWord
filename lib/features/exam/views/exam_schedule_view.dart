@@ -98,8 +98,10 @@ class ExamScheduleView extends StatelessWidget {
                       for (final r in todayR) tile(r),
                     if (pastR.isNotEmpty)
                       Padding(
-                        padding: EdgeInsets.fromLTRB(20.w, 4.h, 20.w, 0),
-                        child: InkWell(
+                        padding: EdgeInsets.fromLTRB(20.w, 6.h, 20.w, 0),
+                        child: HistoryEntryButton(
+                          title: '지난 시험 결과',
+                          count: pastR.length,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => HistoryCalendarView(
@@ -119,29 +121,6 @@ class ExamScheduleView extends StatelessWidget {
                                     ),
                                 ],
                               ),
-                            ),
-                          ),
-                          borderRadius: BorderRadius.circular(14.r),
-                          child: Container(
-                            padding: EdgeInsets.all(14.w),
-                            decoration: BoxDecoration(
-                              color: AppColors.rowBg,
-                              borderRadius: BorderRadius.circular(14.r),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.history_rounded,
-                                    size: 18.sp, color: AppColors.grayText),
-                                SizedBox(width: 8.w),
-                                Text('지난 시험 기록 (${pastR.length})',
-                                    style: TextStyle(
-                                        fontSize: 14.sp,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.ink)),
-                                const Spacer(),
-                                Icon(Icons.chevron_right,
-                                    color: AppColors.hint, size: 20.sp),
-                              ],
                             ),
                           ),
                         ),

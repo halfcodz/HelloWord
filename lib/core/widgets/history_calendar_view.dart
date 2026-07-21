@@ -77,7 +77,6 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
                 focusedDay: _focused,
                 currentDay: now,
                 selectedDayPredicate: (d) => isSameDay(_selected, d),
-                eventLoader: _eventsFor,
                 startingDayOfWeek: StartingDayOfWeek.monday,
                 rowHeight: 46.h,
                 daysOfWeekHeight: 30.h,
@@ -184,15 +183,29 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
 
   Widget _cell(DateTime day,
       {bool selected = false, bool today = false, bool outside = false}) {
-    final hasEvents = _eventsFor(day).isNotEmpty;
-    final Gradient? grad = selected ? AppColors.primaryButton : null;
-    final Color? bg =
-        (today && !selected) ? AppColors.navy.withValues(alpha: 0.06) : null;
-    final Color fg = selected
-        ? Colors.white
-        : (outside
-            ? AppColors.hint
-            : (today ? AppColors.navy : AppColors.ink));
+    final hasEvents = !outside && _eventsFor(day).isNotEmpty;
+
+    // 우선순위: 선택일(민트) > 오늘(네이비 링) > 기록 있는 날(연민트) > 일반.
+    Gradient? grad;
+    Color? bg;
+    Border? border;
+    Color fg = outside ? AppColors.hint : AppColors.ink;
+    FontWeight weight = FontWeight.w600;
+
+    if (selected) {
+      grad = AppColors.primaryButton;
+      fg = Colors.white;
+      weight = FontWeight.w800;
+    } else if (today) {
+      bg = AppColors.cream;
+      border = Border.all(color: AppColors.navy, width: 1.6);
+      fg = AppColors.navy;
+      weight = FontWeight.w800;
+    } else if (hasEvents) {
+      bg = AppColors.blueSoft;
+      fg = AppColors.mintDeep;
+      weight = FontWeight.w800;
+    }
 
     return Center(
       child: Container(
@@ -202,6 +215,7 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
         decoration: BoxDecoration(
           gradient: grad,
           color: bg,
+          border: border,
           shape: BoxShape.circle,
           boxShadow: selected
               ? [
@@ -213,26 +227,77 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
                 ]
               : null,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Text('${day.day}',
+            style: TextStyle(
+                fontSize: 14.sp, fontWeight: weight, color: fg)),
+      ),
+    );
+  }
+}
+
+/// 지난 기록(달력) 화면으로 들어가는 진입 카드. v2 통일 디자인.
+class HistoryEntryButton extends StatelessWidget {
+  const HistoryEntryButton({
+    super.key,
+    required this.title,
+    required this.count,
+    required this.onTap,
+  });
+
+  final String title;
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20.r),
+      child: Container(
+        padding: EdgeInsets.all(14.w),
+        decoration: BoxDecoration(
+          color: AppColors.cream,
+          borderRadius: BorderRadius.circular(20.r),
+          boxShadow: AppColors.softShadow(),
+        ),
+        child: Row(
           children: [
-            Text('${day.day}',
-                style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight:
-                        selected || today ? FontWeight.w800 : FontWeight.w600,
-                    color: fg)),
-            SizedBox(height: 2.h),
             Container(
-              width: 5.w,
-              height: 5.w,
+              width: 44.w,
+              height: 44.w,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: hasEvents && !outside
-                    ? (selected ? Colors.white : AppColors.mint)
-                    : Colors.transparent,
+                gradient: AppColors.primaryButton,
+                borderRadius: BorderRadius.circular(13.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.mint.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(Icons.calendar_month_rounded,
+                  color: Colors.white, size: 22.sp),
+            ),
+            SizedBox(width: 14.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.ink)),
+                  SizedBox(height: 2.h),
+                  Text('달력에서 지난 기록 $count건 보기',
+                      style:
+                          TextStyle(fontSize: 12.sp, color: AppColors.gray)),
+                ],
               ),
             ),
+            Icon(Icons.chevron_right, color: AppColors.hint, size: 20.sp),
           ],
         ),
       ),
