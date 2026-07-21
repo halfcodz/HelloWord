@@ -182,9 +182,12 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
                         ],
                         SizedBox(height: 14.h),
                         // 미국 발음 듣기 버튼.
+                        // 누르는 즉시(onTapDown) 재생하고, 빈 onTap으로 탭을
+                        // 이 버튼이 가져가 카드가 뒤집히지 않게 한다.
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: () => TtsService.speak(word.english),
+                          onTapDown: (_) => TtsService.speak(word.english),
+                          onTap: () {},
                           child: Container(
                             padding: EdgeInsets.symmetric(
                                 horizontal: 16.w, vertical: 8.h),
