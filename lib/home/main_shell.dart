@@ -5,12 +5,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../core/services/presence_service.dart';
-import '../features/chat/repositories/chat_repository.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/theme_controller.dart';
 import '../core/utils/app_refresh.dart';
 import '../core/widgets/bouncy_tap.dart';
-import '../features/chat/views/chat_list_view.dart';
 import '../features/exam/models/exam_session.dart';
 import '../features/exam/repositories/exam_repository.dart';
 import '../features/exam/views/exam_dashboard_view.dart';
@@ -83,13 +81,11 @@ class _MainShellState extends State<MainShell> {
         pages: [
           ExamDashboardView(user: user),
           WordSetListView(user: user, title: '공부자료', enableAdd: true),
-          ChatListView(user: user),
           ProfileView(user: user),
         ],
         items: const [
           _NavItem(Icons.home_rounded, '홈'),
           _NavItem(Icons.folder_rounded, '자료'),
-          _NavItem(Icons.chat_bubble_rounded, '채팅'),
           _NavItem(Icons.person_rounded, '내 정보'),
         ],
       );
@@ -99,14 +95,12 @@ class _MainShellState extends State<MainShell> {
         ExamScheduleView(user: user),
         StudyListView(user: user),
         SessionJoinView(user: user),
-        ChatListView(user: user),
         ProfileView(user: user),
       ],
       items: const [
         _NavItem(Icons.home_rounded, '홈'),
         _NavItem(Icons.menu_book_rounded, '공부'),
         _NavItem(Icons.quiz_rounded, '시험'),
-        _NavItem(Icons.chat_bubble_rounded, '채팅'),
         _NavItem(Icons.person_rounded, '내 정보'),
       ],
     );
@@ -130,7 +124,6 @@ class _MainShellState extends State<MainShell> {
     // 다크 모드 토글 시 하단바·현재 탭이 즉시 다시 그려지도록 테마를 구독한다.
     context.watch<ThemeController>();
     final config = _config();
-    final chatIndex = config.items.indexWhere((it) => it.label == '채팅');
     // 각 탭을 당겨서 새로고침으로 감싼다. 새로고침 시 캐시를 비우고 리로드하되
     // 같은 탭으로 돌아온다(위 initState의 복원).
     final edgeOffset = MediaQuery.of(context).padding.top + kToolbarHeight;
@@ -152,17 +145,10 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: body,
-      bottomNavigationBar: StreamBuilder<bool>(
-        stream: context.read<ChatRepository>().watchHasUnread(widget.user.uid),
-        builder: (context, snapshot) {
-          final hasUnread = snapshot.data ?? false;
-          return _BlingBottomBar(
-            index: _index,
-            items: config.items,
-            badgeIndex: hasUnread ? chatIndex : null,
-            onTap: _onTab,
-          );
-        },
+      bottomNavigationBar: _BlingBottomBar(
+        index: _index,
+        items: config.items,
+        onTap: _onTab,
       ),
     );
   }
@@ -179,13 +165,11 @@ class _BlingBottomBar extends StatelessWidget {
     required this.index,
     required this.items,
     required this.onTap,
-    this.badgeIndex,
   });
 
   final int index;
   final List<_NavItem> items;
   final ValueChanged<int> onTap;
-  final int? badgeIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -217,7 +201,6 @@ class _BlingBottomBar extends StatelessWidget {
                     icon: items[i].icon,
                     label: items[i].label,
                     selected: index == i,
-                    showBadge: i == badgeIndex,
                     onTap: () => onTap(i),
                   ),
                 ),
@@ -235,14 +218,12 @@ class _BarItem extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
-    this.showBadge = false,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  final bool showBadge;
 
   @override
   Widget build(BuildContext context) {
@@ -256,26 +237,7 @@ class _BarItem extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(icon, size: 24.sp, color: color),
-                if (showBadge)
-                  Positioned(
-                    right: -2.w,
-                    top: -2.h,
-                    child: Container(
-                      width: 9.w,
-                      height: 9.w,
-                      decoration: BoxDecoration(
-                        color: AppColors.danger,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+            Icon(icon, size: 24.sp, color: color),
             SizedBox(height: 4.h),
             Text(
               label,
@@ -306,7 +268,8 @@ class _InviteWatcher extends StatefulWidget {
   State<_InviteWatcher> createState() => _InviteWatcherState();
 }
 
-class _InviteWatcherState extends State<_InviteWatcher> {
+class _InviteWatcherState extends State<_InviteWatcher>
+    with WidgetsBindingObserver {
   StreamSubscription<List<ExamSession>>? _sub;
   final _handled = <String>{};
   bool _dialogOpen = false;
@@ -314,6 +277,7 @@ class _InviteWatcherState extends State<_InviteWatcher> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _sub = context
         .read<ExamRepository>()
         .watchInvitesForGuest(widget.user.uid)
@@ -321,7 +285,21 @@ class _InviteWatcherState extends State<_InviteWatcher> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 앱이 다시 앞으로 오면(백그라운드 중 온 초대) 새로고침 없이 바로 확인한다.
+    if (state == AppLifecycleState.resumed && mounted) {
+      context
+          .read<ExamRepository>()
+          .watchInvitesForGuest(widget.user.uid)
+          .first
+          .then(_onInvites)
+          .catchError((_) {});
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _sub?.cancel();
     super.dispose();
   }

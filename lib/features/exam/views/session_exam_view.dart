@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/app_user.dart';
 import '../../call/views/call_panel.dart';
-import '../../chat/views/chat_view.dart';
 import '../models/exam_session.dart';
 import '../repositories/exam_repository.dart';
 import '../viewmodels/session_exam_viewmodel.dart';
@@ -138,27 +137,12 @@ class _ExamBodyState extends State<_ExamBody> {
         title: Text(session?.title ?? '시험'),
         automaticallyImplyLeading: false,
         actions: [
-          if (session != null) ...[
+          if (session != null && !vm.isFinished)
             IconButton(
-              tooltip: '채팅',
-              icon: const Icon(Icons.chat_bubble_outline),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ChatView(
-                    myUid: widget.user.uid,
-                    otherUid: session.hostUid,
-                    otherName: session.hostName,
-                  ),
-                ),
-              ),
+              tooltip: '나가기',
+              icon: const Icon(Icons.logout),
+              onPressed: () => _confirmQuit(vm),
             ),
-            if (!vm.isFinished)
-              IconButton(
-                tooltip: '나가기',
-                icon: const Icon(Icons.logout),
-                onPressed: () => _confirmQuit(vm),
-              ),
-          ],
         ],
       ),
       body: SafeArea(child: _buildBody(context, vm, session)),
