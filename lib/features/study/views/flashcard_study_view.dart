@@ -232,28 +232,23 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
                   ),
                 ),
               ),
-              SizedBox(height: 20.h),
+              SizedBox(height: 24.h),
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: _CardButton(
-                      label: '아직 헷갈려요',
-                      bg: AppColors.fieldBg,
-                      fg: AppColors.grayText,
-                      onTap: () => _advance(memorized: false),
-                    ),
+                  _RoundCardButton(
+                    icon: Icons.close_rounded,
+                    onTap: () => _advance(memorized: false),
                   ),
-                  SizedBox(width: 12.w),
-                  Expanded(
-                    child: _CardButton(
-                      label: '외웠어요!',
-                      bg: AppColors.pink,
-                      fg: Colors.white,
-                      onTap: () => _advance(memorized: true),
-                    ),
+                  SizedBox(width: 20.w),
+                  _RoundCardButton(
+                    icon: Icons.check_rounded,
+                    primary: true,
+                    onTap: () => _advance(memorized: true),
                   ),
                 ],
               ),
+              SizedBox(height: 6.h),
               ],
             ],
           ),
@@ -263,18 +258,17 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
   }
 }
 
-class _CardButton extends StatelessWidget {
-  const _CardButton({
-    required this.label,
-    required this.bg,
-    required this.fg,
+/// 플래시카드 하단 원형 버튼: 헷갈려요(빨간 X) / 외웠어요(민트 체크).
+class _RoundCardButton extends StatelessWidget {
+  const _RoundCardButton({
+    required this.icon,
     required this.onTap,
+    this.primary = false,
   });
 
-  final String label;
-  final Color bg;
-  final Color fg;
+  final IconData icon;
   final VoidCallback onTap;
+  final bool primary;
 
   @override
   Widget build(BuildContext context) {
@@ -282,15 +276,25 @@ class _CardButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        height: 54.h,
+        width: 72.w,
+        height: 72.w,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(16.r),
+          color: primary ? null : AppColors.cream,
+          gradient: primary ? AppColors.primaryButton : null,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: (primary ? AppColors.mint : AppColors.navy)
+                  .withValues(alpha: primary ? 0.4 : 0.1),
+              blurRadius: primary ? 20 : 14,
+              offset: Offset(0, primary ? 8 : 5),
+            ),
+          ],
         ),
-        child: Text(label,
-            style: TextStyle(
-                fontSize: 15.sp, fontWeight: FontWeight.w700, color: fg)),
+        child: Icon(icon,
+            size: 30.sp,
+            color: primary ? Colors.white : AppColors.danger),
       ),
     );
   }

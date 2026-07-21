@@ -27,11 +27,20 @@ class GradientButton extends StatelessWidget {
       child: Opacity(
         opacity: enabled ? 1 : 0.55,
         child: Container(
-          height: 54.h,
+          height: 56.h,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             gradient: AppColors.primaryButton,
-            borderRadius: BorderRadius.circular(14.r),
+            borderRadius: BorderRadius.circular(999.r),
+            boxShadow: enabled
+                ? [
+                    BoxShadow(
+                      color: AppColors.mint.withValues(alpha: 0.35),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : null,
           ),
           child: loading
               ? SizedBox(
@@ -54,7 +63,7 @@ class GradientButton extends StatelessWidget {
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16.sp,
-                        fontWeight: FontWeight.w400,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ],

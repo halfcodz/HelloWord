@@ -23,17 +23,19 @@ class ExamScoreBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pass = _points >= 60;
-    final accent = pass ? AppColors.green : AppColors.danger;
+    final accent = _points >= 60 ? AppColors.mint : AppColors.danger;
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 18.h),
+      padding: EdgeInsets.symmetric(horizontal: 22.w, vertical: 20.h),
       decoration: BoxDecoration(
-        color: AppColors.blueSoft,
-        borderRadius: BorderRadius.circular(20.r),
+        color: AppColors.cream,
+        borderRadius: BorderRadius.circular(24.r),
+        boxShadow: AppColors.softShadow(),
       ),
       child: Row(
         children: [
+          ScoreRing(percent: _points, accent: accent, size: 92),
+          SizedBox(width: 20.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,38 +46,12 @@ class ExamScoreBanner extends StatelessWidget {
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w700,
                           color: AppColors.grayText)),
-                  SizedBox(height: 8.h),
+                  SizedBox(height: 10.h),
                 ],
                 _StatLine(
-                    label: '맞은 개수', value: score, color: AppColors.green),
-                SizedBox(height: 6.h),
-                _StatLine(label: '틀린 개수', value: _wrong, color: AppColors.danger),
-              ],
-            ),
-          ),
-          Container(
-            width: 84.w,
-            height: 84.w,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.cream,
-              shape: BoxShape.circle,
-              border: Border.all(color: accent, width: 3),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('$_points',
-                    style: TextStyle(
-                        fontSize: 28.sp,
-                        height: 1.0,
-                        fontWeight: FontWeight.w800,
-                        color: accent)),
-                Text('점',
-                    style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w700,
-                        color: accent)),
+                    label: '맞음', value: score, color: AppColors.mint),
+                SizedBox(height: 8.h),
+                _StatLine(label: '틀림', value: _wrong, color: AppColors.danger),
               ],
             ),
           ),
@@ -83,6 +59,100 @@ class ExamScoreBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 말해보카풍 점수 링(민트 원형 게이지 + 가운데 점수).
+class ScoreRing extends StatelessWidget {
+  const ScoreRing(
+      {super.key,
+      required this.percent,
+      required this.accent,
+      this.size = 92});
+
+  final int percent;
+  final Color accent;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size.w,
+      height: size.w,
+      child: CustomPaint(
+        painter: _RingPainter(
+          progress: (percent / 100).clamp(0, 1).toDouble(),
+          accent: accent,
+          track: AppColors.border,
+          stroke: size * 0.12,
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('$percent',
+                  style: TextStyle(
+                      fontSize: (size * 0.3).sp,
+                      height: 1.0,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink)),
+              Text('점',
+                  style: TextStyle(
+                      fontSize: (size * 0.13).sp,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.gray)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  _RingPainter({
+    required this.progress,
+    required this.accent,
+    required this.track,
+    required this.stroke,
+  });
+
+  final double progress;
+  final Color accent;
+  final Color track;
+  final double stroke;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = (size.width - stroke) / 2;
+    final trackPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..color = track;
+    final arcPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = stroke
+      ..shader = LinearGradient(
+        colors: [AppColors.mint, AppColors.mintEnd],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    if (progress < 1) {
+      arcPaint.color = accent;
+      arcPaint.shader = null;
+      if (progress >= 0.6) {
+        arcPaint.shader = LinearGradient(colors: [AppColors.mint, AppColors.mintEnd])
+            .createShader(Rect.fromCircle(center: center, radius: radius));
+      }
+    }
+    canvas.drawCircle(center, radius, trackPaint);
+    const start = -1.5707963267948966; // -90도
+    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), start,
+        6.283185307179586 * progress, false, arcPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter old) =>
+      old.progress != progress || old.accent != accent;
 }
 
 class _StatLine extends StatelessWidget {

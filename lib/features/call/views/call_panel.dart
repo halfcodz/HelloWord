@@ -117,7 +117,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
       margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: const Color(0xFF2B2440),
+        color: AppColors.navy,
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: AppColors.softShadow(blur: 12, y: 5),
       ),
@@ -203,7 +203,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(color: Colors.white, width: 2),
+              border: Border.all(color: AppColors.mintEnd, width: 2),
             ),
             child: RTCVideoView(
               service.localRenderer,

@@ -173,36 +173,33 @@ class _BlingBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cream,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(16.r),
-          topRight: Radius.circular(16.r),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.lavender.withValues(alpha: 0.18),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
+    // 말해보카풍: 하단 중앙에 떠 있는 네이비 필 탭바(아이콘 전용).
+    return SafeArea(
+      top: false,
+      minimum: EdgeInsets.only(bottom: 14.h),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          padding: EdgeInsets.all(7.w),
+          decoration: BoxDecoration(
+            color: AppColors.navy,
+            borderRadius: BorderRadius.circular(999.r),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.navy.withValues(alpha: 0.35),
+                blurRadius: 26,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        minimum: EdgeInsets.only(bottom: 10.h),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(6.w, 8.h, 6.w, 4.h),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               for (var i = 0; i < items.length; i++)
-                Expanded(
-                  child: _BarItem(
-                    icon: items[i].icon,
-                    label: items[i].label,
-                    selected: index == i,
-                    onTap: () => onTap(i),
-                  ),
+                _BarItem(
+                  icon: items[i].icon,
+                  selected: index == i,
+                  onTap: () => onTap(i),
                 ),
             ],
           ),
@@ -215,43 +212,30 @@ class _BlingBottomBar extends StatelessWidget {
 class _BarItem extends StatelessWidget {
   const _BarItem({
     required this.icon,
-    required this.label,
     required this.selected,
     required this.onTap,
   });
 
   final IconData icon;
-  final String label;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    // 선택: 포인트 색 / 비선택: 뉴트럴 그레이(토스풍).
-    final color = selected ? AppColors.pink : const Color(0xFF8B95A1);
     return BouncyTap(
       onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 6.h),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 24.sp, color: color),
-            SizedBox(height: 4.h),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.visible,
-              style: TextStyle(
-                fontSize: 10.sp,
-                color: color,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 56.w,
+        height: 46.h,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.mint : Colors.transparent,
+          borderRadius: BorderRadius.circular(999.r),
         ),
+        child: Icon(icon,
+            size: 23.sp,
+            color: selected ? Colors.white : const Color(0xFF5D6580)),
       ),
     );
   }
