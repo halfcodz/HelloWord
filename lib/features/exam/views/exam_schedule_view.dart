@@ -237,9 +237,9 @@ class _ResultCard extends StatelessWidget {
                   color: pass ? AppColors.greenSoft : AppColors.dangerSoft,
                   shape: BoxShape.circle,
                 ),
-                child: Text('${result.percent}%',
+                child: Text('${result.percent}점',
                     style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 13.sp,
                         fontWeight: FontWeight.w800,
                         color: pass ? AppColors.green : AppColors.danger)),
               ),

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../core/services/presence_service.dart';
 import '../features/chat/repositories/chat_repository.dart';
 import '../core/theme/app_theme.dart';
+import '../core/theme/theme_controller.dart';
 import '../core/widgets/bouncy_tap.dart';
 import '../features/chat/views/chat_list_view.dart';
 import '../features/exam/views/exam_dashboard_view.dart';
@@ -93,6 +94,8 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    // 다크 모드 토글 시 하단바·현재 탭이 즉시 다시 그려지도록 테마를 구독한다.
+    context.watch<ThemeController>();
     final config = _config();
     final chatIndex = config.items.indexWhere((it) => it.label == '채팅');
     return Scaffold(

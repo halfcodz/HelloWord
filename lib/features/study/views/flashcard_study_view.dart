@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/services/tts_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bouncy_tap.dart';
+import '../services/memorized_store.dart';
 import '../../word_sets/models/word_pair.dart';
 import '../../word_sets/models/word_set.dart';
 
@@ -26,6 +27,8 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
   void _flip() => setState(() => _showKorean = !_showKorean);
 
   void _advance({required bool memorized}) {
+    // 외운 단어 기록에 저장(안 외운 단어 모아 공부에 활용).
+    MemorizedStore.setMemorized(_words[_index].english, memorized);
     if (memorized) _memorized++;
     if (_index < _words.length - 1) {
       setState(() {
