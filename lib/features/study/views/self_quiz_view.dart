@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../word_sets/models/word_pair.dart';
 import '../../word_sets/models/word_set.dart';
+import '../widgets/memorize_filter.dart';
 
 /// 혼자 보는 연습 시험. 뜻을 보고 영어를 직접 입력해 스스로 채점한다.
 class SelfQuizView extends StatefulWidget {
@@ -18,7 +19,8 @@ class SelfQuizView extends StatefulWidget {
 
 class _SelfQuizViewState extends State<SelfQuizView> {
   final _controller = TextEditingController();
-  late final List<WordPair> _words = List.of(widget.set.words)..shuffle();
+  MemorizeFilter _filter = MemorizeFilter.all;
+  late List<WordPair> _words = applyFilter(widget.set.words, _filter)..shuffle();
   int _index = 0;
   bool _checked = false;
   bool _correct = false;
@@ -28,6 +30,18 @@ class _SelfQuizViewState extends State<SelfQuizView> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _applyFilter(MemorizeFilter f) {
+    setState(() {
+      _filter = f;
+      _words = applyFilter(widget.set.words, _filter)..shuffle();
+      _index = 0;
+      _checked = false;
+      _correct = false;
+      _score = 0;
+      _controller.clear();
+    });
   }
 
   void _check() {
@@ -54,8 +68,42 @@ class _SelfQuizViewState extends State<SelfQuizView> {
     }
   }
 
+  Widget _filterBar() => Padding(
+        padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 6.h),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: MemorizeFilterBar(
+            value: _filter,
+            words: widget.set.words,
+            onChanged: _applyFilter,
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
+    if (_words.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.set.title)),
+        body: SafeArea(
+          child: Column(
+            children: [
+              _filterBar(),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    _filter == MemorizeFilter.notMemorized
+                        ? '안 외운 단어가 없어요! 🎉'
+                        : '외운 단어가 아직 없어요.',
+                    style: TextStyle(fontSize: 15.sp, color: AppColors.gray),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     if (_index >= _words.length) {
       return _ResultScaffold(score: _score, total: _words.length);
     }
@@ -66,6 +114,7 @@ class _SelfQuizViewState extends State<SelfQuizView> {
       body: SafeArea(
         child: Column(
           children: [
+            _filterBar(),
             LinearProgressIndicator(value: (_index + 1) / _words.length),
             Expanded(
               child: SingleChildScrollView(

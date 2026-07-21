@@ -5,7 +5,11 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 /// 시험 중 1:1 영상통화(WebRTC)를 관리한다.
 /// 시그널링(offer/answer/ICE 후보)은 Firestore를 통해 주고받고,
-/// 실제 영상은 두 기기가 P2P로 직접 연결한다(무료 STUN 사용).
+/// 실제 영상은 두 기기가 P2P로 직접 연결한다(무료 STUN/TURN 사용).
+///
+/// 재접속 대응: 한쪽이 앱을 나갔다 들어와도 다시 화면에 들어오면
+/// 새 CallService가 start()되고, 언니(caller)는 연결이 끊기면 자동으로
+/// 다시 offer(ICE restart)를 보내 영상을 재연결한다.
 class CallService {
   CallService({
     required this.sessionId,
@@ -15,15 +19,11 @@ class CallService {
     FirebaseFirestore? firestore,
   }) : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  /// 언니(host)를 caller로 둔다.
   final String sessionId;
   final bool isCaller;
   final FirebaseFirestore _firestore;
 
-  /// 원격(상대) 영상이 도착했을 때 호출된다. (UI 갱신용)
   final void Function()? onRemoteStream;
-
-  /// 연결 상태가 바뀔 때 호출된다. (connected / failed 등)
   final void Function(String state)? onConnectionState;
 
   final RTCVideoRenderer localRenderer = RTCVideoRenderer();
@@ -33,7 +33,10 @@ class CallService {
   MediaStream? _localStream;
   final List<StreamSubscription> _subs = [];
   final List<RTCIceCandidate> _pendingRemoteCandidates = [];
-  bool _remoteDescSet = false;
+  bool _hasRemote = false;
+  String? _appliedOfferSdp; // 콜리(callee): 마지막으로 반영한 offer
+  String? _appliedAnswerSdp; // 콜러(caller): 마지막으로 반영한 answer
+  Timer? _restartTimer;
   bool _disposed = false;
 
   DocumentReference<Map<String, dynamic>> get _callDoc => _firestore
@@ -48,7 +51,6 @@ class CallService {
       _callDoc.collection('calleeCandidates');
 
   static const Map<String, dynamic> _config = {
-    // Unified Plan을 명시해 addTrack/onTrack 흐름을 보장한다.
     'sdpSemantics': 'unified-plan',
     'iceServers': [
       {
@@ -59,7 +61,6 @@ class CallService {
           'stun:stun.relay.metered.ca:80',
         ],
       },
-      // 무료 TURN(Metered OpenRelay) — 직접(P2P) 연결이 막히는 망에서도 우회 연결.
       {
         'urls': 'turn:openrelay.metered.ca:80',
         'username': 'openrelayproject',
@@ -83,7 +84,6 @@ class CallService {
     ],
   };
 
-  /// 카메라/마이크 시작 + 피어 연결 수립. 실패 시 예외를 던진다.
   Future<void> start() async {
     await localRenderer.initialize();
     await remoteRenderer.initialize();
@@ -101,37 +101,42 @@ class CallService {
       await pc.addTrack(track, _localStream!);
     }
 
-    // 원격 트랙 수신 → 렌더러에 연결하고 UI에 알린다.
     pc.onTrack = (event) {
       if (event.streams.isNotEmpty) {
         remoteRenderer.srcObject = event.streams.first;
         onRemoteStream?.call();
       }
     };
-
-    // 구형(Plan B) 대비 fallback: 스트림 단위 수신도 처리.
     pc.onAddStream = (stream) {
       remoteRenderer.srcObject = stream;
       onRemoteStream?.call();
     };
 
-    // 연결 상태 알림(연결됨/실패 등).
-    pc.onConnectionState = (state) {
-      onConnectionState?.call(state.name);
-    };
+    pc.onConnectionState = (state) => onConnectionState?.call(state.name);
     pc.onIceConnectionState = (state) {
       if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
           state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
         onConnectionState?.call('connected');
-      } else if (state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
-        onConnectionState?.call('failed');
+        _restartTimer?.cancel();
+      } else if (state ==
+              RTCIceConnectionState.RTCIceConnectionStateDisconnected ||
+          state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
+        onConnectionState?.call(
+            state == RTCIceConnectionState.RTCIceConnectionStateFailed
+                ? 'failed'
+                : 'disconnected');
+        // 언니(caller)는 잠시 뒤 자동으로 다시 연결을 시도한다.
+        if (isCaller) {
+          _restartTimer?.cancel();
+          _restartTimer = Timer(const Duration(seconds: 2), () {
+            if (!_disposed) _reoffer(pc);
+          });
+        }
       }
     };
 
     final myCandidates = isCaller ? _callerCandidates : _calleeCandidates;
-    pc.onIceCandidate = (candidate) {
-      myCandidates.add(candidate.toMap());
-    };
+    pc.onIceCandidate = (candidate) => myCandidates.add(candidate.toMap());
 
     if (isCaller) {
       await _runCaller(pc);
@@ -141,21 +146,19 @@ class CallService {
   }
 
   Future<void> _runCaller(RTCPeerConnection pc) async {
-    final offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    await _callDoc.set({'offer': offer.toMap()}, SetOptions(merge: true));
+    await _offer(pc, iceRestart: false);
 
+    // 콜리의 answer가 오면(재접속 포함 새 answer마다) 반영한다.
     _subs.add(_callDoc.snapshots().listen((snap) async {
-      final data = snap.data();
-      if (data == null || _remoteDescSet) return;
-      final answer = data['answer'];
-      if (answer != null) {
-        _remoteDescSet = true;
-        await pc.setRemoteDescription(
-          RTCSessionDescription(answer['sdp'], answer['type']),
-        );
-        await _flushPendingCandidates(pc);
-      }
+      if (_disposed) return;
+      final answer = snap.data()?['answer'];
+      final sdp = answer?['sdp'] as String?;
+      if (sdp == null || sdp == _appliedAnswerSdp) return;
+      _appliedAnswerSdp = sdp;
+      await pc.setRemoteDescription(
+          RTCSessionDescription(sdp, answer['type'] as String?));
+      _hasRemote = true;
+      await _flushPendingCandidates(pc);
     }));
 
     _subs.add(_calleeCandidates.snapshots().listen((snap) {
@@ -168,20 +171,23 @@ class CallService {
   }
 
   Future<void> _runCallee(RTCPeerConnection pc) async {
+    // 재접속 시 깨끗하게 다시 협상하도록 내 후보를 비운다.
+    await _clearCandidates(_calleeCandidates);
+
+    // offer가 새로 오면(재접속 포함) 매번 answer를 만들어 응답한다.
     _subs.add(_callDoc.snapshots().listen((snap) async {
-      final data = snap.data();
-      if (data == null || _remoteDescSet) return;
-      final offer = data['offer'];
-      if (offer != null) {
-        _remoteDescSet = true;
-        await pc.setRemoteDescription(
-          RTCSessionDescription(offer['sdp'], offer['type']),
-        );
-        final answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        await _callDoc.set({'answer': answer.toMap()}, SetOptions(merge: true));
-        await _flushPendingCandidates(pc);
-      }
+      if (_disposed) return;
+      final offer = snap.data()?['offer'];
+      final sdp = offer?['sdp'] as String?;
+      if (sdp == null || sdp == _appliedOfferSdp) return;
+      _appliedOfferSdp = sdp;
+      await pc.setRemoteDescription(
+          RTCSessionDescription(sdp, offer['type'] as String?));
+      _hasRemote = true;
+      final answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await _callDoc.set({'answer': answer.toMap()}, SetOptions(merge: true));
+      await _flushPendingCandidates(pc);
     }));
 
     _subs.add(_callerCandidates.snapshots().listen((snap) {
@@ -193,6 +199,26 @@ class CallService {
     }));
   }
 
+  /// 콜러가 offer를 만들어 보낸다. (초기 연결/재연결 공통)
+  Future<void> _offer(RTCPeerConnection pc, {required bool iceRestart}) async {
+    final offer = await pc.createOffer(
+        iceRestart ? {'iceRestart': true} : const {});
+    await pc.setLocalDescription(offer);
+    await _callDoc.set({'offer': offer.toMap()}, SetOptions(merge: true));
+  }
+
+  /// 연결이 끊겼을 때 콜러가 후보를 비우고 다시 offer한다(ICE restart).
+  Future<void> _reoffer(RTCPeerConnection pc) async {
+    if (_disposed) return;
+    try {
+      await _clearCandidates(_callerCandidates);
+      await _clearCandidates(_calleeCandidates);
+      await _callDoc.set({'answer': null}, SetOptions(merge: true));
+      _appliedAnswerSdp = null;
+      await _offer(pc, iceRestart: true);
+    } catch (_) {}
+  }
+
   void _addCandidate(RTCPeerConnection pc, Map<String, dynamic>? data) {
     if (data == null) return;
     final candidate = RTCIceCandidate(
@@ -200,8 +226,7 @@ class CallService {
       data['sdpMid'] as String?,
       data['sdpMLineIndex'] as int?,
     );
-    // 원격 설명(remote description)이 설정되기 전에 도착한 후보는 버퍼링한다.
-    if (_remoteDescSet) {
+    if (_hasRemote) {
       pc.addCandidate(candidate);
     } else {
       _pendingRemoteCandidates.add(candidate);
@@ -215,12 +240,20 @@ class CallService {
     _pendingRemoteCandidates.clear();
   }
 
-  /// 카메라 on/off 토글.
+  Future<void> _clearCandidates(
+      CollectionReference<Map<String, dynamic>> col) async {
+    try {
+      final docs = await col.get();
+      for (final d in docs.docs) {
+        await d.reference.delete();
+      }
+    } catch (_) {}
+  }
+
   void toggleCamera(bool enabled) {
     _localStream?.getVideoTracks().forEach((t) => t.enabled = enabled);
   }
 
-  /// 마이크 on/off 토글.
   void toggleMic(bool enabled) {
     _localStream?.getAudioTracks().forEach((t) => t.enabled = enabled);
   }
@@ -228,6 +261,7 @@ class CallService {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _restartTimer?.cancel();
     for (final s in _subs) {
       await s.cancel();
     }
@@ -240,14 +274,8 @@ class CallService {
     // caller가 통화 정보를 정리한다(다음 통화를 위해).
     if (isCaller) {
       try {
-        final caller = await _callerCandidates.get();
-        for (final d in caller.docs) {
-          await d.reference.delete();
-        }
-        final callee = await _calleeCandidates.get();
-        for (final d in callee.docs) {
-          await d.reference.delete();
-        }
+        await _clearCandidates(_callerCandidates);
+        await _clearCandidates(_calleeCandidates);
         await _callDoc.delete();
       } catch (_) {}
     }

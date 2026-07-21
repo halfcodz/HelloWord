@@ -357,7 +357,7 @@ class _ResultCard extends StatelessWidget {
                             color: AppColors.ink)),
                     SizedBox(height: 3.h),
                     Text(
-                        '${result.guestName.isEmpty ? "동생" : result.guestName} · ${result.score}/${result.total} 정답',
+                        '${result.guestName.isEmpty ? "동생" : result.guestName} · ${result.score}/${result.total} 정답${result.createdAt != null ? " · ${formatYmd(result.createdAt!)}" : ""}',
                         style:
                             TextStyle(fontSize: 12.sp, color: AppColors.gray)),
                   ],

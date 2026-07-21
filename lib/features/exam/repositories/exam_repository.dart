@@ -32,11 +32,13 @@ class ExamRepository {
     return List.generate(6, (_) => rand.nextInt(10)).join();
   }
 
-  /// 언니가 단어 세트로 새 시험 세션을 만든다.
+  /// 언니가 단어 세트로 새 시험 세션을 만들고, 특정 동생에게 초대를 보낸다.
   Future<ExamSession> createSession({
     required WordSet wordSet,
     required String hostUid,
     required String hostName,
+    String? invitedUid,
+    String? invitedName,
   }) async {
     final ref = _sessions.doc();
     final session = ExamSession(
@@ -49,10 +51,54 @@ class ExamRepository {
       hostName: hostName,
       status: SessionStatus.waiting,
       currentIndex: 0,
+      invitedUid: invitedUid,
+      invitedName: invitedName,
     );
     await ref.set(session.toMap());
     return session;
   }
+
+  /// 나에게 온 대기 중 시험 초대를 실시간으로 구독한다. (동생)
+  /// 단일 필드(invitedUid) 쿼리 후 상태는 클라이언트에서 거른다(복합 색인 회피).
+  Stream<List<ExamSession>> watchInvitesForGuest(String uid) => _sessions
+      .where('invitedUid', isEqualTo: uid)
+      .snapshots()
+      .map((snap) => snap.docs
+          .map(ExamSession.fromDoc)
+          .where((s) => s.status == SessionStatus.waiting && s.guestUid == null)
+          .toList());
+
+  /// 동생이 초대를 거절한다.
+  Future<void> declineInvite(String sessionId) async {
+    await _sessions.doc(sessionId).update({'status': SessionStatus.declined.name});
+  }
+
+  /// 내가 응시자(동생)로 참여 중인 '진행 중' 시험을 구독한다. (재접속용)
+  Stream<ExamSession?> watchMyActiveExamAsGuest(String uid) => _sessions
+      .where('guestUid', isEqualTo: uid)
+      .snapshots()
+      .map((snap) {
+        for (final d in snap.docs) {
+          final s = ExamSession.fromDoc(d);
+          if (s.status == SessionStatus.active) return s;
+        }
+        return null;
+      });
+
+  /// 내가 출제자(언니)로 진행 중인(대기/응시 중) 시험을 구독한다. (재접속용)
+  Stream<ExamSession?> watchMyActiveExamAsHost(String uid) => _sessions
+      .where('hostUid', isEqualTo: uid)
+      .snapshots()
+      .map((snap) {
+        for (final d in snap.docs) {
+          final s = ExamSession.fromDoc(d);
+          if (s.status == SessionStatus.waiting ||
+              s.status == SessionStatus.active) {
+            return s;
+          }
+        }
+        return null;
+      });
 
   Stream<ExamSession?> watchSession(String sessionId) => _sessions
       .doc(sessionId)

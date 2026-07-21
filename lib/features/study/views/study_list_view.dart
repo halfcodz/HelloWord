@@ -3,14 +3,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/date_format.dart';
 import '../../../core/widgets/bouncy_tap.dart';
 import '../../../models/app_user.dart';
 import '../../exam/models/exam_result.dart';
 import '../../exam/repositories/exam_repository.dart';
-import '../../word_sets/models/word_pair.dart';
 import '../../word_sets/models/word_set.dart';
 import '../../word_sets/repositories/word_set_repository.dart';
-import '../services/memorized_store.dart';
 import '../viewmodels/study_viewmodel.dart';
 import 'exam_review_study_view.dart';
 import 'flashcard_study_view.dart';
@@ -39,23 +38,6 @@ class _StudyBody extends StatelessWidget {
   const _StudyBody({required this.uid});
 
   final String uid;
-
-  /// 지난 시험들에서 틀린 단어를 중복 없이 모은다.
-  List<WordPair> _wrongWords(List<ExamResult> results) {
-    final seen = <String>{};
-    final out = <WordPair>[];
-    for (final r in results) {
-      for (final it in r.items) {
-        if (!it.correct) {
-          final key = it.english.toLowerCase().trim();
-          if (key.isNotEmpty && seen.add(key)) {
-            out.add(WordPair(english: it.english, korean: it.korean));
-          }
-        }
-      }
-    }
-    return out;
-  }
 
   void _openStudyMenu(BuildContext context, WordSet set) {
     showModalBottomSheet<void>(
@@ -115,21 +97,6 @@ class _StudyBody extends StatelessWidget {
     );
   }
 
-  /// 받은 단어 세트 중 아직 안 외운 단어를 중복 없이 모은다.
-  List<WordPair> _notMemorizedWords(List<WordSet> sets) {
-    final seen = <String>{};
-    final out = <WordPair>[];
-    for (final s in sets) {
-      for (final w in s.words) {
-        final key = w.english.toLowerCase().trim();
-        if (key.isEmpty || seen.contains(key)) continue;
-        seen.add(key);
-        if (!MemorizedStore.isMemorized(w.english)) out.add(w);
-      }
-    }
-    return out;
-  }
-
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<StudyViewModel>();
@@ -148,35 +115,7 @@ class _StudyBody extends StatelessWidget {
       stream: exam.watchResultsForGuest(uid),
       builder: (context, snap) {
         final results = snap.data ?? const <ExamResult>[];
-        final wrong = _wrongWords(results);
-        final notMemorized = _notMemorizedWords(viewModel.sets);
-
         final children = <Widget>[];
-
-        // ── 복습 카드(안 외운 단어 / 틀린 단어) ──
-        if (notMemorized.isNotEmpty) {
-          children.add(_ReviewCard(
-            color: AppColors.pink,
-            softColor: AppColors.blueSoft,
-            icon: Icons.psychology_alt_rounded,
-            title: '안 외운 단어 모아 공부',
-            subtitle: '아직 안 외운 ${notMemorized.length}개 · 집중 복습',
-            onTap: () => _openStudyMenu(
-                context,
-                _quickSet('not-memorized', '안 외운 단어', notMemorized)),
-          ));
-        }
-        if (wrong.isNotEmpty) {
-          children.add(_ReviewCard(
-            color: AppColors.danger,
-            softColor: AppColors.dangerSoft,
-            icon: Icons.refresh_rounded,
-            title: '틀린 단어 모아 복습',
-            subtitle: '지난 시험에서 틀린 ${wrong.length}개 · 다시 외워봐요',
-            onTap: () =>
-                _openStudyMenu(context, _quickSet('wrong', '틀린 단어', wrong)),
-          ));
-        }
 
         // ── 지난 시험(눌러서 틀린 것 확인·공부) ──
         if (results.isNotEmpty) {
@@ -213,15 +152,6 @@ class _StudyBody extends StatelessWidget {
     );
   }
 
-  WordSet _quickSet(String id, String title, List<WordPair> words) => WordSet(
-        id: id,
-        title: title,
-        date: DateTime.now(),
-        message: '',
-        words: words,
-        createdBy: '',
-      );
-
   Widget _sectionLabel(String text) => Padding(
         padding: EdgeInsets.fromLTRB(4.w, 14.h, 4.w, 10.h),
         child: Text(text,
@@ -251,75 +181,6 @@ class _StudyBody extends StatelessWidget {
           ],
         ),
       );
-}
-
-/// 상단 복습 카드(안 외운 단어 / 틀린 단어).
-class _ReviewCard extends StatelessWidget {
-  const _ReviewCard({
-    required this.color,
-    required this.softColor,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final Color color;
-  final Color softColor;
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 10.h),
-      child: BouncyTap(
-        onTap: onTap,
-        child: Container(
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: softColor,
-            borderRadius: BorderRadius.circular(18.r),
-            border: Border.all(color: color.withValues(alpha: 0.3)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 46.w,
-                height: 46.w,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(13.r),
-                ),
-                child: Icon(icon, color: Colors.white, size: 24.sp),
-              ),
-              SizedBox(width: 14.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: TextStyle(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.ink)),
-                    SizedBox(height: 2.h),
-                    Text(subtitle,
-                        style: TextStyle(
-                            fontSize: 12.sp, color: AppColors.grayText)),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, color: color, size: 22.sp),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// 지난 시험 한 줄(점수 + 틀린 개수). 누르면 틀린 것 확인·공부.
@@ -374,9 +235,7 @@ class _ExamResultTile extends StatelessWidget {
                             color: AppColors.ink)),
                     SizedBox(height: 2.h),
                     Text(
-                        wrong > 0
-                            ? '틀린 $wrong개 · 눌러서 확인·공부'
-                            : '다 맞았어요 🎉',
+                        '${result.createdAt != null ? "${formatYmd(result.createdAt!)} · " : ""}${wrong > 0 ? "틀린 $wrong개 · 눌러서 확인·공부" : "다 맞았어요 🎉"}',
                         style: TextStyle(
                             fontSize: 12.sp,
                             color:

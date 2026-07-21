@@ -17,6 +17,14 @@ class SessionExamViewModel extends ChangeNotifier {
         _sessionId = sessionId {
     _sessionSub = _repository.watchSession(_sessionId).listen((session) {
       _session = session;
+      // 재접속 시 서버에 저장된 위치에서 이어서 풀도록 한 번만 복원한다.
+      if (!_indexRestored && session != null) {
+        _indexRestored = true;
+        if (session.currentIndex > 0 &&
+            session.currentIndex < session.total) {
+          _currentIndex = session.currentIndex;
+        }
+      }
       _loaded = true;
       notifyListeners();
     });
@@ -28,6 +36,7 @@ class SessionExamViewModel extends ChangeNotifier {
 
   bool _loaded = false;
   bool get loaded => _loaded;
+  bool _indexRestored = false;
 
   final ExamRepository _repository;
   final String _sessionId;

@@ -9,6 +9,7 @@ import '../../../core/widgets/word_tile.dart';
 import '../../../models/app_user.dart';
 import '../../exam/repositories/exam_repository.dart';
 import '../../exam/views/session_monitor_view.dart';
+import '../../social/repositories/friend_repository.dart';
 import '../models/word_set.dart';
 
 /// 저장된 단어 세트의 상세(단어 목록) 화면.
@@ -84,12 +85,43 @@ class _StartExamButtonState extends State<_StartExamButton> {
   bool _creating = false;
 
   Future<void> _start() async {
+    // 시험 볼 동생을 고른다.
+    final friends =
+        await context.read<FriendRepository>().watchFriends(widget.user.uid).first;
+    if (!mounted) return;
+    if (friends.isEmpty) {
+      showToast(context, '먼저 내 정보에서 동생을 초대해 친구를 맺어주세요.', isError: true);
+      return;
+    }
+    AppUser? target = friends.first;
+    if (friends.length > 1) {
+      target = await showDialog<AppUser>(
+        context: context,
+        builder: (context) => SimpleDialog(
+          title: const Text('누구에게 시험을 낼까요?'),
+          children: [
+            for (final f in friends)
+              SimpleDialogOption(
+                onPressed: () => Navigator.of(context).pop(f),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.h),
+                  child: Text(f.name, style: TextStyle(fontSize: 16.sp)),
+                ),
+              ),
+          ],
+        ),
+      );
+      if (target == null || !mounted) return;
+    }
+
     setState(() => _creating = true);
     try {
       final session = await context.read<ExamRepository>().createSession(
             wordSet: widget.set,
             hostUid: widget.user.uid,
             hostName: widget.user.name,
+            invitedUid: target.uid,
+            invitedName: target.name,
           );
       if (!mounted) return;
       Navigator.of(context).push(

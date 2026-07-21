@@ -5,6 +5,7 @@ import '../../../core/services/tts_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bouncy_tap.dart';
 import '../services/memorized_store.dart';
+import '../widgets/memorize_filter.dart';
 import '../../word_sets/models/word_pair.dart';
 import '../../word_sets/models/word_set.dart';
 
@@ -19,10 +20,21 @@ class FlashcardStudyView extends StatefulWidget {
 }
 
 class _FlashcardStudyViewState extends State<FlashcardStudyView> {
-  late List<WordPair> _words = List.of(widget.set.words);
+  MemorizeFilter _filter = MemorizeFilter.all;
+  late List<WordPair> _words = applyFilter(widget.set.words, _filter);
   int _index = 0;
   bool _showKorean = false;
   int _memorized = 0;
+
+  void _applyFilter(MemorizeFilter f) {
+    setState(() {
+      _filter = f;
+      _words = applyFilter(widget.set.words, _filter);
+      _index = 0;
+      _showKorean = false;
+      _memorized = 0;
+    });
+  }
 
   void _flip() => setState(() => _showKorean = !_showKorean);
 
@@ -61,7 +73,7 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
 
   void _shuffle() {
     setState(() {
-      _words = List.of(widget.set.words)..shuffle();
+      _words = applyFilter(widget.set.words, _filter)..shuffle();
       _index = 0;
       _showKorean = false;
       _memorized = 0;
@@ -70,12 +82,12 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
 
   @override
   Widget build(BuildContext context) {
-    final word = _words[_index];
     final total = _words.length;
+    final word = total == 0 ? null : _words[_index];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${_index + 1}/$total',
+        title: Text(total == 0 ? '플래시카드' : '${_index + 1}/$total',
             style: TextStyle(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w700,
@@ -83,7 +95,7 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
         centerTitle: true,
         actions: [
           IconButton(
-            onPressed: _shuffle,
+            onPressed: total == 0 ? null : _shuffle,
             icon: Icon(Icons.shuffle_rounded, color: AppColors.grayText),
             tooltip: '섞기',
           ),
@@ -94,6 +106,28 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
           padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 20.h),
           child: Column(
             children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: MemorizeFilterBar(
+                  value: _filter,
+                  words: widget.set.words,
+                  onChanged: _applyFilter,
+                ),
+              ),
+              SizedBox(height: 10.h),
+              if (total == 0)
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      _filter == MemorizeFilter.notMemorized
+                          ? '안 외운 단어가 없어요! 🎉'
+                          : '외운 단어가 아직 없어요.',
+                      style:
+                          TextStyle(fontSize: 15.sp, color: AppColors.gray),
+                    ),
+                  ),
+                )
+              else ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(4.r),
                 child: LinearProgressIndicator(
@@ -131,7 +165,7 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
                         ),
                         SizedBox(height: 18.h),
                         Text(
-                          _showKorean ? word.korean : word.english,
+                          _showKorean ? word!.korean : word!.english,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: _showKorean ? 30.sp : 38.sp,
@@ -217,6 +251,7 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
                   ),
                 ],
               ),
+              ],
             ],
           ),
         ),

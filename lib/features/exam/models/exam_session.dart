@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../word_sets/models/word_pair.dart';
 
-enum SessionStatus { waiting, active, finished }
+enum SessionStatus { waiting, active, finished, declined }
 
 SessionStatus _statusFrom(String? value) {
   switch (value) {
@@ -10,6 +10,8 @@ SessionStatus _statusFrom(String? value) {
       return SessionStatus.active;
     case 'finished':
       return SessionStatus.finished;
+    case 'declined':
+      return SessionStatus.declined;
     default:
       return SessionStatus.waiting;
   }
@@ -29,6 +31,8 @@ class ExamSession {
     required this.hostName,
     required this.status,
     required this.currentIndex,
+    this.invitedUid,
+    this.invitedName,
     this.guestUid,
     this.guestName,
     this.score,
@@ -53,7 +57,11 @@ class ExamSession {
   /// 동생이 현재 풀고 있는 문제 번호.
   final int currentIndex;
 
-  /// 응시자(동생). 참여 전에는 null.
+  /// 언니가 초대한 동생. 초대 방식에서 사용.
+  final String? invitedUid;
+  final String? invitedName;
+
+  /// 응시자(동생). 참여(승인) 전에는 null.
   final String? guestUid;
   final String? guestName;
 
@@ -74,6 +82,8 @@ class ExamSession {
         'hostName': hostName,
         'status': status.name,
         'currentIndex': currentIndex,
+        'invitedUid': invitedUid,
+        'invitedName': invitedName,
         'guestUid': guestUid,
         'guestName': guestName,
         'score': score,
@@ -95,6 +105,8 @@ class ExamSession {
       hostName: d['hostName'] as String? ?? '',
       status: _statusFrom(d['status'] as String?),
       currentIndex: d['currentIndex'] as int? ?? 0,
+      invitedUid: d['invitedUid'] as String?,
+      invitedName: d['invitedName'] as String?,
       guestUid: d['guestUid'] as String?,
       guestName: d['guestName'] as String?,
       score: d['score'] as int?,
