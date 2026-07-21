@@ -3,8 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/app_refresh.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/home_greeting.dart';
 import '../../../models/app_user.dart';
 import '../../social/views/friend_bar.dart';
 import '../../social/views/notification_bell.dart';
@@ -12,6 +12,7 @@ import '../models/exam_plan.dart';
 import '../models/exam_result.dart';
 import '../repositories/exam_repository.dart';
 import 'exam_result_detail_view.dart';
+import 'exam_result_widgets.dart';
 
 /// 동생 홈: 언니가 만든 시험 일정과 내 시험 결과를 '조회만' 하는 화면.
 /// 편집(배정·삭제)은 언니만 가능하다.
@@ -26,22 +27,20 @@ class ExamScheduleView extends StatelessWidget {
     final today = DateTime.now();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('시험 일정'),
-        actions: [
-          NotificationBell(user: user),
-          IconButton(
-            tooltip: '새로고침',
-            onPressed: AppRefresh.refreshKeepingTab,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
       body: SafeArea(
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(bottom: 24.h),
+          padding: EdgeInsets.fromLTRB(0, 8.h, 0, 110.h),
           children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              child: HomeGreeting(
+                name: user.name,
+                mascot: '🐥',
+                trailing: NotificationBell(user: user),
+              ),
+            ),
+            SizedBox(height: 6.h),
             FriendBar(me: user),
             SizedBox(height: 4.h),
             _SectionTitle(
@@ -160,27 +159,23 @@ class _PlanCard extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
       child: Container(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.all(18.w),
         decoration: BoxDecoration(
           color: AppColors.cream,
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(22.r),
+          boxShadow: AppColors.softShadow(),
         ),
         child: Row(
           children: [
             Container(
-              width: 52.w,
-              height: 52.w,
+              width: 50.w,
+              height: 50.w,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: urgent ? AppColors.pink : AppColors.blueSoft,
-                borderRadius: BorderRadius.circular(14.r),
+                color: AppColors.orangeSoft,
+                borderRadius: BorderRadius.circular(16.r),
               ),
-              child: Text(label,
-                  style: TextStyle(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w800,
-                      color: urgent ? Colors.white : AppColors.pink)),
+              child: Text('⏰', style: TextStyle(fontSize: 25.sp)),
             ),
             SizedBox(width: 14.w),
             Expanded(
@@ -192,13 +187,25 @@ class _PlanCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           fontSize: 15.sp,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
                           color: AppColors.ink)),
                   SizedBox(height: 3.h),
                   Text('${formatYmd(plan.scheduledDate)} · ${plan.wordCount}개',
                       style: TextStyle(fontSize: 12.sp, color: AppColors.gray)),
                 ],
               ),
+            ),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 11.w, vertical: 6.h),
+              decoration: BoxDecoration(
+                color: urgent ? AppColors.orange : AppColors.blueSoft,
+                borderRadius: BorderRadius.circular(999.r),
+              ),
+              child: Text(label,
+                  style: TextStyle(
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w800,
+                      color: urgent ? Colors.white : AppColors.mintDeep)),
             ),
           ],
         ),
@@ -220,29 +227,20 @@ class _ResultCard extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(22.r),
         child: Container(
           padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
             color: AppColors.cream,
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(22.r),
+            boxShadow: AppColors.softShadow(),
           ),
           child: Row(
             children: [
-              Container(
-                width: 52.w,
-                height: 52.w,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: pass ? AppColors.greenSoft : AppColors.dangerSoft,
-                  shape: BoxShape.circle,
-                ),
-                child: Text('${result.percent}점',
-                    style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w800,
-                        color: pass ? AppColors.green : AppColors.danger)),
+              ScoreRing(
+                percent: result.percent,
+                accent: pass ? AppColors.mint : AppColors.danger,
+                size: 52,
               ),
               SizedBox(width: 14.w),
               Expanded(

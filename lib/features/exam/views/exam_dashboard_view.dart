@@ -3,9 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/app_refresh.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/toast.dart';
+import '../../../core/widgets/home_greeting.dart';
 import '../../../models/app_user.dart';
 import '../../social/views/friend_bar.dart';
 import '../../social/views/notification_bell.dart';
@@ -16,6 +16,7 @@ import '../models/exam_plan.dart';
 import '../models/exam_result.dart';
 import '../repositories/exam_repository.dart';
 import 'exam_result_detail_view.dart';
+import 'exam_result_widgets.dart';
 
 /// 언니 홈: 시험 관리 대시보드.
 /// 예정된 시험(D-DAY)과 동생이 친 지난 시험 결과를 한눈에 정리한다.
@@ -109,17 +110,6 @@ class ExamDashboardView extends StatelessWidget {
     final today = DateTime.now();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('시험 관리'),
-        actions: [
-          NotificationBell(user: user),
-          IconButton(
-            tooltip: '새로고침',
-            onPressed: AppRefresh.refreshKeepingTab,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _assignExam(context),
         icon: const Icon(Icons.event_note_rounded),
@@ -128,8 +118,18 @@ class ExamDashboardView extends StatelessWidget {
       body: SafeArea(
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(bottom: 90.h),
+          padding: EdgeInsets.fromLTRB(0, 8.h, 0, 120.h),
           children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              child: HomeGreeting(
+                name: user.name,
+                mascot: '🐰',
+                subtitle: '우리 동생 관리하기',
+                trailing: NotificationBell(user: user),
+              ),
+            ),
+            SizedBox(height: 6.h),
             FriendBar(me: user),
             SizedBox(height: 4.h),
             _SectionTitle(icon: Icons.event_available_rounded, label: '예정된 시험'),
@@ -390,29 +390,20 @@ class _ResultCard extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(22.r),
         child: Container(
           padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
             color: AppColors.cream,
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(22.r),
+            boxShadow: AppColors.softShadow(),
           ),
           child: Row(
             children: [
-              Container(
-                width: 52.w,
-                height: 52.w,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: pass ? AppColors.greenSoft : AppColors.dangerSoft,
-                  shape: BoxShape.circle,
-                ),
-                child: Text('${result.percent}점',
-                    style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w800,
-                        color: pass ? AppColors.green : AppColors.danger)),
+              ScoreRing(
+                percent: result.percent,
+                accent: pass ? AppColors.mint : AppColors.danger,
+                size: 52,
               ),
               SizedBox(width: 14.w),
               Expanded(

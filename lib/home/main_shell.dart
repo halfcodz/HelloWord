@@ -306,30 +306,21 @@ class _InviteWatcherState extends State<_InviteWatcher>
 
   Future<void> _showInvite(ExamSession s) async {
     _dialogOpen = true;
-    final choice = await showDialog<bool>(
+    final choice = await showGeneralDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Text('🐰', style: TextStyle(fontSize: 26.sp)),
-            SizedBox(width: 8.w),
-            const Expanded(child: Text('시험 초대가 왔어요!')),
-          ],
-        ),
-        content: Text(
-            '${s.hostName}에게서 "${s.title}" 시험 초대가 왔어요.\n(${s.total}문제) 지금 승인하면 영상통화로 시험을 시작해요.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('거절'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('승인'),
-          ),
-        ],
-      ),
+      barrierLabel: '시험 초대',
+      barrierColor: AppColors.navy.withValues(alpha: 0.6),
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (context, _, _) => _InviteFullCard(session: s),
+      transitionBuilder: (context, anim, _, child) {
+        final curved =
+            CurvedAnimation(parent: anim, curve: Curves.easeOutBack);
+        return FadeTransition(
+          opacity: anim,
+          child: ScaleTransition(scale: Tween(begin: 0.9, end: 1.0).animate(curved), child: child),
+        );
+      },
     );
     _dialogOpen = false;
     if (!mounted) return;
@@ -351,4 +342,101 @@ class _InviteWatcherState extends State<_InviteWatcher>
 
   @override
   Widget build(BuildContext context) => widget.child;
+}
+
+/// 시험 초대 전면 카드(말해보카풍 · 네이비 배경 + 바운스 마스코트).
+class _InviteFullCard extends StatelessWidget {
+  const _InviteFullCard({required this.session});
+
+  final ExamSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.navy,
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 32.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(),
+              Container(
+                width: 110.w,
+                height: 110.w,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.navySoft,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.mintEnd, width: 4),
+                ),
+                child: Text('🐰', style: TextStyle(fontSize: 54.sp)),
+              ),
+              SizedBox(height: 22.h),
+              Text('${session.hostName}가 시험에\n초대했어요 📩',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 23.sp,
+                      height: 1.4,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white)),
+              SizedBox(height: 10.h),
+              Text('${session.title} · ${session.total}문제 · 영상통화',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.onNavy)),
+              const Spacer(),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => Navigator.of(context).pop(true),
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(vertical: 18.h),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryButton,
+                    borderRadius: BorderRadius.circular(999.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.mint.withValues(alpha: 0.4),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Text('수락하고 시작하기',
+                      style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white)),
+                ),
+              ),
+              SizedBox(height: 10.h),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => Navigator.of(context).pop(false),
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white24, width: 1.5),
+                    borderRadius: BorderRadius.circular(999.r),
+                  ),
+                  child: Text('지금은 어려워요',
+                      style: TextStyle(
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.onNavy)),
+                ),
+              ),
+              SizedBox(height: 24.h),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
