@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/widgets/bouncy_tap.dart';
+import '../../../core/widgets/history_calendar_view.dart';
 import '../../../models/app_user.dart';
 import '../../exam/models/exam_result.dart';
 import '../../exam/repositories/exam_repository.dart';
@@ -143,7 +144,12 @@ class _StudyBody extends StatelessWidget {
               context,
               '지난 시험 기록 (${pastResults.length})',
               '지난 시험',
-              [for (final r in pastResults) _examTile(context, r)],
+              [
+                for (final r in pastResults)
+                  DatedItem(
+                      date: r.createdAt ?? DateTime.now(),
+                      child: _examTile(context, r)),
+              ],
             ));
           }
         }
@@ -164,7 +170,10 @@ class _StudyBody extends StatelessWidget {
             context,
             '지난 단어 기록 (${pastSets.length})',
             '지난 단어',
-            [for (final set in pastSets) _setCard(context, set)],
+            [
+              for (final set in pastSets)
+                DatedItem(date: set.date, child: _setCard(context, set)),
+            ],
           ));
         }
 
@@ -194,13 +203,14 @@ class _StudyBody extends StatelessWidget {
         child: _StudyCard(set: set, onTap: () => _openStudyMenu(context, set)),
       );
 
-  Widget _historyButton(
-      BuildContext context, String label, String title, List<Widget> items) {
+  Widget _historyButton(BuildContext context, String label, String title,
+      List<DatedItem> items) {
     return Padding(
       padding: EdgeInsets.only(bottom: 10.h),
       child: InkWell(
         onTap: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => _StudyHistoryView(title: title, items: items))),
+            builder: (_) =>
+                HistoryCalendarView(title: title, items: items))),
         borderRadius: BorderRadius.circular(14.r),
         child: Container(
           padding: EdgeInsets.all(14.w),
@@ -499,28 +509,6 @@ class _StudyCard extends StatelessWidget {
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 지난 단어/시험 기록 화면.
-class _StudyHistoryView extends StatelessWidget {
-  const _StudyHistoryView({required this.title, required this.items});
-
-  final String title;
-  final List<Widget> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: SafeArea(
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
-          children: items,
         ),
       ),
     );

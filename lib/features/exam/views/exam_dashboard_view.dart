@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/toast.dart';
+import '../../../core/widgets/history_calendar_view.dart';
 import '../../../core/widgets/home_greeting.dart';
 import '../../../models/app_user.dart';
 import '../../social/views/friend_bar.dart';
@@ -182,8 +183,19 @@ class ExamDashboardView extends StatelessWidget {
                         child: InkWell(
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  _ResultHistoryView(results: past),
+                              builder: (_) => HistoryCalendarView(
+                                title: '지난 시험 결과',
+                                items: [
+                                  for (final r in past)
+                                    DatedItem(
+                                      date: r.createdAt ?? DateTime.now(),
+                                      child: _ResultCard(
+                                        result: r,
+                                        onTap: () => _openResult(context, r),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                           borderRadius: BorderRadius.circular(12.r),
@@ -230,33 +242,6 @@ class ExamDashboardView extends StatelessWidget {
   void _openResult(BuildContext context, ExamResult result) {
     Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => ExamResultDetailView(result: result)));
-  }
-}
-
-/// 지난 시험 결과 이력 화면.
-class _ResultHistoryView extends StatelessWidget {
-  const _ResultHistoryView({required this.results});
-
-  final List<ExamResult> results;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('지난 시험 결과')),
-      body: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.symmetric(vertical: 8.h),
-          children: [
-            for (final result in results)
-              _ResultCard(
-                result: result,
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => ExamResultDetailView(result: result))),
-              ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
