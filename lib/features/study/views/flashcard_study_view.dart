@@ -285,7 +285,7 @@ class _RoundCardButton extends StatelessWidget {
           shape: BoxShape.circle,
           border: primary
               ? null
-              : Border.all(color: AppColors.border, width: 1.5),
+              : Border.all(color: AppColors.danger.withValues(alpha: 0.4), width: 2),
           boxShadow: [
             BoxShadow(
               color: (primary ? AppColors.mint : AppColors.navy)
@@ -297,7 +297,6 @@ class _RoundCardButton extends StatelessWidget {
         ),
         child: Icon(icon,
             size: 34.sp,
-            weight: 800,
             color: primary ? Colors.white : AppColors.danger),
       ),
     );
