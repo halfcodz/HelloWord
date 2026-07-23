@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/widgets/bouncy_tap.dart';
-import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/history_calendar_view.dart';
 import '../../../models/app_user.dart';
 import '../models/word_set.dart';
 import '../repositories/word_set_repository.dart';
@@ -14,7 +13,8 @@ import '../viewmodels/word_set_list_viewmodel.dart';
 import 'word_set_detail_view.dart';
 import 'word_set_upload_view.dart';
 
-/// 언니의 단어 세트 목록 화면.
+/// 언니의 단어 세트(공부자료) 화면.
+/// 동생 공부탭과 같은 '오늘/지난' 큰 카드 2개 구성 + 언니 기능(추가·삭제).
 class WordSetListView extends StatelessWidget {
   const WordSetListView({
     super.key,
@@ -26,7 +26,7 @@ class WordSetListView extends StatelessWidget {
   final AppUser user;
   final String title;
 
-  /// 단어 추가(업로드) 진입을 노출할지. 하단바의 "시험" 탭에서는 false.
+  /// 단어 추가(업로드) 진입을 노출할지.
   final bool enableAdd;
 
   @override
@@ -41,7 +41,50 @@ class WordSetListView extends StatelessWidget {
   }
 }
 
-class _WordSetListBody extends StatefulWidget {
+bool _isTodaySet(DateTime d) {
+  final n = DateTime.now();
+  return d.year == n.year && d.month == n.month && d.day == n.day;
+}
+
+Future<void> _openUpload(BuildContext context, AppUser user) async {
+  await Navigator.of(context).push(
+    MaterialPageRoute(builder: (_) => WordSetUploadView(user: user)),
+  );
+}
+
+/// 세트 삭제 확인 후 삭제 실행.
+Future<void> _confirmDeleteSet(
+  BuildContext context,
+  WordSet set,
+  Future<void> Function() onConfirmed,
+) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('삭제할까요? 🥲'),
+      content: Text('"${set.title}" 세트를 삭제합니다.'),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소')),
+        FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('삭제')),
+      ],
+    ),
+  );
+  if (ok == true) await onConfirmed();
+}
+
+void _openDetail(BuildContext context, WordSet set, AppUser user) {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => WordSetDetailView(set: set, user: user),
+    ),
+  );
+}
+
+class _WordSetListBody extends StatelessWidget {
   const _WordSetListBody({
     required this.user,
     required this.title,
@@ -53,141 +96,268 @@ class _WordSetListBody extends StatefulWidget {
   final bool enableAdd;
 
   @override
-  State<_WordSetListBody> createState() => _WordSetListBodyState();
-}
-
-class _WordSetListBodyState extends State<_WordSetListBody> {
-  bool _showPast = false;
-
-  Future<void> _openUpload(BuildContext context) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => WordSetUploadView(user: widget.user)),
-    );
-  }
-
-  bool _isToday(DateTime d) {
-    final n = DateTime.now();
-    return d.year == n.year && d.month == n.month && d.day == n.day;
-  }
-
-  @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<WordSetListViewModel>();
-    final showFab =
-        widget.enableAdd && !viewModel.loading && viewModel.sets.isNotEmpty;
+    final showFab = enableAdd && !viewModel.loading;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(title: Text(title)),
       floatingActionButton: showFab
           ? FloatingActionButton.extended(
-              onPressed: () => _openUpload(context),
+              onPressed: () => _openUpload(context, user),
               icon: const Icon(Icons.add),
               label: const Text('단어 추가'),
             )
           : null,
-      body: _buildBody(context, viewModel),
+      body: SafeArea(child: _home(context, viewModel)),
     );
   }
 
-  Widget _buildBody(BuildContext context, WordSetListViewModel viewModel) {
+  Widget _home(BuildContext context, WordSetListViewModel viewModel) {
     if (viewModel.loading) {
       return const Center(child: CircularProgressIndicator());
     }
     if (viewModel.error != null) {
       return Center(child: Text(viewModel.error!));
     }
-    if (viewModel.isEmpty) {
-      return _EmptyState(
-        onAdd: widget.enableAdd ? () => _openUpload(context) : null,
-      );
-    }
 
-    final today = viewModel.sets.where((s) => _isToday(s.date)).toList();
-    final past = viewModel.sets.where((s) => !_isToday(s.date)).toList();
+    final today = viewModel.sets.where((s) => _isTodaySet(s.date)).toList();
+    final past = viewModel.sets.where((s) => !_isTodaySet(s.date)).toList();
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 90.h),
+      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 100.h),
       children: [
-        _sectionHeader('오늘 자료'),
-        if (today.isEmpty)
-          _hint('오늘 올린 자료가 없어요.')
-        else
-          for (final set in today) _row(context, viewModel, set),
-        if (past.isNotEmpty) ...[
-          SizedBox(height: 10.h),
-          _PastHeader(
-            count: past.length,
-            expanded: _showPast,
-            onTap: () => setState(() => _showPast = !_showPast),
-          ),
-          if (_showPast)
-            for (final set in past) _row(context, viewModel, set),
-        ],
+        Text('자료를 관리해 볼까요?',
+            style: TextStyle(
+                fontSize: 20.sp,
+                fontWeight: FontWeight.w800,
+                color: AppColors.ink)),
+        SizedBox(height: 4.h),
+        Text('오늘 올린 자료를 확인하거나, 지난 자료를 달력에서 찾아봐요.',
+            style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+        SizedBox(height: 18.h),
+        _BigChoiceCard(
+          emoji: '📦',
+          badge: 'TODAY',
+          title: '오늘 올린 자료',
+          subtitle: today.isEmpty
+              ? '오늘 올린 자료가 없어요'
+              : '단어 세트 ${today.length}개',
+          action: '자료 보기',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => _MaterialsTodayView(user: user, enableAdd: enableAdd),
+          )),
+        ),
+        SizedBox(height: 14.h),
+        _BigChoiceCard(
+          emoji: '🗓️',
+          badge: 'HISTORY',
+          title: '지난 자료',
+          subtitle: past.isEmpty
+              ? '아직 지난 자료가 없어요'
+              : '달력에서 지난 자료 ${past.length}개 찾기',
+          action: '달력으로 보기',
+          dark: true,
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => HistoryCalendarView(
+              title: '지난 자료',
+              emptyText: '이 날 올린 자료가 없어요.',
+              items: [
+                for (final set in past)
+                  DatedItem(
+                    date: set.date,
+                    child: _MaterialCoverCard(
+                      set: set,
+                      onTap: () => _openDetail(context, set, user),
+                      onDelete: () => _confirmDeleteSet(
+                          context, set, () => viewModel.delete(set.id)),
+                    ),
+                  ),
+              ],
+            ),
+          )),
+        ),
       ],
     );
   }
+}
 
-  Widget _sectionHeader(String text) => Padding(
-        padding: EdgeInsets.fromLTRB(4.w, 8.h, 4.w, 8.h),
-        child: Text(text,
-            style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w800,
-                color: AppColors.ink)),
-      );
+/// 오늘 올린 자료 목록(실시간). 커버 카드 + 추가/삭제.
+class _MaterialsTodayView extends StatelessWidget {
+  const _MaterialsTodayView({required this.user, required this.enableAdd});
 
-  Widget _hint(String text) => Container(
-        width: double.infinity,
-        margin: EdgeInsets.only(bottom: 8.h),
-        padding: EdgeInsets.symmetric(vertical: 22.h, horizontal: 16.w),
-        decoration: BoxDecoration(
-          color: AppColors.rowBg,
-          borderRadius: BorderRadius.circular(14.r),
-        ),
-        child: Text(text,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
-      );
+  final AppUser user;
+  final bool enableAdd;
 
-  Widget _row(
-      BuildContext context, WordSetListViewModel viewModel, WordSet set) {
-    return _MaterialCoverCard(
-      set: set,
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => WordSetDetailView(set: set, user: widget.user),
+  @override
+  Widget build(BuildContext context) {
+    final repo = context.read<WordSetRepository>();
+    return Scaffold(
+      appBar: AppBar(title: const Text('오늘 올린 자료')),
+      floatingActionButton: enableAdd
+          ? FloatingActionButton.extended(
+              onPressed: () => _openUpload(context, user),
+              icon: const Icon(Icons.add),
+              label: const Text('단어 추가'),
+            )
+          : null,
+      body: SafeArea(
+        child: StreamBuilder<List<WordSet>>(
+          stream: repo.watchByCreator(user.uid),
+          builder: (context, snap) {
+            if (!snap.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final today =
+                snap.data!.where((s) => _isTodaySet(s.date)).toList();
+            if (today.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('📦', style: TextStyle(fontSize: 44.sp)),
+                    SizedBox(height: 12.h),
+                    Text('오늘 올린 자료가 없어요',
+                        style:
+                            TextStyle(fontSize: 15.sp, color: AppColors.ink)),
+                    SizedBox(height: 6.h),
+                    Text('아래 "단어 추가"로 새 자료를 만들어요!',
+                        textAlign: TextAlign.center,
+                        style:
+                            TextStyle(fontSize: 12.sp, color: AppColors.gray)),
+                  ],
+                ),
+              );
+            }
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 90.h),
+              children: [
+                for (final set in today)
+                  _MaterialCoverCard(
+                    set: set,
+                    onTap: () => _openDetail(context, set, user),
+                    onDelete: () => _confirmDeleteSet(
+                        context, set, () => repo.delete(set.id)),
+                  ),
+              ],
+            );
+          },
         ),
       ),
-      onDelete: () => _confirmDelete(context, viewModel, set),
     );
   }
+}
 
-  Future<void> _confirmDelete(
-    BuildContext context,
-    WordSetListViewModel viewModel,
-    WordSet set,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('삭제할까요? 🥲'),
-        content: Text('"${set.title}" 세트를 삭제합니다.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('삭제'),
-          ),
-        ],
+/// '오늘/지난'을 고르는 큰 선택 카드(동생 공부탭과 동일 디자인).
+class _BigChoiceCard extends StatelessWidget {
+  const _BigChoiceCard({
+    required this.emoji,
+    required this.badge,
+    required this.title,
+    required this.subtitle,
+    required this.action,
+    required this.onTap,
+    this.dark = false,
+  });
+
+  final String emoji;
+  final String badge;
+  final String title;
+  final String subtitle;
+  final String action;
+  final VoidCallback onTap;
+  final bool dark;
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = Colors.white.withValues(alpha: 0.85);
+    return BouncyTap(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(22.w),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: dark ? AppColors.navy : null,
+          gradient: dark ? null : AppColors.primaryButton,
+          borderRadius: BorderRadius.circular(26.r),
+          boxShadow: [
+            BoxShadow(
+              color: (dark ? AppColors.navy : AppColors.mint)
+                  .withValues(alpha: dark ? 0.28 : 0.3),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -10.w,
+              bottom: -22.h,
+              child: Text(emoji,
+                  style: TextStyle(
+                      fontSize: 96.sp,
+                      color: Colors.white.withValues(alpha: 0.16))),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(999.r),
+                  ),
+                  child: Text(badge,
+                      style: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.5,
+                          color: Colors.white)),
+                ),
+                SizedBox(height: 14.h),
+                Text(title,
+                    style: TextStyle(
+                        fontSize: 23.sp,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white)),
+                SizedBox(height: 4.h),
+                Text(subtitle,
+                    style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: sub)),
+                SizedBox(height: 16.h),
+                Row(
+                  children: [
+                    Text(action,
+                        style: TextStyle(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white)),
+                    SizedBox(width: 6.w),
+                    Container(
+                      width: 26.w,
+                      height: 26.w,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.arrow_forward_rounded,
+                          size: 16.sp, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
-    if (confirmed == true) {
-      await viewModel.delete(set.id);
-    }
   }
 }
 
@@ -233,7 +403,6 @@ class _MaterialCoverCard extends StatelessWidget {
                         fontSize: 82.sp,
                         color: Colors.white.withValues(alpha: 0.22))),
               ),
-              // 우측 상단 X: 세트 삭제.
               Positioned(
                 right: 0,
                 top: 0,
@@ -300,94 +469,6 @@ class _MaterialCoverCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// '지난 자료' 펼침/접힘 헤더.
-class _PastHeader extends StatelessWidget {
-  const _PastHeader(
-      {required this.count, required this.expanded, required this.onTap});
-
-  final int count;
-  final bool expanded;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12.r),
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 4.w),
-        child: Row(
-          children: [
-            Icon(Icons.history_rounded, size: 18.sp, color: AppColors.grayText),
-            SizedBox(width: 6.w),
-            Text('지난 자료 ($count)',
-                style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.ink)),
-            const Spacer(),
-            Icon(expanded ? Icons.expand_less : Icons.expand_more,
-                color: AppColors.gray),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onAdd});
-
-  final VoidCallback? onAdd;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(32.w),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('🌸', style: TextStyle(fontSize: 64.sp))
-                .animate(onPlay: (c) => c.repeat(reverse: true))
-                .scale(
-                  begin: const Offset(1, 1),
-                  end: const Offset(1.12, 1.12),
-                  duration: 1400.ms,
-                  curve: Curves.easeInOut,
-                ),
-            SizedBox(height: 20.h),
-            Text('아직 단어 세트가 없어요',
-                style: TextStyle(fontSize: 18.sp, color: AppColors.ink)),
-            SizedBox(height: 8.h),
-            Text(
-              onAdd != null
-                  ? '단어 파일(csv·txt·엑셀)을 올려\n공부자료를 만들어 보세요!'
-                  : '자료 탭에서 공부자료를 먼저 추가해 주세요!',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14.sp, color: AppColors.lavender),
-            ),
-            if (onAdd != null) ...[
-              SizedBox(height: 28.h),
-              SizedBox(
-                width: 220.w,
-                child: GradientButton(
-                  label: '단어 추가하기',
-                  icon: Icons.add,
-                  onPressed: onAdd,
-                ),
-              ),
-            ],
-          ],
-        )
-            .animate()
-            .fadeIn(duration: 500.ms)
-            .slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic),
       ),
     );
   }

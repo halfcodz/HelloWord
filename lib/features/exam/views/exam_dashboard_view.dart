@@ -117,13 +117,19 @@ class ExamDashboardView extends StatelessWidget {
         label: const Text('시험 배정'),
       ),
       body: SafeArea(
-        child: ListView(
-          // 내용이 화면에 들어오면 스크롤/튕김 없이 고정되지만,
-          // 위에서 당겨서 새로고침은 되도록 항상 스크롤 가능 + 클램핑.
-          physics: const AlwaysScrollableScrollPhysics(
-              parent: ClampingScrollPhysics()),
-          padding: EdgeInsets.fromLTRB(0, 8.h, 0, 24.h),
-          children: [
+        // 내용을 최소 뷰포트 높이로 채워, 스크롤할 내용이 없으면 스크롤되지 않게 하고
+        // (빈 흰 공간으로 내려가지 않음) 위에서 당기면 새로고침만 되도록 한다.
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+                parent: ClampingScrollPhysics()),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(0, 8.h, 0, 24.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.w),
               child: HomeGreeting(
@@ -220,7 +226,11 @@ class ExamDashboardView extends StatelessWidget {
                 );
               },
             ),
-          ],
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
