@@ -6,6 +6,7 @@ import '../../../core/utils/date_format.dart';
 import '../../../core/utils/toast.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/word_tile.dart';
+import '../../../core/widgets/x_mark.dart';
 import '../../../models/app_user.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../exam/repositories/exam_repository.dart';
@@ -270,37 +271,10 @@ class _DeleteWordButton extends StatelessWidget {
       onTap: onTap,
       child: Padding(
         padding: EdgeInsets.only(left: 8.w),
-        child: SizedBox(
-          width: 22.w,
-          height: 22.w,
-          child: CustomPaint(painter: _XPainter(color: AppColors.danger)),
-        ),
+        child: XMark(color: AppColors.danger, size: 22.w),
       ),
     );
   }
-}
-
-/// 빨간 X를 직접 그리는 페인터.
-class _XPainter extends CustomPainter {
-  _XPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = color
-      ..strokeWidth = 2.6
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    final w = size.width;
-    final h = size.height;
-    canvas.drawLine(Offset(w * 0.25, h * 0.25), Offset(w * 0.75, h * 0.75), p);
-    canvas.drawLine(Offset(w * 0.75, h * 0.25), Offset(w * 0.25, h * 0.75), p);
-  }
-
-  @override
-  bool shouldRepaint(_XPainter old) => old.color != color;
 }
 
 /// 다중 선택 삭제 모드의 하단 바(전체선택 + 삭제).

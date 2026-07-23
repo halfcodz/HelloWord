@@ -14,6 +14,10 @@ Future<void> speakImpl(String text) async {
   try {
     final synth = web.window.speechSynthesis;
     // 사용자 제스처 안에서 바로 호출(iOS 재생 잠금 해제).
+    // iOS Safari는 speechSynthesis가 일시정지되는 경우가 있어 resume 먼저.
+    try {
+      synth.resume();
+    } catch (_) {}
     synth.cancel();
     _voice ??= _pickVoice(synth);
 

@@ -8,6 +8,7 @@ import '../../../core/utils/date_format.dart';
 import '../../../core/utils/toast.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../core/widgets/word_tile.dart';
+import '../../../core/widgets/x_mark.dart';
 import '../../../models/app_user.dart';
 import '../../social/repositories/friend_repository.dart';
 import '../repositories/word_set_repository.dart';
@@ -257,14 +258,9 @@ class _UploadScreenState extends State<_UploadScreen> {
               trailing: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => viewModel.removeWordAt(index),
-                child: Container(
-                  margin: EdgeInsets.only(left: 6.w),
-                  width: 40.w,
-                  height: 40.w,
-                  alignment: Alignment.center,
-                  color: Colors.transparent,
-                  child: Icon(Icons.close_rounded,
-                      size: 26.sp, color: AppColors.danger),
+                child: Padding(
+                  padding: EdgeInsets.only(left: 8.w),
+                  child: XMark(color: AppColors.danger, size: 24.w),
                 ),
               ),
             ),
@@ -276,7 +272,7 @@ class _UploadScreenState extends State<_UploadScreen> {
   }
 }
 
-/// 이 단어를 보낼 친구(동생) 선택.
+/// 이 자료를 볼 사람(동생)을 직접 선택한다. (여러 명 선택 가능)
 class _RecipientPicker extends StatelessWidget {
   const _RecipientPicker({required this.viewModel});
 
@@ -285,29 +281,103 @@ class _RecipientPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final friends = viewModel.friends;
+    final selected = viewModel.selectedFriendUids;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('받는 사람', style: Theme.of(context).textTheme.titleSmall),
+        Row(
+          children: [
+            Icon(Icons.person_rounded, size: 18.sp, color: AppColors.pink),
+            SizedBox(width: 6.w),
+            Text('이 자료를 볼 사람',
+                style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink)),
+          ],
+        ),
         SizedBox(height: 4.h),
+        Text('선택한 동생에게만 이 자료가 보여요.',
+            style: TextStyle(fontSize: 12.sp, color: AppColors.gray)),
+        SizedBox(height: 10.h),
         if (friends.isEmpty)
-          Text('아직 친구가 없어요. 내 정보에서 동생을 초대하면 여기서 선택할 수 있어요.',
-              style: TextStyle(fontSize: 12.sp, color: AppColors.lavender))
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 14.w),
+            decoration: BoxDecoration(
+              color: AppColors.rowBg,
+              borderRadius: BorderRadius.circular(14.r),
+            ),
+            child: Text('아직 친구가 없어요.\n내 정보에서 동생을 초대하면 여기서 선택할 수 있어요.',
+                style: TextStyle(fontSize: 12.sp, color: AppColors.gray)),
+          )
         else
           Wrap(
             spacing: 8.w,
-            runSpacing: 4.h,
+            runSpacing: 8.h,
             children: [
               for (final friend in friends)
-                FilterChip(
-                  label: Text(friend.name),
-                  selected: viewModel.selectedFriendUids.contains(friend.uid),
-                  onSelected: (_) => viewModel.toggleFriend(friend.uid),
-                  showCheckmark: true,
+                _RecipientChip(
+                  name: friend.name,
+                  selected: selected.contains(friend.uid),
+                  onTap: () => viewModel.toggleFriend(friend.uid),
                 ),
             ],
           ),
+        if (friends.isNotEmpty && selected.isEmpty) ...[
+          SizedBox(height: 8.h),
+          Text('⚠️ 받는 사람을 한 명 이상 선택해야 동생이 볼 수 있어요.',
+              style: TextStyle(fontSize: 12.sp, color: AppColors.danger)),
+        ],
       ],
+    );
+  }
+}
+
+/// 받는 사람 선택 칩(v2 톤).
+class _RecipientChip extends StatelessWidget {
+  const _RecipientChip({
+    required this.name,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String name;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 9.h),
+        decoration: BoxDecoration(
+          gradient: selected ? AppColors.primaryButton : null,
+          color: selected ? null : AppColors.fieldBg,
+          borderRadius: BorderRadius.circular(999.r),
+          border: Border.all(
+              color: selected ? Colors.transparent : AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+              size: 16.sp,
+              color: selected ? Colors.white : AppColors.hint,
+            ),
+            SizedBox(width: 6.w),
+            Text(name,
+                style: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: selected ? Colors.white : AppColors.grayText)),
+          ],
+        ),
+      ),
     );
   }
 }
