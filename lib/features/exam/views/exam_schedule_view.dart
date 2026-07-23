@@ -65,15 +65,11 @@ class ExamScheduleView extends StatelessWidget {
               },
             ),
             SizedBox(height: 16.h),
-            _SectionTitle(icon: Icons.fact_check_rounded, label: '오늘 시험 결과'),
+            _SectionTitle(icon: Icons.fact_check_rounded, label: '시험 결과'),
             StreamBuilder<List<ExamResult>>(
               stream: exam.watchResultsForGuest(user.uid),
               builder: (context, snap) {
                 final results = snap.data ?? const <ExamResult>[];
-                if (results.isEmpty) {
-                  return const _EmptyHint(
-                      text: '아직 본 시험이 없어요.\n시험을 마치면 점수가 여기에 쌓여요.');
-                }
                 bool isToday(DateTime? d) {
                   if (d == null) return false;
                   return d.year == today.year &&
@@ -81,27 +77,45 @@ class ExamScheduleView extends StatelessWidget {
                       d.day == today.day;
                 }
 
-                Widget tile(ExamResult r) => _ResultCard(
-                      result: r,
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => ExamResultDetailView(result: r))),
-                    );
                 final todayR =
                     results.where((r) => isToday(r.createdAt)).toList();
                 final pastR =
                     results.where((r) => !isToday(r.createdAt)).toList();
-                return Column(
-                  children: [
-                    if (todayR.isEmpty)
-                      const _EmptyHint(text: '오늘 본 시험이 없어요.')
-                    else
-                      for (final r in todayR) tile(r),
-                    if (pastR.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(20.w, 6.h, 20.w, 0),
-                        child: HistoryEntryButton(
-                          title: '지난 시험 결과',
+                _ResultCard resultTile(ExamResult r) => _ResultCard(
+                      result: r,
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => ExamResultDetailView(result: r))),
+                    );
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _ResultNavCard(
+                          emoji: '📊',
+                          label: '오늘 시험 결과',
+                          count: todayR.length,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => _ResultListView(
+                                title: '오늘 시험 결과',
+                                emptyText: '오늘 본 시험이 없어요.\n시험을 마치면 여기에 쌓여요.',
+                                results: [
+                                  for (final r in todayR) resultTile(r),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: _ResultNavCard(
+                          emoji: '🗓️',
+                          label: '지난 시험 결과',
                           count: pastR.length,
+                          dark: true,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => HistoryCalendarView(
@@ -110,14 +124,7 @@ class ExamScheduleView extends StatelessWidget {
                                   for (final r in pastR)
                                     DatedItem(
                                       date: r.createdAt ?? today,
-                                      child: _ResultCard(
-                                        result: r,
-                                        onTap: () => Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                                builder: (_) =>
-                                                    ExamResultDetailView(
-                                                        result: r))),
-                                      ),
+                                      child: resultTile(r),
                                     ),
                                 ],
                               ),
@@ -125,12 +132,141 @@ class ExamScheduleView extends StatelessWidget {
                           ),
                         ),
                       ),
-                  ],
+                    ],
+                  ),
                 );
               },
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 동생 홈 · 시험 결과로 들어가는 작은 카드(가로 2개). 공부탭 큰 카드와 다른 톤.
+class _ResultNavCard extends StatelessWidget {
+  const _ResultNavCard({
+    required this.emoji,
+    required this.label,
+    required this.count,
+    required this.onTap,
+    this.dark = false,
+  });
+
+  final String emoji;
+  final String label;
+  final int count;
+  final VoidCallback onTap;
+  final bool dark;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20.r),
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: AppColors.cream,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppColors.softShadow(blur: 12, y: 4),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 38.w,
+                  height: 38.w,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: dark ? AppColors.navy : null,
+                    gradient: dark ? null : AppColors.primaryButton,
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Text(emoji, style: TextStyle(fontSize: 18.sp)),
+                ),
+                const Spacer(),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 9.w, vertical: 3.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.blueSoft,
+                    borderRadius: BorderRadius.circular(999.r),
+                  ),
+                  child: Text('$count건',
+                      style: TextStyle(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.mintDeep)),
+                ),
+              ],
+            ),
+            SizedBox(height: 12.h),
+            Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink)),
+            SizedBox(height: 3.h),
+            Row(
+              children: [
+                Text('결과 보기',
+                    style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.gray)),
+                Icon(Icons.chevron_right, size: 15.sp, color: AppColors.hint),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 시험 결과 목록 화면(오늘 결과 등). 카드 목록만 보여준다.
+class _ResultListView extends StatelessWidget {
+  const _ResultListView({
+    required this.title,
+    required this.results,
+    required this.emptyText,
+  });
+
+  final String title;
+  final List<Widget> results;
+  final String emptyText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: SafeArea(
+        child: results.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('📊', style: TextStyle(fontSize: 40.sp)),
+                    SizedBox(height: 10.h),
+                    Text(emptyText,
+                        textAlign: TextAlign.center,
+                        style:
+                            TextStyle(fontSize: 14.sp, color: AppColors.gray)),
+                  ],
+                ),
+              )
+            : ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.symmetric(vertical: 10.h),
+                children: results,
+              ),
       ),
     );
   }
