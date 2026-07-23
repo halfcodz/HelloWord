@@ -231,15 +231,12 @@ class ExamReviewList extends StatelessWidget {
     super.key,
     required this.words,
     required this.resolve,
-    this.sourceTitle,
     this.padding,
   });
 
   final List<WordPair> words;
   final ExamAnswer? Function(int index) resolve;
 
-  /// 이 시험(단어 세트)의 이름. 틀린 문항에 '어디서 틀렸는지'로 표시.
-  final String? sourceTitle;
   final EdgeInsetsGeometry? padding;
 
   @override
@@ -278,7 +275,6 @@ class ExamReviewList extends StatelessWidget {
         word: e.word,
         submitted: e.submitted,
         correct: e.correct,
-        source: e.correct ? null : sourceTitle,
       ));
       children.add(SizedBox(height: 8.h));
     }
@@ -327,14 +323,12 @@ class ExamReviewRow extends StatelessWidget {
     required this.word,
     required this.submitted,
     required this.correct,
-    this.source,
   });
 
   final int number;
   final WordPair word;
   final String submitted;
   final bool correct;
-  final String? source;
 
   @override
   Widget build(BuildContext context) {
@@ -372,23 +366,6 @@ class ExamReviewRow extends StatelessWidget {
                 else
                   AnswerDiffText(
                       correct: word.quizAnswer, submitted: submitted),
-                if (source != null && source!.isNotEmpty) ...[
-                  SizedBox(height: 3.h),
-                  Row(
-                    children: [
-                      Icon(Icons.folder_outlined,
-                          size: 12.sp, color: AppColors.hint),
-                      SizedBox(width: 4.w),
-                      Flexible(
-                        child: Text('출처: $source',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 11.sp, color: AppColors.hint)),
-                      ),
-                    ],
-                  ),
-                ],
               ],
             ),
           ),

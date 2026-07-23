@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/bouncy_tap.dart';
 import '../../../core/widgets/gradient_button.dart';
 import '../../../models/app_user.dart';
 import '../models/word_set.dart';
@@ -151,7 +152,7 @@ class _WordSetListBodyState extends State<_WordSetListBody> {
 
   Widget _row(
       BuildContext context, WordSetListViewModel viewModel, WordSet set) {
-    return _WordSetRow(
+    return _MaterialCoverCard(
       set: set,
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
@@ -190,9 +191,10 @@ class _WordSetListBodyState extends State<_WordSetListBody> {
   }
 }
 
-/// 간결한 단어 세트 한 줄. (카드 대신 리스트 행)
-class _WordSetRow extends StatelessWidget {
-  const _WordSetRow({
+/// 단어 세트 커버 카드(공부탭과 동일한 민트 그라디언트 디자인).
+/// 언니용: 진행률 대신 단어 수를 보여주고, 우측 상단 X로 세트를 삭제한다.
+class _MaterialCoverCard extends StatelessWidget {
+  const _MaterialCoverCard({
     required this.set,
     required this.onTap,
     required this.onDelete,
@@ -205,57 +207,95 @@ class _WordSetRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 8.h),
-      child: InkWell(
+      padding: EdgeInsets.only(bottom: 12.h),
+      child: BouncyTap(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14.r),
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+          padding: EdgeInsets.all(20.w),
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: AppColors.cream,
-            borderRadius: BorderRadius.circular(14.r),
-            border: Border.all(color: AppColors.border),
+            gradient: AppColors.primaryButton,
+            borderRadius: BorderRadius.circular(26.r),
+            boxShadow: [
+              BoxShadow(
+                  color: AppColors.mint.withValues(alpha: 0.3),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10)),
+            ],
           ),
-          child: Row(
+          child: Stack(
             children: [
-              Container(
-                width: 40.w,
-                height: 40.w,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.blueSoft,
-                  borderRadius: BorderRadius.circular(11.r),
-                ),
-                child: Icon(Icons.menu_book_rounded,
-                    color: AppColors.pink, size: 20.sp),
+              Positioned(
+                right: -12.w,
+                bottom: -18.h,
+                child: Text('📚',
+                    style: TextStyle(
+                        fontSize: 82.sp,
+                        color: Colors.white.withValues(alpha: 0.22))),
               ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(set.title,
+              // 우측 상단 X: 세트 삭제.
+              Positioned(
+                right: 0,
+                top: 0,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onDelete,
+                  child: Container(
+                    width: 30.w,
+                    height: 30.w,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.22),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.close_rounded,
+                        size: 18.sp, color: Colors.white),
+                  ),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(right: 36.w),
+                    child: Text('WORDS',
+                        style: TextStyle(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 2,
+                            color: Colors.white.withValues(alpha: 0.85))),
+                  ),
+                  SizedBox(height: 4.h),
+                  Padding(
+                    padding: EdgeInsets.only(right: 36.w),
+                    child: Text(set.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.ink)),
-                    SizedBox(height: 2.h),
-                    Text('${formatYmd(set.date)} · ${set.wordCount}개',
-                        style:
-                            TextStyle(fontSize: 12.sp, color: AppColors.gray)),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onDelete,
-                child: Padding(
-                  padding: EdgeInsets.all(6.w),
-                  child: Icon(Icons.delete_outline,
-                      size: 20.sp, color: AppColors.hint),
-                ),
+                            fontSize: 19.sp,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white)),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text('${set.wordCount}단어 · ${formatYmd(set.date)}',
+                      style: TextStyle(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white.withValues(alpha: 0.85))),
+                  SizedBox(height: 14.h),
+                  Row(
+                    children: [
+                      Text('탭해서 단어 확인·시험 배정',
+                          style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white.withValues(alpha: 0.9))),
+                      SizedBox(width: 6.w),
+                      Icon(Icons.arrow_forward_rounded,
+                          size: 15.sp, color: Colors.white),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

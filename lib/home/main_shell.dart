@@ -373,7 +373,7 @@ class _InviteFullCard extends StatelessWidget {
                 child: Text('🐰', style: TextStyle(fontSize: 54.sp)),
               ),
               SizedBox(height: 22.h),
-              Text('${session.hostName}가 시험에\n초대했어요 📩',
+              Text('언니가 시험에\n초대했어요! 📩',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 23.sp,

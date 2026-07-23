@@ -61,7 +61,6 @@ class ExamResultDetailView extends StatelessWidget {
               askMeaning: item.askMeaning),
           submitted: item.submitted,
           correct: item.correct,
-          source: item.correct ? null : result.title,
         ),
       ));
       children.add(SizedBox(height: 8.h));

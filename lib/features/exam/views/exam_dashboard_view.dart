@@ -17,6 +17,7 @@ import '../models/exam_result.dart';
 import '../repositories/exam_repository.dart';
 import 'exam_result_detail_view.dart';
 import 'exam_result_widgets.dart';
+import 'result_section.dart';
 
 /// 언니 홈: 시험 관리 대시보드.
 /// 예정된 시험(D-DAY)과 동생이 친 지난 시험 결과를 한눈에 정리한다.
@@ -155,38 +156,49 @@ class ExamDashboardView extends StatelessWidget {
               },
             ),
             SizedBox(height: 16.h),
-            _SectionTitle(
-                icon: Icons.fact_check_rounded, label: '오늘 시험 결과'),
+            _SectionTitle(icon: Icons.fact_check_rounded, label: '시험 결과'),
             StreamBuilder<List<ExamResult>>(
               stream: exam.watchResultsByHost(user.uid),
               builder: (context, snap) {
                 final results = snap.data ?? const <ExamResult>[];
-                final today =
+                final todayR =
                     results.where((r) => _isToday(r.createdAt)).toList();
-                final past =
+                final pastR =
                     results.where((r) => !_isToday(r.createdAt)).toList();
-                return Column(
-                  children: [
-                    if (today.isEmpty)
-                      const _EmptyHint(text: '오늘 채점된 시험이 없어요.')
-                    else
-                      for (final result in today)
-                        _ResultCard(
-                          result: result,
-                          onTap: () => _openResult(context, result),
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: ResultNavCard(
+                          emoji: '📊',
+                          label: '오늘 시험 결과',
+                          count: todayR.length,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => TodayResultsView(
+                                results: todayR,
+                                emptyText:
+                                    '오늘 채점된 시험이 없어요.\n동생이 시험을 마치면 여기에 나와요.',
+                              ),
+                            ),
+                          ),
                         ),
-                    if (past.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(20.w, 6.h, 20.w, 0),
-                        child: HistoryEntryButton(
-                          title: '지난 시험 결과',
-                          count: past.length,
+                      ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: ResultNavCard(
+                          emoji: '🗓️',
+                          label: '지난 시험 결과',
+                          count: pastR.length,
+                          dark: true,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => HistoryCalendarView(
                                 title: '지난 시험 결과',
                                 items: [
-                                  for (final r in past)
+                                  for (final r in pastR)
                                     DatedItem(
                                       date: r.createdAt ?? DateTime.now(),
                                       child: _ResultCard(
@@ -200,7 +212,8 @@ class ExamDashboardView extends StatelessWidget {
                           ),
                         ),
                       ),
-                  ],
+                    ],
+                  ),
                 );
               },
             ),

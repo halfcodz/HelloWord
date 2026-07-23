@@ -13,6 +13,7 @@ import '../../exam/views/session_monitor_view.dart';
 import '../../social/repositories/friend_repository.dart';
 import '../models/word_pair.dart';
 import '../models/word_set.dart';
+import '../repositories/word_set_repository.dart';
 
 /// 저장된 단어 세트의 상세(단어 목록) 화면.
 /// 각 단어를 '뜻 적기'로 낼지 선택할 수 있다.
@@ -27,23 +28,130 @@ class WordSetDetailView extends StatefulWidget {
 }
 
 class _WordSetDetailViewState extends State<WordSetDetailView> {
-  /// '뜻 적기'로 낼 단어의 인덱스.
-  final Set<int> _askMeaning = {};
+  /// 화면에서 편집(삭제) 가능한 현재 단어 목록.
+  late final List<WordPair> _words = [...widget.set.words];
+
+  /// '뜻 적기'로 낼 단어(객체 참조로 추적해 삭제 후에도 유지).
+  final Set<WordPair> _ask = {};
+
+  /// 다중 선택 삭제 모드.
+  bool _selectMode = false;
+  final Set<WordPair> _selected = {};
+
+  bool _saving = false;
 
   /// 시험에 낼 단어 목록(선택한 단어는 뜻 적기로).
-  List<WordPair> get _examWords => [
-        for (var i = 0; i < widget.set.words.length; i++)
-          widget.set.words[i].copyWith(askMeaning: _askMeaning.contains(i)),
-      ];
+  List<WordPair> get _examWords =>
+      [for (final w in _words) w.copyWith(askMeaning: _ask.contains(w))];
+
+  Future<void> _persist() async {
+    setState(() => _saving = true);
+    try {
+      await context
+          .read<WordSetRepository>()
+          .updateWords(widget.set.id, _words);
+    } catch (_) {
+      if (mounted) showToast(context, '삭제를 저장하지 못했어요. 다시 시도해 주세요.', isError: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _deleteOne(WordPair word) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('단어를 삭제할까요?'),
+        content: Text('"${word.english}" 단어를 이 세트에서 지웁니다.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('취소')),
+          FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('삭제')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() {
+      _words.remove(word);
+      _ask.remove(word);
+      _selected.remove(word);
+    });
+    await _persist();
+  }
+
+  Future<void> _deleteSelected() async {
+    if (_selected.isEmpty) return;
+    final n = _selected.length;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$n개 단어를 삭제할까요?'),
+        content: const Text('선택한 단어들을 이 세트에서 지웁니다.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('취소')),
+          FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('삭제')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() {
+      _words.removeWhere(_selected.contains);
+      _ask.removeWhere(_selected.contains);
+      _selected.clear();
+      _selectMode = false;
+    });
+    await _persist();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final set = widget.set;
     return Scaffold(
-      appBar: AppBar(title: Text(set.title)),
-      bottomNavigationBar:
-          _StartExamButton(set: set, user: widget.user, words: _examWords),
+      appBar: AppBar(
+        title: Text(_selectMode ? '${_selected.length}개 선택' : set.title),
+        actions: [
+          if (!_selectMode)
+            TextButton(
+              onPressed: _words.isEmpty
+                  ? null
+                  : () => setState(() => _selectMode = true),
+              child: const Text('선택'),
+            )
+          else
+            TextButton(
+              onPressed: () => setState(() {
+                _selectMode = false;
+                _selected.clear();
+              }),
+              child: const Text('취소'),
+            ),
+        ],
+      ),
+      bottomNavigationBar: _selectMode
+          ? _DeleteBar(
+              count: _selected.length,
+              allSelected:
+                  _words.isNotEmpty && _selected.length == _words.length,
+              onToggleAll: () => setState(() {
+                if (_selected.length == _words.length) {
+                  _selected.clear();
+                } else {
+                  _selected
+                    ..clear()
+                    ..addAll(_words);
+                }
+              }),
+              onDelete: _saving ? null : _deleteSelected,
+            )
+          : _StartExamButton(set: set, user: widget.user, words: _examWords),
       body: Column(
         children: [
           Container(
@@ -61,7 +169,7 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
                     SizedBox(width: 12.w),
                     Icon(Icons.style_outlined, size: 14.sp),
                     SizedBox(width: 4.w),
-                    Text('${set.wordCount}개', style: theme.textTheme.bodyMedium),
+                    Text('${_words.length}개', style: theme.textTheme.bodyMedium),
                   ],
                 ),
                 if (set.message.trim().isNotEmpty) ...[
@@ -75,7 +183,9 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
                     SizedBox(width: 6.w),
                     Expanded(
                       child: Text(
-                        '단어의 "뜻 적기"를 켜면 그 문제는 영어를 보여주고 뜻을 적게 해요.',
+                        _selectMode
+                            ? '삭제할 단어를 눌러 선택한 뒤, 아래에서 한 번에 지워요.'
+                            : '"뜻 적기"를 켜면 그 문제는 영어를 보여주고 뜻을 적게 해요. · X로 단어를 지울 수 있어요.',
                         style: TextStyle(
                             fontSize: 12.sp, color: AppColors.grayText)),
                     ),
@@ -85,23 +195,142 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
             ),
           ),
           Expanded(
-            child: ListView.separated(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-              itemCount: set.words.length,
-              separatorBuilder: (_, _) => SizedBox(height: 8.h),
-              itemBuilder: (context, index) => WordTile(
-                word: set.words[index],
-                index: index + 1,
-                trailing: _AskMeaningToggle(
-                  on: _askMeaning.contains(index),
-                  onTap: () => setState(() {
-                    if (!_askMeaning.remove(index)) _askMeaning.add(index);
-                  }),
-                ),
-              ),
-            ),
+            child: _words.isEmpty
+                ? Center(
+                    child: Text('단어가 없어요.',
+                        style:
+                            TextStyle(fontSize: 14.sp, color: AppColors.gray)),
+                  )
+                : ListView.separated(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    itemCount: _words.length,
+                    separatorBuilder: (_, _) => SizedBox(height: 8.h),
+                    itemBuilder: (context, index) {
+                      final word = _words[index];
+                      final selected = _selected.contains(word);
+                      final tile = WordTile(
+                        word: word,
+                        index: index + 1,
+                        trailing: _selectMode
+                            ? Padding(
+                                padding: EdgeInsets.only(left: 6.w),
+                                child: Icon(
+                                  selected
+                                      ? Icons.check_circle_rounded
+                                      : Icons.circle_outlined,
+                                  color: selected
+                                      ? AppColors.pink
+                                      : AppColors.hint,
+                                  size: 24.sp,
+                                ),
+                              )
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _AskMeaningToggle(
+                                    on: _ask.contains(word),
+                                    onTap: () => setState(() {
+                                      if (!_ask.remove(word)) _ask.add(word);
+                                    }),
+                                  ),
+                                  _DeleteWordButton(
+                                      onTap: () => _deleteOne(word)),
+                                ],
+                              ),
+                      );
+                      if (!_selectMode) return tile;
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => setState(() {
+                          if (!_selected.remove(word)) _selected.add(word);
+                        }),
+                        child: tile,
+                      );
+                    },
+                  ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 단어 한 개 삭제 X 버튼.
+class _DeleteWordButton extends StatelessWidget {
+  const _DeleteWordButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.only(left: 6.w),
+        width: 30.w,
+        height: 30.w,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.dangerSoft,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(Icons.close_rounded, size: 17.sp, color: AppColors.danger),
+      ),
+    );
+  }
+}
+
+/// 다중 선택 삭제 모드의 하단 바(전체선택 + 삭제).
+class _DeleteBar extends StatelessWidget {
+  const _DeleteBar({
+    required this.count,
+    required this.allSelected,
+    required this.onToggleAll,
+    required this.onDelete,
+  });
+
+  final int count;
+  final bool allSelected;
+  final VoidCallback onToggleAll;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 8.h),
+        child: Row(
+          children: [
+            OutlinedButton.icon(
+              onPressed: onToggleAll,
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+                side: BorderSide(color: AppColors.border),
+                foregroundColor: AppColors.grayText,
+              ),
+              icon: Icon(
+                  allSelected
+                      ? Icons.check_box_rounded
+                      : Icons.check_box_outline_blank_rounded,
+                  size: 18.sp),
+              label: Text(allSelected ? '선택 해제' : '전체 선택'),
+            ),
+            SizedBox(width: 10.w),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: count == 0 ? null : onDelete,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  padding: EdgeInsets.symmetric(vertical: 13.h),
+                ),
+                icon: const Icon(Icons.delete_outline_rounded),
+                label: Text('$count개 삭제'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
