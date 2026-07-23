@@ -118,10 +118,9 @@ class ExamDashboardView extends StatelessWidget {
       ),
       body: SafeArea(
         child: ListView(
-          // 홈은 튕김(오버스크롤) 없이 고정. 당겨서 새로고침은 유지.
-          physics:
-              const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
-          padding: EdgeInsets.fromLTRB(0, 8.h, 0, 120.h),
+          // 홈은 스크롤 없이 고정(공부 탭처럼).
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(0, 8.h, 0, 24.h),
           children: [
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.w),
