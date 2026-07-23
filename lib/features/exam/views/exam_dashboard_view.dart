@@ -9,7 +9,6 @@ import '../../../core/widgets/history_calendar_view.dart';
 import '../../../core/widgets/home_greeting.dart';
 import '../../../models/app_user.dart';
 import '../../social/views/friend_bar.dart';
-import '../../social/views/notification_bell.dart';
 import '../../word_sets/models/word_set.dart';
 import '../../word_sets/repositories/word_set_repository.dart';
 import '../../word_sets/views/word_set_detail_view.dart';
@@ -127,7 +126,6 @@ class ExamDashboardView extends StatelessWidget {
                 name: user.name,
                 mascot: '🐰',
                 subtitle: '우리 동생 관리하기',
-                trailing: NotificationBell(user: user),
               ),
             ),
             SizedBox(height: 6.h),

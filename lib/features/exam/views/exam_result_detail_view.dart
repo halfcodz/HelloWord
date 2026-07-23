@@ -14,6 +14,20 @@ class ExamResultDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(result.title)),
+      body: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(4.w, 8.h, 4.w, 24.h),
+          children: buildResultContent(result),
+        ),
+      ),
+    );
+  }
+
+  /// 시험 결과 한 건의 내용(점수 배너 + 문항별 정오답)을 위젯 리스트로 만든다.
+  /// 상세 화면과 '오늘 시험 결과' 직접 보기에서 공용으로 쓴다.
+  static List<Widget> buildResultContent(ExamResult result) {
     // 틀린 문항을 먼저(위) → 맞은 문항을 아래로 정렬.
     final items = [...result.items]..sort((a, b) {
         if (a.correct == b.correct) return a.index.compareTo(b.index);
@@ -52,19 +66,10 @@ class ExamResultDetailView extends StatelessWidget {
       ));
       children.add(SizedBox(height: 8.h));
     }
-
-    return Scaffold(
-      appBar: AppBar(title: Text(result.title)),
-      body: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(4.w, 8.h, 4.w, 24.h),
-          children: children,
-        ),
-      ),
-    );
+    return children;
   }
 
-  Widget _label(String text, Color color) => Padding(
+  static Widget _label(String text, Color color) => Padding(
         padding: EdgeInsets.fromLTRB(18.w, 4.h, 16.w, 8.h),
         child: Text(text,
             style: TextStyle(
