@@ -137,12 +137,26 @@ class _ExamBodyState extends State<_ExamBody> {
         title: Text(session?.title ?? '시험'),
         automaticallyImplyLeading: false,
         actions: [
-          if (session != null && !vm.isFinished)
+          if (session != null && !vm.isFinished) ...[
             IconButton(
               tooltip: '나가기',
               icon: const Icon(Icons.logout),
               onPressed: () => _confirmQuit(vm),
             ),
+            Padding(
+              padding: EdgeInsets.only(right: 10.w, top: 8.h, bottom: 8.h),
+              child: FilledButton(
+                onPressed: () => _finish(vm),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.green,
+                  shape: const StadiumBorder(),
+                  padding: EdgeInsets.symmetric(horizontal: 18.w),
+                ),
+                child: const Text('완료',
+                    style: TextStyle(fontWeight: FontWeight.w800)),
+              ),
+            ),
+          ],
         ],
       ),
       body: SafeArea(child: _buildBody(context, vm, session)),
@@ -262,7 +276,6 @@ class _ExamBodyState extends State<_ExamBody> {
           isLast: isLast,
           onPrev: () => _goPrev(vm),
           onNext: () => _goNext(vm),
-          onFinish: () => _finish(vm),
           onTyped: vm.onTyped,
           onSubmitted: () => isLast ? _finish(vm) : _goNext(vm),
         ),
@@ -278,7 +291,6 @@ class _ExamBodyState extends State<_ExamBody> {
           child: ExamReviewList(
             words: session.words,
             resolve: vm.answerAt,
-            sourceTitle: session.title,
           ),
         ),
         Container(
@@ -314,7 +326,6 @@ class _InputBar extends StatelessWidget {
     required this.isLast,
     required this.onPrev,
     required this.onNext,
-    required this.onFinish,
     required this.onTyped,
     required this.onSubmitted,
   });
@@ -325,7 +336,6 @@ class _InputBar extends StatelessWidget {
   final bool isLast;
   final VoidCallback onPrev;
   final VoidCallback onNext;
-  final VoidCallback onFinish;
   final ValueChanged<String> onTyped;
   final VoidCallback onSubmitted;
 
@@ -339,10 +349,25 @@ class _InputBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(14.w, 10.h, 14.w, 8.h),
+          padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 18.h),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // 입력칸을 먼저(위) 두어 무엇을 쓰는지 잘 보이게 한다.
+              TextField(
+                controller: controller,
+                autofocus: true,
+                textInputAction:
+                    isLast ? TextInputAction.done : TextInputAction.next,
+                autocorrect: false,
+                enableSuggestions: false,
+                textCapitalization: TextCapitalization.none,
+                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
+                decoration: InputDecoration(hintText: hintText),
+                onChanged: onTyped,
+                onSubmitted: (_) => onSubmitted(),
+              ),
+              SizedBox(height: 10.h),
               Row(
                 children: [
                   Expanded(
@@ -366,33 +391,7 @@ class _InputBar extends StatelessWidget {
                       child: const Text('다음 →'),
                     ),
                   ),
-                  SizedBox(width: 8.w),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: onFinish,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.green,
-                        padding: EdgeInsets.symmetric(vertical: 11.h),
-                      ),
-                      child: const Text('완료'),
-                    ),
-                  ),
                 ],
-              ),
-              SizedBox(height: 10.h),
-              // 이 입력칸이 키보드 바로 위에 위치해 항상 보인다.
-              TextField(
-                controller: controller,
-                autofocus: true,
-                textInputAction:
-                    isLast ? TextInputAction.done : TextInputAction.next,
-                autocorrect: false,
-                enableSuggestions: false,
-                textCapitalization: TextCapitalization.none,
-                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
-                decoration: InputDecoration(hintText: hintText),
-                onChanged: onTyped,
-                onSubmitted: (_) => onSubmitted(),
               ),
             ],
           ),

@@ -262,6 +262,24 @@ class CallService {
     if (_disposed) return;
     _disposed = true;
     _restartTimer?.cancel();
+
+    // 카메라/마이크 하드웨어를 확실히 끈다.
+    // 웹에서는 MediaStream.dispose()·PC.close()만으로는 트랙이 멈추지 않아
+    // 탭에 카메라가 계속 켜져 있으므로, 각 트랙에 stop()을 반드시 호출한다.
+    // (다른 async 정리보다 먼저 실행해 중간에 끊겨도 반드시 멈추게 한다.)
+    try {
+      for (final t in _localStream?.getTracks() ?? const []) {
+        try {
+          await t.stop();
+        } catch (_) {}
+      }
+    } catch (_) {}
+    // 렌더러에서 스트림 참조를 떼어낸다(웹 비디오 요소 해제).
+    try {
+      localRenderer.srcObject = null;
+      remoteRenderer.srcObject = null;
+    } catch (_) {}
+
     for (final s in _subs) {
       await s.cancel();
     }

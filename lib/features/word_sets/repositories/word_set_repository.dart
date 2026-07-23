@@ -69,4 +69,12 @@ class WordSetRepository {
   }
 
   Future<void> delete(String id) => _collection.doc(id).delete();
+
+  /// 단어 세트의 단어 목록을 교체한다(단어 개별/일괄 삭제 등에 사용).
+  Future<void> updateWords(String id, List<WordPair> words) {
+    return _collection.doc(id).update({
+      'words': words.map((w) => w.toMap()).toList(),
+      'wordCount': words.length,
+    });
+  }
 }

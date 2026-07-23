@@ -278,7 +278,6 @@ class _LiveMonitor extends StatelessWidget {
             child: ExamReviewList(
               words: session.words,
               resolve: viewModel.answerAt,
-              sourceTitle: session.title,
             ),
           ),
           SafeArea(

@@ -14,6 +14,7 @@ import '../models/exam_result.dart';
 import '../repositories/exam_repository.dart';
 import 'exam_result_detail_view.dart';
 import 'exam_result_widgets.dart';
+import 'result_section.dart';
 
 /// 동생 홈: 언니가 만든 시험 일정과 내 시험 결과를 '조회만' 하는 화면.
 /// 편집(배정·삭제)은 언니만 가능하다.
@@ -92,13 +93,13 @@ class ExamScheduleView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(
-                        child: _ResultNavCard(
+                        child: ResultNavCard(
                           emoji: '📊',
                           label: '오늘 시험 결과',
                           count: todayR.length,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => _TodayResultsView(
+                              builder: (_) => TodayResultsView(
                                 results: todayR,
                                 emptyText: '오늘 본 시험이 없어요.\n시험을 마치면 여기에 나와요.',
                               ),
@@ -108,7 +109,7 @@ class ExamScheduleView extends StatelessWidget {
                       ),
                       SizedBox(width: 12.w),
                       Expanded(
-                        child: _ResultNavCard(
+                        child: ResultNavCard(
                           emoji: '🗓️',
                           label: '지난 시험 결과',
                           count: pastR.length,
@@ -141,165 +142,6 @@ class ExamScheduleView extends StatelessWidget {
   }
 }
 
-/// 동생 홈 · 시험 결과로 들어가는 작은 카드(가로 2개). 공부탭 큰 카드와 다른 톤.
-class _ResultNavCard extends StatelessWidget {
-  const _ResultNavCard({
-    required this.emoji,
-    required this.label,
-    required this.count,
-    required this.onTap,
-    this.dark = false,
-  });
-
-  final String emoji;
-  final String label;
-  final int count;
-  final VoidCallback onTap;
-  final bool dark;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20.r),
-      child: Container(
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: AppColors.cream,
-          borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(color: AppColors.border),
-          boxShadow: AppColors.softShadow(blur: 12, y: 4),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 38.w,
-                  height: 38.w,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: dark ? AppColors.navy : null,
-                    gradient: dark ? null : AppColors.primaryButton,
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Text(emoji, style: TextStyle(fontSize: 18.sp)),
-                ),
-                const Spacer(),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 9.w, vertical: 3.h),
-                  decoration: BoxDecoration(
-                    color: AppColors.blueSoft,
-                    borderRadius: BorderRadius.circular(999.r),
-                  ),
-                  child: Text('$count건',
-                      style: TextStyle(
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.mintDeep)),
-                ),
-              ],
-            ),
-            SizedBox(height: 12.h),
-            Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.ink)),
-            SizedBox(height: 3.h),
-            Row(
-              children: [
-                Text('결과 보기',
-                    style: TextStyle(
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.gray)),
-                Icon(Icons.chevron_right, size: 15.sp, color: AppColors.hint),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 오늘 시험 결과를 바로(내용으로) 보여주는 화면.
-/// 결과가 1건이면 그 내용을, 여러 건이면 제목으로 구분해 이어서 보여준다.
-class _TodayResultsView extends StatelessWidget {
-  const _TodayResultsView({
-    required this.results,
-    required this.emptyText,
-  });
-
-  final List<ExamResult> results;
-  final String emptyText;
-
-  @override
-  Widget build(BuildContext context) {
-    if (results.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('오늘 시험 결과')),
-        body: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('📊', style: TextStyle(fontSize: 40.sp)),
-                SizedBox(height: 10.h),
-                Text(emptyText,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14.sp, color: AppColors.gray)),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    // 1건이면 제목을 그 시험 이름으로, 여러 건이면 '오늘 시험 결과'로.
-    final title = results.length == 1 ? results.first.title : '오늘 시험 결과';
-    final children = <Widget>[];
-    for (var i = 0; i < results.length; i++) {
-      if (results.length > 1) {
-        children.add(Padding(
-          padding: EdgeInsets.fromLTRB(18.w, i == 0 ? 6.h : 20.h, 16.w, 4.h),
-          child: Row(
-            children: [
-              Text('📄', style: TextStyle(fontSize: 15.sp)),
-              SizedBox(width: 6.w),
-              Expanded(
-                child: Text(results[i].title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink)),
-              ),
-            ],
-          ),
-        ));
-      }
-      children.addAll(ExamResultDetailView.buildResultContent(results[i]));
-    }
-
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: SafeArea(
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(4.w, 8.h, 4.w, 24.h),
-          children: children,
-        ),
-      ),
-    );
-  }
-}
 
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle({required this.icon, required this.label});
