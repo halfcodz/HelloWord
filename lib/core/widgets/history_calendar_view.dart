@@ -61,17 +61,20 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              margin: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
-              padding: EdgeInsets.fromLTRB(8.w, 10.h, 8.w, 6.h),
-              decoration: BoxDecoration(
-                color: AppColors.cream,
-                borderRadius: BorderRadius.circular(24.r),
-                boxShadow: AppColors.softShadow(),
-              ),
-              child: TableCalendar<DatedItem>(
+        // 아래로 스크롤하면 달력이 위로 올라가 사라지고, 리스트가 전체화면으로.
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Container(
+                margin: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
+                padding: EdgeInsets.fromLTRB(8.w, 10.h, 8.w, 6.h),
+                decoration: BoxDecoration(
+                  color: AppColors.cream,
+                  borderRadius: BorderRadius.circular(24.r),
+                  boxShadow: AppColors.softShadow(),
+                ),
+                child: TableCalendar<DatedItem>(
                 firstDay: DateTime.utc(2023, 1, 1),
                 lastDay: DateTime.utc(now.year + 1, 12, 31),
                 focusedDay: _focused,
@@ -117,45 +120,57 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
                   todayBuilder: (context, day, _) => _cell(day, today: true),
                   selectedBuilder: (context, day, _) =>
                       _cell(day, selected: true),
+                  ),
                 ),
               ),
             ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(20.w, 6.h, 20.w, 8.h),
-              child: Row(
-                children: [
-                  Text(_selectedLabel(),
-                      style: TextStyle(
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.ink)),
-                  SizedBox(width: 8.w),
-                  if (dayItems.isNotEmpty)
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 9.w, vertical: 3.h),
-                      decoration: BoxDecoration(
-                        color: AppColors.blueSoft,
-                        borderRadius: BorderRadius.circular(999.r),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20.w, 6.h, 20.w, 8.h),
+                child: Row(
+                  children: [
+                    Text(_selectedLabel(),
+                        style: TextStyle(
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink)),
+                    SizedBox(width: 8.w),
+                    if (dayItems.isNotEmpty)
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 9.w, vertical: 3.h),
+                        decoration: BoxDecoration(
+                          color: AppColors.blueSoft,
+                          borderRadius: BorderRadius.circular(999.r),
+                        ),
+                        child: Text('${dayItems.length}건',
+                            style: TextStyle(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.mintDeep)),
                       ),
-                      child: Text('${dayItems.length}건',
-                          style: TextStyle(
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.mintDeep)),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-            Expanded(
-              child: dayItems.isEmpty
-                  ? _emptyState()
-                  : ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 24.h),
-                      children: [for (final it in dayItems) it.child],
-                    ),
-            ),
+            if (dayItems.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Padding(
+                  padding: EdgeInsets.only(top: 48.h),
+                  child: _emptyState(),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 24.h),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, i) => dayItems[i].child,
+                    childCount: dayItems.length,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
