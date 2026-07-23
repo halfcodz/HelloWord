@@ -25,13 +25,6 @@ class MaterialBell extends StatefulWidget {
 }
 
 class _MaterialBellState extends State<MaterialBell> {
-  // 새 자료 알림 배지: 푸른색 그라데이션.
-  static const _blueGradient = LinearGradient(
-    colors: [Color(0xFF3D7BFF), Color(0xFF00D2FF)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
   List<WordSet> _newMaterials(List<WordSet> sets) {
     final seen = SeenMaterialsStore.lastSeenMs;
     final list = sets
@@ -56,25 +49,28 @@ class _MaterialBellState extends State<MaterialBell> {
           builder: (context, invSnap) {
             final invites = invSnap.data ?? const <FriendInvite>[];
             final total = newMats.length + invites.length;
-            final hasNewMaterial = newMats.isNotEmpty;
             return Stack(
               alignment: Alignment.center,
               children: [
                 IconButton(
                   tooltip: '알림',
                   onPressed: () => _open(context, newMats),
-                  icon: Icon(
-                    hasNewMaterial
-                        ? Icons.notifications_active_rounded
-                        : Icons.notifications_none_rounded,
-                    color: hasNewMaterial ? const Color(0xFF2E7BFF) : null,
-                  ),
+                  icon: const Icon(Icons.notifications_none_rounded),
                 ),
+                // 알림이 있으면 빨간 점만 표시(개수·색상 표시 없음).
                 if (total > 0)
                   Positioned(
-                    right: 6.w,
-                    top: 6.h,
-                    child: _Badge(count: total, gradient: _blueGradient),
+                    right: 10.w,
+                    top: 10.h,
+                    child: Container(
+                      width: 9.w,
+                      height: 9.w,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF4D4D),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.4),
+                      ),
+                    ),
                   ),
               ],
             );
@@ -159,39 +155,6 @@ class _MaterialBellState extends State<MaterialBell> {
   Widget _sheetLabel(String text) => Text(text,
       style: TextStyle(
           fontSize: 14.sp, fontWeight: FontWeight.w800, color: AppColors.ink));
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({required this.count, required this.gradient});
-
-  final int count;
-  final Gradient gradient;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(minWidth: 17.w, minHeight: 17.w),
-      padding: EdgeInsets.symmetric(horizontal: count > 9 ? 4.w : 0),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: Colors.white, width: 1.4),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF2E7BFF).withValues(alpha: 0.5),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Text('$count',
-          style: TextStyle(
-              fontSize: 9.sp,
-              fontWeight: FontWeight.w800,
-              color: Colors.white)),
-    );
-  }
 }
 
 class _MaterialTile extends StatelessWidget {
