@@ -398,8 +398,57 @@ class ExamReviewRow extends StatelessWidget {
   }
 }
 
-/// 제출한 답을 정답과 문자 단위로 비교해, 틀린(어긋난) 글자를 빨간색으로 보여준다.
-/// 예) 정답 apple, 입력 appre → 'r'이 빨간색.
+/// 제출한 답을 정답과 글자 단위로 비교해, 틀린(어긋난) 글자만 빨간색으로 보여준다.
+/// 한 줄 인라인 표시. (실시간 감독 화면·결과 화면 공통)
+/// 예) 정답 apple, 입력 appre → 'r'만 빨간색.
+class SpellDiffText extends StatelessWidget {
+  const SpellDiffText({
+    super.key,
+    required this.correct,
+    required this.submitted,
+    this.fontSize,
+    this.baseColor,
+  });
+
+  final String correct;
+  final String submitted;
+  final double? fontSize;
+
+  /// 맞은 글자 색(기본: grayText).
+  final Color? baseColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = fontSize ?? 14.sp;
+    if (submitted.isEmpty) {
+      return Text('(빈칸)',
+          style: TextStyle(
+              fontSize: size,
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.w700,
+              color: AppColors.danger));
+    }
+    final matched = matchedChars(correct, submitted);
+    final base = baseColor ?? AppColors.grayText;
+    return RichText(
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      text: TextSpan(children: [
+        for (var i = 0; i < submitted.length; i++)
+          TextSpan(
+            text: submitted[i],
+            style: TextStyle(
+              fontSize: size,
+              fontWeight: matched[i] ? FontWeight.w600 : FontWeight.w800,
+              color: matched[i] ? base : AppColors.danger,
+            ),
+          ),
+      ]),
+    );
+  }
+}
+
+/// 제출한 답을 정답과 비교해 '내 답(틀린 글자 빨강) / 정답' 두 줄로 보여준다.
 class AnswerDiffText extends StatelessWidget {
   const AnswerDiffText({
     super.key,
@@ -412,49 +461,6 @@ class AnswerDiffText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (submitted.isEmpty) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('내 답 ',
-              style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
-          Text('(빈칸)',
-              style: TextStyle(
-                  fontSize: 13.sp,
-                  fontStyle: FontStyle.italic,
-                  color: AppColors.danger)),
-          SizedBox(width: 10.w),
-          Text('· 정답 ',
-              style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
-          Flexible(
-            child: Text(correct,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.green)),
-          ),
-        ],
-      );
-    }
-
-    final matched = _matchedChars(correct, submitted);
-    final spans = <TextSpan>[];
-    for (var i = 0; i < submitted.length; i++) {
-      final ok = matched[i];
-      spans.add(TextSpan(
-        text: submitted[i],
-        style: TextStyle(
-          fontSize: 13.sp,
-          fontWeight: ok ? FontWeight.w600 : FontWeight.w800,
-          color: ok ? AppColors.grayText : AppColors.danger,
-          decoration: ok ? null : TextDecoration.underline,
-          decorationColor: AppColors.danger,
-        ),
-      ));
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -463,11 +469,8 @@ class AnswerDiffText extends StatelessWidget {
             Text('내 답 ',
                 style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
             Flexible(
-              child: RichText(
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                text: TextSpan(children: spans),
-              ),
+              child: SpellDiffText(
+                  correct: correct, submitted: submitted, fontSize: 13.sp),
             ),
           ],
         ),
@@ -490,36 +493,36 @@ class AnswerDiffText extends StatelessWidget {
       ],
     );
   }
+}
 
-  /// 제출한 각 글자가 정답과 맞아떨어지는지(LCS 기준) 여부.
-  /// 대소문자는 무시하고 위치가 아닌 최장공통부분수열로 정렬해 비교한다.
-  static List<bool> _matchedChars(String correct, String submitted) {
-    final a = correct.toLowerCase();
-    final b = submitted.toLowerCase();
-    final n = a.length, m = b.length;
-    final dp = List.generate(n + 1, (_) => List.filled(m + 1, 0));
-    for (var i = n - 1; i >= 0; i--) {
-      for (var j = m - 1; j >= 0; j--) {
-        if (a[i] == b[j]) {
-          dp[i][j] = dp[i + 1][j + 1] + 1;
-        } else {
-          dp[i][j] = dp[i + 1][j] > dp[i][j + 1] ? dp[i + 1][j] : dp[i][j + 1];
-        }
-      }
-    }
-    final matched = List.filled(m, false);
-    var i = 0, j = 0;
-    while (i < n && j < m) {
+/// 제출한 각 글자가 정답과 맞아떨어지는지(LCS 기준) 여부.
+/// 대소문자는 무시하고 위치가 아닌 최장공통부분수열로 정렬해 비교한다.
+List<bool> matchedChars(String correct, String submitted) {
+  final a = correct.toLowerCase();
+  final b = submitted.toLowerCase();
+  final n = a.length, m = b.length;
+  final dp = List.generate(n + 1, (_) => List.filled(m + 1, 0));
+  for (var i = n - 1; i >= 0; i--) {
+    for (var j = m - 1; j >= 0; j--) {
       if (a[i] == b[j]) {
-        matched[j] = true;
-        i++;
-        j++;
-      } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-        i++;
+        dp[i][j] = dp[i + 1][j + 1] + 1;
       } else {
-        j++;
+        dp[i][j] = dp[i + 1][j] > dp[i][j + 1] ? dp[i + 1][j] : dp[i][j + 1];
       }
     }
-    return matched;
   }
+  final matched = List.filled(m, false);
+  var i = 0, j = 0;
+  while (i < n && j < m) {
+    if (a[i] == b[j]) {
+      matched[j] = true;
+      i++;
+      j++;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      i++;
+    } else {
+      j++;
+    }
+  }
+  return matched;
 }

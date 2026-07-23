@@ -376,12 +376,24 @@ class _AnswerRow extends StatelessWidget {
       trailing = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            answer!.submitted!,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: correct ? AppColors.green : theme.colorScheme.error,
-            ),
+          Flexible(
+            child: correct
+                ? Text(
+                    answer!.submitted!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.green),
+                  )
+                // 틀렸으면 어긋난 스펠링만 빨간색으로.
+                : SpellDiffText(
+                    correct: word.quizAnswer,
+                    submitted: answer!.submitted!,
+                    fontSize: 14.sp,
+                    baseColor: AppColors.ink,
+                  ),
           ),
           SizedBox(width: 6.w),
           Icon(
