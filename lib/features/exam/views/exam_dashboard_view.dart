@@ -118,7 +118,9 @@ class ExamDashboardView extends StatelessWidget {
       ),
       body: SafeArea(
         child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
+          // 홈은 튕김(오버스크롤) 없이 고정. 당겨서 새로고침은 유지.
+          physics:
+              const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
           padding: EdgeInsets.fromLTRB(0, 8.h, 0, 120.h),
           children: [
             Padding(
@@ -132,16 +134,16 @@ class ExamDashboardView extends StatelessWidget {
             SizedBox(height: 6.h),
             FriendBar(me: user),
             SizedBox(height: 4.h),
-            _SectionTitle(icon: Icons.event_available_rounded, label: '예정된 시험'),
+            _SectionTitle(icon: Icons.event_available_rounded, label: '오늘 시험'),
             StreamBuilder<List<ExamPlan>>(
               stream: exam.watchPlansByHost(user.uid),
               builder: (context, snap) {
                 final plans = (snap.data ?? const <ExamPlan>[])
-                    .where((p) => !p.done)
+                    .where((p) => !p.done && _isToday(p.scheduledDate))
                     .toList();
                 if (plans.isEmpty) {
                   return const _EmptyHint(
-                      text: '예정된 시험이 없어요.\n아래 "시험 배정"으로 추가해요.');
+                      text: '오늘 예정된 시험이 없어요.\n아래 "시험 배정"으로 추가해요.');
                 }
                 return Column(
                   children: [
