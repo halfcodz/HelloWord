@@ -331,7 +331,7 @@ class _DeleteBar extends StatelessWidget {
   }
 }
 
-/// 단어별 '뜻 적기' 토글 칩.
+/// 단어별 '뜻 적기' 토글 스위치(버튼이 아닌 온/오프 토글).
 class _AskMeaningToggle extends StatelessWidget {
   const _AskMeaningToggle({required this.on, required this.onTap});
 
@@ -343,18 +343,47 @@ class _AskMeaningToggle extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
-        margin: EdgeInsets.only(left: 6.w),
-        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 7.h),
-        decoration: BoxDecoration(
-          color: on ? AppColors.pink : AppColors.fieldBg,
-          borderRadius: BorderRadius.circular(10.r),
+      child: Padding(
+        padding: EdgeInsets.only(left: 6.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('뜻 적기',
+                style: TextStyle(
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w700,
+                    color: on ? AppColors.mintDeep : AppColors.gray)),
+            SizedBox(height: 3.h),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOut,
+              width: 42.w,
+              height: 24.h,
+              padding: EdgeInsets.all(2.w),
+              alignment: on ? Alignment.centerRight : Alignment.centerLeft,
+              decoration: BoxDecoration(
+                gradient: on ? AppColors.primaryButton : null,
+                color: on ? null : AppColors.border,
+                borderRadius: BorderRadius.circular(999.r),
+              ),
+              child: Container(
+                width: 20.w,
+                height: 20.h,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.navy.withValues(alpha: 0.18),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-        child: Text('뜻 적기',
-            style: TextStyle(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w700,
-                color: on ? Colors.white : AppColors.gray)),
       ),
     );
   }
