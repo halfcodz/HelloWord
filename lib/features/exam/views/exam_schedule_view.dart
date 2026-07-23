@@ -8,7 +8,7 @@ import '../../../core/widgets/history_calendar_view.dart';
 import '../../../core/widgets/home_greeting.dart';
 import '../../../models/app_user.dart';
 import '../../social/views/friend_bar.dart';
-import '../../social/views/notification_bell.dart';
+import '../../social/views/material_bell.dart';
 import '../models/exam_plan.dart';
 import '../models/exam_result.dart';
 import '../repositories/exam_repository.dart';
@@ -38,7 +38,7 @@ class ExamScheduleView extends StatelessWidget {
               child: HomeGreeting(
                 name: user.name,
                 mascot: '🐥',
-                trailing: NotificationBell(user: user),
+                trailing: MaterialBell(user: user),
               ),
             ),
             SizedBox(height: 6.h),
@@ -98,12 +98,9 @@ class ExamScheduleView extends StatelessWidget {
                           count: todayR.length,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => _ResultListView(
-                                title: '오늘 시험 결과',
-                                emptyText: '오늘 본 시험이 없어요.\n시험을 마치면 여기에 쌓여요.',
-                                results: [
-                                  for (final r in todayR) resultTile(r),
-                                ],
+                              builder: (_) => _TodayResultsView(
+                                results: todayR,
+                                emptyText: '오늘 본 시험이 없어요.\n시험을 마치면 여기에 나와요.',
                               ),
                             ),
                           ),
@@ -231,42 +228,74 @@ class _ResultNavCard extends StatelessWidget {
   }
 }
 
-/// 시험 결과 목록 화면(오늘 결과 등). 카드 목록만 보여준다.
-class _ResultListView extends StatelessWidget {
-  const _ResultListView({
-    required this.title,
+/// 오늘 시험 결과를 바로(내용으로) 보여주는 화면.
+/// 결과가 1건이면 그 내용을, 여러 건이면 제목으로 구분해 이어서 보여준다.
+class _TodayResultsView extends StatelessWidget {
+  const _TodayResultsView({
     required this.results,
     required this.emptyText,
   });
 
-  final String title;
-  final List<Widget> results;
+  final List<ExamResult> results;
   final String emptyText;
 
   @override
   Widget build(BuildContext context) {
+    if (results.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('오늘 시험 결과')),
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('📊', style: TextStyle(fontSize: 40.sp)),
+                SizedBox(height: 10.h),
+                Text(emptyText,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14.sp, color: AppColors.gray)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 1건이면 제목을 그 시험 이름으로, 여러 건이면 '오늘 시험 결과'로.
+    final title = results.length == 1 ? results.first.title : '오늘 시험 결과';
+    final children = <Widget>[];
+    for (var i = 0; i < results.length; i++) {
+      if (results.length > 1) {
+        children.add(Padding(
+          padding: EdgeInsets.fromLTRB(18.w, i == 0 ? 6.h : 20.h, 16.w, 4.h),
+          child: Row(
+            children: [
+              Text('📄', style: TextStyle(fontSize: 15.sp)),
+              SizedBox(width: 6.w),
+              Expanded(
+                child: Text(results[i].title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink)),
+              ),
+            ],
+          ),
+        ));
+      }
+      children.addAll(ExamResultDetailView.buildResultContent(results[i]));
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: SafeArea(
-        child: results.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('📊', style: TextStyle(fontSize: 40.sp)),
-                    SizedBox(height: 10.h),
-                    Text(emptyText,
-                        textAlign: TextAlign.center,
-                        style:
-                            TextStyle(fontSize: 14.sp, color: AppColors.gray)),
-                  ],
-                ),
-              )
-            : ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.symmetric(vertical: 10.h),
-                children: results,
-              ),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(4.w, 8.h, 4.w, 24.h),
+          children: children,
+        ),
       ),
     );
   }
