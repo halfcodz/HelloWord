@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/widgets/bouncy_tap.dart';
 import '../../../core/widgets/history_calendar_view.dart';
+import '../../../core/widgets/x_mark.dart';
 import '../../../models/app_user.dart';
 import '../models/word_set.dart';
 import '../repositories/word_set_repository.dart';
@@ -413,12 +414,11 @@ class _MaterialCoverCard extends StatelessWidget {
                     width: 30.w,
                     height: 30.w,
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.22),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.close_rounded,
-                        size: 18.sp, color: Colors.white),
+                    child: XMark(color: AppColors.danger, size: 16.w),
                   ),
                 ),
               ),
