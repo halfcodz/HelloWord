@@ -31,7 +31,9 @@ class ExamScheduleView extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
+          // 홈은 튕김(오버스크롤) 없이 고정. 당겨서 새로고침은 유지.
+          physics:
+              const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
           padding: EdgeInsets.fromLTRB(0, 8.h, 0, 110.h),
           children: [
             Padding(
