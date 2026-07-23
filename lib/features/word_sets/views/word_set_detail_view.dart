@@ -256,7 +256,8 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
   }
 }
 
-/// 단어 한 개 삭제 X 버튼.
+/// 단어 한 개 삭제 X 버튼. 테두리·배경 없이 빨간 X만 직접 그린다.
+/// (웹에서 아이콘 폰트 X 글리프가 안 보이는 문제 회피)
 class _DeleteWordButton extends StatelessWidget {
   const _DeleteWordButton({required this.onTap});
 
@@ -267,19 +268,39 @@ class _DeleteWordButton extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
-        margin: EdgeInsets.only(left: 6.w),
-        width: 30.w,
-        height: 30.w,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.dangerSoft,
-          shape: BoxShape.circle,
+      child: Padding(
+        padding: EdgeInsets.only(left: 8.w),
+        child: SizedBox(
+          width: 22.w,
+          height: 22.w,
+          child: CustomPaint(painter: _XPainter(color: AppColors.danger)),
         ),
-        child: Icon(Icons.close_rounded, size: 17.sp, color: AppColors.danger),
       ),
     );
   }
+}
+
+/// 빨간 X를 직접 그리는 페인터.
+class _XPainter extends CustomPainter {
+  _XPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = color
+      ..strokeWidth = 2.6
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final w = size.width;
+    final h = size.height;
+    canvas.drawLine(Offset(w * 0.25, h * 0.25), Offset(w * 0.75, h * 0.75), p);
+    canvas.drawLine(Offset(w * 0.75, h * 0.25), Offset(w * 0.25, h * 0.75), p);
+  }
+
+  @override
+  bool shouldRepaint(_XPainter old) => old.color != color;
 }
 
 /// 다중 선택 삭제 모드의 하단 바(전체선택 + 삭제).
