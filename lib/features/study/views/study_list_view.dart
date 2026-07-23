@@ -18,7 +18,7 @@ import 'flashcard_study_view.dart';
 import 'self_quiz_view.dart';
 import 'word_list_view.dart';
 
-/// 동생 공부 탭: 언니가 올린 단어 세트로 혼자 공부한다.
+/// 동생 공부 탭: '오늘' / '지난' 큰 카드 2개 중 하나를 골라 들어간다.
 class StudyListView extends StatelessWidget {
   const StudyListView({super.key, required this.user});
 
@@ -31,231 +31,426 @@ class StudyListView extends StatelessWidget {
         wordSetRepository: context.read<WordSetRepository>(),
         myUid: user.uid,
       ),
-      child: _StudyBody(uid: user.uid),
+      child: _StudyHome(uid: user.uid),
     );
   }
 }
 
-class _StudyBody extends StatelessWidget {
-  const _StudyBody({required this.uid});
+bool _isToday(DateTime? d) {
+  if (d == null) return false;
+  final n = DateTime.now();
+  return d.year == n.year && d.month == n.month && d.day == n.day;
+}
 
-  final String uid;
-
-  void _openStudyMenu(BuildContext context, WordSet set) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.cream,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18.r)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(20.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Text(set.title,
-                    style: TextStyle(fontSize: 17.sp, color: AppColors.ink)),
-              ),
-              SizedBox(height: 16.h),
-              _MenuTile(
-                icon: Icons.style_rounded,
-                label: '플래시카드',
-                hint: '카드를 넘기며 암기',
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => FlashcardStudyView(set: set)));
-                },
-              ),
-              SizedBox(height: 10.h),
-              _MenuTile(
-                icon: Icons.edit_rounded,
-                label: '직접 입력 연습',
-                hint: '시험처럼 직접 써보기',
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => SelfQuizView(set: set)));
-                },
-              ),
-              SizedBox(height: 10.h),
-              _MenuTile(
-                icon: Icons.list_alt_rounded,
-                label: '단어 목록',
-                hint: '전체 단어 한눈에 보기',
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => WordListView(set: set)));
-                },
-              ),
-            ],
-          ),
+/// 공부 세트 학습 메뉴(플래시카드/직접입력/목록)를 띄우고, 고른 학습을 연다.
+/// 학습에서 돌아올 때까지 기다리므로, 호출부에서 진행률을 새로고침할 수 있다.
+Future<void> openStudyMenu(BuildContext context, WordSet set) async {
+  final choice = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: AppColors.cream,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
+    ),
+    builder: (sheet) => SafeArea(
+      child: Padding(
+        padding: EdgeInsets.all(20.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Text(set.title,
+                  style: TextStyle(
+                      fontSize: 17.sp,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink)),
+            ),
+            SizedBox(height: 16.h),
+            _MenuTile(
+              icon: Icons.style_rounded,
+              label: '플래시카드',
+              hint: '카드를 넘기며 암기',
+              onTap: () => Navigator.of(sheet).pop('flash'),
+            ),
+            SizedBox(height: 10.h),
+            _MenuTile(
+              icon: Icons.edit_rounded,
+              label: '직접 입력 연습',
+              hint: '시험처럼 직접 써보기',
+              onTap: () => Navigator.of(sheet).pop('quiz'),
+            ),
+            SizedBox(height: 10.h),
+            _MenuTile(
+              icon: Icons.list_alt_rounded,
+              label: '단어 목록',
+              hint: '전체 단어 한눈에 보기',
+              onTap: () => Navigator.of(sheet).pop('list'),
+            ),
+          ],
         ),
       ),
-    );
+    ),
+  );
+  if (choice == null || !context.mounted) return;
+  final Widget page;
+  switch (choice) {
+    case 'flash':
+      page = FlashcardStudyView(set: set);
+      break;
+    case 'quiz':
+      page = SelfQuizView(set: set);
+      break;
+    case 'list':
+      page = WordListView(set: set);
+      break;
+    default:
+      return;
   }
+  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+}
+
+/// 공부 세트 커버 카드 한 장(여백 포함). 학습에서 돌아오면 onChanged로 진행률 갱신.
+Widget studySetCard(BuildContext context, WordSet set, {VoidCallback? onChanged}) {
+  return Padding(
+    padding: EdgeInsets.only(bottom: 12.h),
+    child: _StudyCard(
+      set: set,
+      onTap: () async {
+        await openStudyMenu(context, set);
+        onChanged?.call();
+      },
+    ),
+  );
+}
+
+/// 지난 시험 한 줄(점수 + 틀린 개수). 누르면 틀린 것 확인·공부.
+Widget examResultTile(BuildContext context, ExamResult r) {
+  return _ExamResultTile(
+    result: r,
+    onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => ExamReviewStudyView(result: r))),
+  );
+}
+
+class _StudyHome extends StatelessWidget {
+  const _StudyHome({required this.uid});
+
+  final String uid;
 
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<StudyViewModel>();
     return Scaffold(
       appBar: AppBar(title: const Text('공부하기')),
-      body: SafeArea(child: _body(context, viewModel)),
+      body: SafeArea(child: _content(context, viewModel)),
     );
   }
 
-  Widget _body(BuildContext context, StudyViewModel viewModel) {
+  Widget _content(BuildContext context, StudyViewModel viewModel) {
     if (viewModel.loading) {
       return const Center(child: CircularProgressIndicator());
     }
     final exam = context.read<ExamRepository>();
+    final now = DateTime.now();
+
     return StreamBuilder<List<ExamResult>>(
       stream: exam.watchResultsForGuest(uid),
       builder: (context, snap) {
         final results = snap.data ?? const <ExamResult>[];
-        final todayResults =
-            results.where((r) => _isToday(r.createdAt)).toList();
-        final pastResults =
-            results.where((r) => !_isToday(r.createdAt)).toList();
+        final todayResults = results.where((r) => _isToday(r.createdAt)).toList();
+        final pastResults = results.where((r) => !_isToday(r.createdAt)).toList();
 
-        final todaySets =
-            viewModel.sets.where((s) => _isToday(s.date)).toList();
-        final pastSets =
-            viewModel.sets.where((s) => !_isToday(s.date)).toList();
+        final todaySets = viewModel.sets.where((s) => _isToday(s.date)).toList();
+        final pastSets = viewModel.sets.where((s) => !_isToday(s.date)).toList();
 
-        final children = <Widget>[];
+        // 지난 자료(단어 + 시험)를 하나의 달력으로.
+        final pastItems = <DatedItem>[
+          for (final set in pastSets)
+            DatedItem(date: set.date, child: studySetCard(context, set)),
+          for (final r in pastResults)
+            DatedItem(
+                date: r.createdAt ?? now, child: examResultTile(context, r)),
+        ];
 
-        // ── 오늘 시험(눌러서 틀린 것 확인·공부) ──
-        if (results.isNotEmpty) {
-          children.add(_sectionLabel('오늘 시험'));
-          if (todayResults.isEmpty) {
-            children.add(_hint('오늘 본 시험이 없어요.'));
-          } else {
-            for (final r in todayResults) {
-              children.add(_examTile(context, r));
-            }
-          }
-          if (pastResults.isNotEmpty) {
-            children.add(_historyButton(
-              context,
-              '지난 시험',
-              [
-                for (final r in pastResults)
-                  DatedItem(
-                      date: r.createdAt ?? DateTime.now(),
-                      child: _examTile(context, r)),
-              ],
-            ));
-          }
-        }
-
-        // ── 오늘 받은 단어 ──
-        children.add(_sectionLabel('오늘 받은 단어'));
-        if (viewModel.sets.isEmpty) {
-          children.add(_emptySets());
-        } else if (todaySets.isEmpty) {
-          children.add(_hint('오늘 받은 단어가 없어요.'));
-        } else {
-          for (final set in todaySets) {
-            children.add(_setCard(context, set));
-          }
-        }
-        if (pastSets.isNotEmpty) {
-          children.add(_historyButton(
-            context,
-            '지난 단어',
-            [
-              for (final set in pastSets)
-                DatedItem(date: set.date, child: _setCard(context, set)),
-            ],
-          ));
-        }
+        final todayCount = todaySets.length + todayResults.length;
+        final pastCount = pastItems.length;
 
         return ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
-          children: children,
+          padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
+          children: [
+            Text('무엇을 공부해 볼까요?',
+                style: TextStyle(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink)),
+            SizedBox(height: 4.h),
+            Text('오늘의 자료로 공부하거나, 지난 기록을 달력에서 찾아봐요.',
+                style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+            SizedBox(height: 18.h),
+            _BigChoiceCard(
+              emoji: '📖',
+              badge: 'TODAY',
+              title: '오늘의 공부',
+              subtitle: todayCount == 0
+                  ? '오늘 받은 자료가 아직 없어요'
+                  : '받은 단어 ${todaySets.length}개 · 시험 ${todayResults.length}개',
+              action: '공부하러 가기',
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) =>
+                    TodayStudyView(sets: todaySets, results: todayResults),
+              )),
+            ),
+            SizedBox(height: 14.h),
+            _BigChoiceCard(
+              emoji: '🗓️',
+              badge: 'HISTORY',
+              title: '지난 기록',
+              subtitle: pastCount == 0
+                  ? '아직 지난 기록이 없어요'
+                  : '달력에서 지난 단어·시험 $pastCount건 찾기',
+              action: '달력으로 보기',
+              dark: true,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => HistoryCalendarView(
+                  title: '지난 자료',
+                  items: pastItems,
+                  emptyText: '이 날은 받은 단어나 시험이 없어요.',
+                ),
+              )),
+            ),
+          ],
         );
       },
     );
   }
+}
 
-  bool _isToday(DateTime? d) {
-    if (d == null) return false;
-    final n = DateTime.now();
-    return d.year == n.year && d.month == n.month && d.day == n.day;
-  }
+/// 오늘의 공부: 오늘 시험과 오늘 받은 단어를 분리해서 보여준다.
+class TodayStudyView extends StatefulWidget {
+  const TodayStudyView({super.key, required this.sets, required this.results});
 
-  Widget _examTile(BuildContext context, ExamResult r) => _ExamResultTile(
-        result: r,
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => ExamReviewStudyView(result: r))),
-      );
+  final List<WordSet> sets;
+  final List<ExamResult> results;
 
-  Widget _setCard(BuildContext context, WordSet set) => Padding(
-        padding: EdgeInsets.only(bottom: 12.h),
-        child: _StudyCard(set: set, onTap: () => _openStudyMenu(context, set)),
-      );
+  @override
+  State<TodayStudyView> createState() => _TodayStudyViewState();
+}
 
-  Widget _historyButton(
-      BuildContext context, String title, List<DatedItem> items) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 10.h),
-      child: HistoryEntryButton(
-        title: title,
-        count: items.length,
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => HistoryCalendarView(title: title, items: items))),
+class _TodayStudyViewState extends State<TodayStudyView> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('오늘의 공부')),
+      body: SafeArea(
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 24.h),
+          children: [
+            const _SectionLabel('오늘 시험', icon: '📝'),
+            if (widget.results.isEmpty)
+              const _Hint('오늘 본 시험이 없어요.')
+            else
+              for (final r in widget.results) examResultTile(context, r),
+            SizedBox(height: 6.h),
+            const _SectionLabel('오늘 받은 단어', icon: '📚'),
+            if (widget.sets.isEmpty)
+              const _EmptySets()
+            else
+              for (final set in widget.sets)
+                studySetCard(context, set,
+                    onChanged: () => setState(() {})),
+          ],
+        ),
       ),
     );
   }
+}
 
-  Widget _hint(String text) => Container(
-        width: double.infinity,
-        margin: EdgeInsets.only(bottom: 10.h),
-        padding: EdgeInsets.symmetric(vertical: 22.h, horizontal: 16.w),
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text, {required this.icon});
+
+  final String text;
+  final String icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(4.w, 14.h, 4.w, 10.h),
+      child: Row(
+        children: [
+          Text(icon, style: TextStyle(fontSize: 17.sp)),
+          SizedBox(width: 7.w),
+          Text(text,
+              style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink)),
+        ],
+      ),
+    );
+  }
+}
+
+class _Hint extends StatelessWidget {
+  const _Hint(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: EdgeInsets.only(bottom: 10.h),
+      padding: EdgeInsets.symmetric(vertical: 22.h, horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: AppColors.rowBg,
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Text(text,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+    );
+  }
+}
+
+class _EmptySets extends StatelessWidget {
+  const _EmptySets();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: 28.h, horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: AppColors.rowBg,
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Column(
+        children: [
+          Text('📚', style: TextStyle(fontSize: 40.sp)),
+          SizedBox(height: 10.h),
+          Text('받은 단어가 아직 없어요',
+              style: TextStyle(fontSize: 15.sp, color: AppColors.ink)),
+          SizedBox(height: 6.h),
+          Text('언니가 단어를 보내주면 여기서 공부할 수 있어요!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12.sp, color: AppColors.gray)),
+        ],
+      ),
+    );
+  }
+}
+
+/// '오늘' / '지난'을 고르는 큰 선택 카드. dark=true면 네이비, 아니면 민트 그라디언트.
+class _BigChoiceCard extends StatelessWidget {
+  const _BigChoiceCard({
+    required this.emoji,
+    required this.badge,
+    required this.title,
+    required this.subtitle,
+    required this.action,
+    required this.onTap,
+    this.dark = false,
+  });
+
+  final String emoji;
+  final String badge;
+  final String title;
+  final String subtitle;
+  final String action;
+  final VoidCallback onTap;
+  final bool dark;
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = Colors.white.withValues(alpha: 0.85);
+    return BouncyTap(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(22.w),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: AppColors.rowBg,
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        child: Text(text,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
-      );
-
-  Widget _sectionLabel(String text) => Padding(
-        padding: EdgeInsets.fromLTRB(4.w, 14.h, 4.w, 10.h),
-        child: Text(text,
-            style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w800,
-                color: AppColors.ink)),
-      );
-
-  Widget _emptySets() => Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: 28.h, horizontal: 16.w),
-        decoration: BoxDecoration(
-          color: AppColors.rowBg,
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        child: Column(
-          children: [
-            Text('📚', style: TextStyle(fontSize: 40.sp)),
-            SizedBox(height: 10.h),
-            Text('받은 단어가 아직 없어요',
-                style: TextStyle(fontSize: 15.sp, color: AppColors.ink)),
-            SizedBox(height: 6.h),
-            Text('언니가 단어를 보내주면 여기서 공부할 수 있어요!',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12.sp, color: AppColors.gray)),
+          color: dark ? AppColors.navy : null,
+          gradient: dark ? null : AppColors.primaryButton,
+          borderRadius: BorderRadius.circular(26.r),
+          boxShadow: [
+            BoxShadow(
+              color: (dark ? AppColors.navy : AppColors.mint)
+                  .withValues(alpha: dark ? 0.28 : 0.3),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
           ],
         ),
-      );
+        child: Stack(
+          children: [
+            Positioned(
+              right: -10.w,
+              bottom: -22.h,
+              child: Text(emoji,
+                  style: TextStyle(
+                      fontSize: 96.sp,
+                      color: Colors.white.withValues(alpha: 0.16))),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(999.r),
+                  ),
+                  child: Text(badge,
+                      style: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.5,
+                          color: Colors.white)),
+                ),
+                SizedBox(height: 14.h),
+                Text(title,
+                    style: TextStyle(
+                        fontSize: 23.sp,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white)),
+                SizedBox(height: 4.h),
+                Text(subtitle,
+                    style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: sub)),
+                SizedBox(height: 16.h),
+                Row(
+                  children: [
+                    Text(action,
+                        style: TextStyle(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white)),
+                    SizedBox(width: 6.w),
+                    Container(
+                      width: 26.w,
+                      height: 26.w,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.arrow_forward_rounded,
+                          size: 16.sp, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// 지난 시험 한 줄(점수 + 틀린 개수). 누르면 틀린 것 확인·공부.
@@ -368,8 +563,7 @@ class _MenuTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label,
-                      style:
-                          TextStyle(fontSize: 16.sp, color: AppColors.ink)),
+                      style: TextStyle(fontSize: 16.sp, color: AppColors.ink)),
                   SizedBox(height: 2.h),
                   Text(hint,
                       style: TextStyle(
@@ -403,9 +597,8 @@ class _StudyCard extends StatelessWidget {
     final progress = total == 0 ? 0.0 : done / total;
 
     final onCard = complete ? AppColors.ink : Colors.white;
-    final subColor = complete
-        ? AppColors.gray
-        : Colors.white.withValues(alpha: 0.85);
+    final subColor =
+        complete ? AppColors.gray : Colors.white.withValues(alpha: 0.85);
 
     return BouncyTap(
       onTap: onTap,
@@ -433,8 +626,8 @@ class _StudyCard extends StatelessWidget {
               child: Text('📚',
                   style: TextStyle(
                       fontSize: 82.sp,
-                      color: Colors.white.withValues(
-                          alpha: complete ? 0.06 : 0.22))),
+                      color: Colors.white
+                          .withValues(alpha: complete ? 0.06 : 0.22))),
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
