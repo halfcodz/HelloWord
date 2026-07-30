@@ -158,6 +158,51 @@ class AppColors {
 class AppTheme {
   AppTheme._();
 
+  /// 구글 폰트(Noto Sans KR)는 첫 실행 때 네트워크로 내려받는다.
+  /// 다 내려받기 전에는 글리프가 없어 한글·이모지가 □로 보이므로,
+  /// 기기에 이미 있는 한글/이모지 폰트를 대체 폰트로 지정해 둔다.
+  static const List<String> koFallback = [
+    'Apple SD Gothic Neo', // iOS/macOS 기본 한글
+    'AppleSDGothicNeo-Regular',
+    'Noto Sans CJK KR', // Android 기본 한글
+    'Noto Sans KR',
+    'NanumGothic',
+    'Malgun Gothic',
+    'sans-serif',
+    'Apple Color Emoji',
+    'Noto Color Emoji',
+  ];
+
+  /// 한글/이모지 대체 폰트가 적용된 본문 폰트.
+  static TextStyle font({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+  }) =>
+      GoogleFonts.notoSansKr(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+      ).copyWith(fontFamilyFallback: koFallback);
+
+  /// 폰트를 내려받기 전에도 글자가 반드시 보여야 하는 화면(로딩 화면)용 스타일.
+  /// 구글 폰트를 쓰지 않고 기기에 이미 있는 폰트만 사용한다.
+  /// (inherit: false — 상위 기본 스타일의 구글 폰트가 섞이지 않게 한다.)
+  static TextStyle systemFont({
+    required double fontSize,
+    required Color color,
+    FontWeight? fontWeight,
+    double? letterSpacing,
+  }) =>
+      TextStyle(
+        inherit: false,
+        fontSize: fontSize,
+        color: color,
+        fontWeight: fontWeight,
+        letterSpacing: letterSpacing,
+        fontFamilyFallback: koFallback,
+      );
+
   /// 라이트/다크 공통 테마. [AppColors.applyMode]로 토큰을 스왑한 뒤 호출한다.
   static ThemeData build({bool dark = false}) {
     final colorScheme = ColorScheme.fromSeed(
@@ -177,6 +222,7 @@ class AppTheme {
     final baseText = GoogleFonts.notoSansKrTextTheme().apply(
       bodyColor: AppColors.ink,
       displayColor: AppColors.ink,
+      fontFamilyFallback: koFallback,
     );
 
     return ThemeData(
@@ -203,7 +249,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: false,
         foregroundColor: AppColors.ink,
-        titleTextStyle: GoogleFonts.notoSansKr(
+        titleTextStyle: font(
           fontSize: 20,
           color: AppColors.ink,
           fontWeight: FontWeight.w800,
@@ -220,15 +266,13 @@ class AppTheme {
           foregroundColor: Colors.white,
           shape: const StadiumBorder(),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          textStyle:
-              GoogleFonts.notoSansKr(fontSize: 16, fontWeight: FontWeight.w800),
+          textStyle: font(fontSize: 16, fontWeight: FontWeight.w800),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.mintDeep,
-          textStyle:
-              GoogleFonts.notoSansKr(fontSize: 15, fontWeight: FontWeight.w700),
+          textStyle: font(fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -237,8 +281,7 @@ class AppTheme {
           side: BorderSide(color: AppColors.border),
           shape: const StadiumBorder(),
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
-          textStyle:
-              GoogleFonts.notoSansKr(fontSize: 15, fontWeight: FontWeight.w700),
+          textStyle: font(fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -281,8 +324,7 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.navy,
-        contentTextStyle:
-            GoogleFonts.notoSansKr(color: Colors.white, fontSize: 14),
+        contentTextStyle: font(color: Colors.white, fontSize: 14),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),

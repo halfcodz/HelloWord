@@ -74,18 +74,23 @@ class _LoadingScaffold extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Text('📖', style: TextStyle(fontSize: 38.sp)),
+              // 이모지 대신 앱에 포함된 아이콘을 쓴다.
+              // (폰트를 내려받기 전에는 이모지가 □로 보일 수 있다.)
+              child: Icon(Icons.menu_book_rounded,
+                  size: 38.sp, color: Colors.white),
             ),
             SizedBox(height: 18.h),
+            // 로딩 화면은 구글 폰트를 내려받기 전에 보이는 화면이므로,
+            // 기기 기본 폰트로 그려 글자가 □로 보이지 않게 한다.
             Text('HelloWord',
-                style: TextStyle(
+                style: AppTheme.systemFont(
                     fontSize: 26.sp,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.5,
                     color: AppColors.ink)),
             SizedBox(height: 6.h),
             Text('자매 영어 단어 시험',
-                style: TextStyle(
+                style: AppTheme.systemFont(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                     color: AppColors.grayText)),
