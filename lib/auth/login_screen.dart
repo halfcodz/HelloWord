@@ -107,7 +107,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
-                          child: Text('📖', style: TextStyle(fontSize: 38.sp)),
+                          // 로딩 화면과 같은 로고. 이모지 대신 앱에 포함된 아이콘을 쓴다.
+                          child: Icon(Icons.menu_book_rounded,
+                              size: 38.sp, color: Colors.white),
                         ),
                         SizedBox(height: 14.h),
                         Text('HelloWord',

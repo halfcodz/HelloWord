@@ -80,9 +80,16 @@ class WordSetUploadViewModel extends ChangeNotifier {
       _title.trim().isNotEmpty &&
       _status != UploadStatus.saving;
 
+  /// 마지막으로 추가할 때 중복이라 건너뛴 단어 수.
+  int _duplicateCount = 0;
+  int get duplicateCount => _duplicateCount;
+
   /// 파일 선택 후 파싱한다.
-  Future<void> pickAndParse() async {
-    _status = UploadStatus.parsing;
+  /// [append]가 true면 지금 목록 뒤에 이어서 추가한다(표를 여러 번 붙일 때).
+  /// 추가된 단어 수를 돌려준다(파일 선택을 취소하면 -1).
+  Future<int> pickAndParse({bool append = false}) async {
+    // 이어서 추가할 때는 이미 만든 목록이 사라지지 않게 로딩 화면으로 바꾸지 않는다.
+    if (!append) _status = UploadStatus.parsing;
     _errorMessage = null;
     notifyListeners();
 
@@ -94,10 +101,10 @@ class WordSetUploadViewModel extends ChangeNotifier {
       );
 
       if (result == null || result.files.isEmpty) {
-        // 사용자가 선택을 취소함.
+        // 사용자가 선택을 취소함. (-1: 아무 일도 없었음)
         _status = hasWords ? UploadStatus.ready : UploadStatus.idle;
         notifyListeners();
-        return;
+        return -1;
       }
 
       final file = result.files.first;
@@ -108,15 +115,11 @@ class WordSetUploadViewModel extends ChangeNotifier {
 
       final parsed = WordFileParser.parse(fileName: file.name, bytes: bytes);
       if (parsed.pairs.isEmpty) {
-        _status = UploadStatus.error;
-        _errorMessage = '유효한 단어를 찾지 못했습니다. "영단어-해석" 형식인지 확인해 주세요.';
-        notifyListeners();
-        return;
+        return _fail('유효한 단어를 찾지 못했습니다. "영단어-해석" 형식인지 확인해 주세요.',
+            keepWords: append);
       }
 
-      _fileName = file.name;
-      _words = parsed.pairs;
-      _skippedLines = parsed.skippedLines;
+      final added = _apply(parsed, source: file.name, append: append);
 
       // 제목이 비어 있으면 파일명(확장자 제외)을 기본값으로 제안한다.
       if (_title.trim().isEmpty) {
@@ -124,40 +127,76 @@ class WordSetUploadViewModel extends ChangeNotifier {
         _title = dot > 0 ? file.name.substring(0, dot) : file.name;
       }
 
-      _status = UploadStatus.ready;
       notifyListeners();
+      return added;
     } on WordFileParseException catch (e) {
-      _status = UploadStatus.error;
-      _errorMessage = e.message;
-      notifyListeners();
+      return _fail(e.message, keepWords: append);
     } catch (_) {
-      _status = UploadStatus.error;
-      _errorMessage = '파일 처리 중 오류가 발생했습니다.';
-      notifyListeners();
+      return _fail('파일 처리 중 오류가 발생했습니다.', keepWords: append);
     }
   }
 
   /// GPT 등에서 복사한 표 텍스트를 붙여넣어 단어를 만든다.
-  /// 저장 성공 흐름은 파일 업로드와 동일하다.
-  void parseFromText(String text) {
-    _status = UploadStatus.parsing;
+  /// [append]가 true면 이미 만든 목록 뒤에 이어서 추가한다.
+  /// 저장 성공 흐름은 파일 업로드와 동일하다. 추가된 단어 수를 돌려준다.
+  int parseFromText(String text, {bool append = false}) {
+    if (!append) _status = UploadStatus.parsing;
     _errorMessage = null;
     notifyListeners();
 
     final parsed = WordFileParser.parseText(text);
     if (parsed.pairs.isEmpty) {
-      _status = UploadStatus.error;
-      _errorMessage =
-          '유효한 단어를 찾지 못했어요. "영어 - 뜻" 형태의 표나 목록인지 확인해 주세요.';
-      notifyListeners();
-      return;
+      return _fail('유효한 단어를 찾지 못했어요. "영어 - 뜻" 형태의 표나 목록인지 확인해 주세요.',
+          keepWords: append);
     }
 
-    _fileName = '붙여넣은 단어';
-    _words = parsed.pairs;
-    _skippedLines = parsed.skippedLines;
-    _status = UploadStatus.ready;
+    final added = _apply(parsed, source: '붙여넣은 단어', append: append);
     notifyListeners();
+    return added;
+  }
+
+  /// 파싱 결과를 목록에 반영한다. 추가 모드에서는 이미 있는 단어(영어+뜻이 같음)를
+  /// 건너뛰고, 실제로 늘어난 개수를 돌려준다.
+  int _apply(ParsedWords parsed, {required String source, required bool append}) {
+    _duplicateCount = 0;
+    if (!append) {
+      _fileName = source;
+      _words = parsed.pairs;
+      _skippedLines = parsed.skippedLines;
+      _status = UploadStatus.ready;
+      return parsed.pairs.length;
+    }
+
+    String key(WordPair w) =>
+        '${w.english.trim().toLowerCase()}|${w.korean.trim()}';
+    final seen = _words.map(key).toSet();
+    final merged = List.of(_words);
+    for (final pair in parsed.pairs) {
+      if (seen.add(key(pair))) {
+        merged.add(pair);
+      } else {
+        _duplicateCount++;
+      }
+    }
+    final added = merged.length - _words.length;
+    _words = merged;
+    _skippedLines += parsed.skippedLines;
+    final current = _fileName ?? '';
+    if (current.isEmpty) {
+      _fileName = source;
+    } else if (!current.contains(source)) {
+      _fileName = '$current + $source';
+    }
+    _status = UploadStatus.ready;
+    return added;
+  }
+
+  /// 파싱 실패 처리. [keepWords]면 이미 만든 목록을 유지한다(이어 붙이기 중 실패).
+  int _fail(String message, {required bool keepWords}) {
+    _errorMessage = message;
+    _status = keepWords ? UploadStatus.ready : UploadStatus.error;
+    notifyListeners();
+    return 0;
   }
 
   void setTitle(String value) {

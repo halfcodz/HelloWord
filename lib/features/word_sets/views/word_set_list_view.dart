@@ -11,6 +11,7 @@ import '../../../models/app_user.dart';
 import '../models/word_set.dart';
 import '../repositories/word_set_repository.dart';
 import '../viewmodels/word_set_list_viewmodel.dart';
+import 'exam_assigned_badge.dart';
 import 'word_set_detail_view.dart';
 import 'word_set_upload_view.dart';
 
@@ -427,12 +428,22 @@ class _MaterialCoverCard extends StatelessWidget {
                 children: [
                   Padding(
                     padding: EdgeInsets.only(right: 36.w),
-                    child: Text('WORDS',
-                        style: TextStyle(
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 2,
-                            color: Colors.white.withValues(alpha: 0.85))),
+                    child: Row(
+                      children: [
+                        Text('WORDS',
+                            style: TextStyle(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 2,
+                                color: Colors.white.withValues(alpha: 0.85))),
+                        if (set.examAssigned) ...[
+                          SizedBox(width: 8.w),
+                          Flexible(
+                            child: ExamAssignedBadge.of(set, onColor: true),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                   SizedBox(height: 4.h),
                   Padding(

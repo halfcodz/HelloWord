@@ -51,20 +51,48 @@ class _UploadScreenState extends State<_UploadScreen> {
     super.dispose();
   }
 
-  Future<void> _pickFile(WordSetUploadViewModel viewModel) async {
-    await viewModel.pickAndParse();
+  /// 파일에서 단어를 불러온다. [append]면 지금 목록 뒤에 이어서 추가한다.
+  Future<void> _pickFile(WordSetUploadViewModel viewModel,
+      {bool append = false}) async {
+    final added = await viewModel.pickAndParse(append: append);
     // 파싱 후 파일명 기반 기본 제목을 컨트롤러에 반영한다.
     if (_titleController.text.trim().isEmpty && viewModel.title.isNotEmpty) {
       _titleController.text = viewModel.title;
     }
+    if (append && mounted) _showAddResult(viewModel, added);
   }
 
-  Future<void> _openPasteDialog(WordSetUploadViewModel viewModel) async {
+  /// 이어 붙이기 결과를 알려준다. (-1은 사용자가 취소한 경우로 아무것도 알리지 않는다)
+  void _showAddResult(WordSetUploadViewModel viewModel, int added) {
+    if (added < 0) return;
+    if (added > 0) {
+      final dup = viewModel.duplicateCount;
+      showToast(
+        context,
+        dup > 0
+            ? '단어 $added개를 추가했어요! (이미 있는 $dup개는 건너뜀)'
+            : '단어 $added개를 추가했어요!',
+      );
+      return;
+    }
+    showToast(
+      context,
+      viewModel.errorMessage ??
+          (viewModel.duplicateCount > 0
+              ? '모두 이미 있는 단어예요.'
+              : '추가할 단어를 찾지 못했어요.'),
+      isError: true,
+    );
+  }
+
+  /// 표 붙여넣기 다이얼로그. [append]면 지금 목록에 이어서 추가한다.
+  Future<void> _openPasteDialog(WordSetUploadViewModel viewModel,
+      {bool append = false}) async {
     final controller = TextEditingController();
     final text = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('표 붙여넣기'),
+        title: Text(append ? '표 더 붙여넣기' : '표 붙여넣기'),
         content: SizedBox(
           width: double.maxFinite,
           child: Column(
@@ -72,7 +100,9 @@ class _UploadScreenState extends State<_UploadScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'GPT나 엑셀에서 만든 단어 표를 복사한 뒤,\n아래 버튼을 누르면 한 번에 붙여넣어져요.',
+                append
+                    ? '다른 표를 복사한 뒤 아래 버튼을 누르면,\n지금 목록 뒤에 이어서 추가돼요.'
+                    : 'GPT나 엑셀에서 만든 단어 표를 복사한 뒤,\n아래 버튼을 누르면 한 번에 붙여넣어져요.',
                 style: TextStyle(fontSize: 13.sp, color: AppColors.gray),
               ),
               SizedBox(height: 12.h),
@@ -118,16 +148,17 @@ class _UploadScreenState extends State<_UploadScreen> {
           FilledButton(
             onPressed: () =>
                 Navigator.of(dialogContext).pop(controller.text),
-            child: const Text('불러오기'),
+            child: Text(append ? '추가하기' : '불러오기'),
           ),
         ],
       ),
     );
     if (text == null || text.trim().isEmpty) return;
-    viewModel.parseFromText(text);
+    final added = viewModel.parseFromText(text, append: append);
     if (_titleController.text.trim().isEmpty && viewModel.title.isNotEmpty) {
       _titleController.text = viewModel.title;
     }
+    if (append && mounted) _showAddResult(viewModel, added);
   }
 
   Future<void> _pickDate(WordSetUploadViewModel viewModel) async {
@@ -198,6 +229,12 @@ class _UploadScreenState extends State<_UploadScreen> {
                   wordCount: viewModel.words.length,
                   skipped: viewModel.skippedLines,
                   onReplace: () => _pickFile(viewModel),
+                ),
+                SizedBox(height: 10.h),
+                // 표를 여러 번 이어서 붙일 수 있게 '추가' 버튼을 함께 둔다.
+                _AddMoreBar(
+                  onPasteMore: () => _openPasteDialog(viewModel, append: true),
+                  onPickMore: () => _pickFile(viewModel, append: true),
                 ),
                 SizedBox(height: 20.h),
                 TextField(
@@ -382,6 +419,43 @@ class _RecipientChip extends StatelessWidget {
   }
 }
 
+/// 이미 불러온 목록에 표·파일을 이어서 더 붙이는 버튼 두 개.
+class _AddMoreBar extends StatelessWidget {
+  const _AddMoreBar({required this.onPasteMore, required this.onPickMore});
+
+  final VoidCallback onPasteMore;
+  final VoidCallback onPickMore;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: onPasteMore,
+            style: FilledButton.styleFrom(
+              padding: EdgeInsets.symmetric(vertical: 12.h),
+            ),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('표 더 붙여넣기'),
+          ),
+        ),
+        SizedBox(width: 10.w),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: onPickMore,
+            style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.symmetric(vertical: 12.h),
+            ),
+            icon: const Icon(Icons.note_add_outlined, size: 18),
+            label: const Text('파일 더 추가'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PickPrompt extends StatelessWidget {
   const _PickPrompt({
     required this.onPick,
@@ -505,7 +579,7 @@ class _FileInfoCard extends StatelessWidget {
                 ],
               ),
             ),
-            TextButton(onPressed: onReplace, child: const Text('변경')),
+            TextButton(onPressed: onReplace, child: const Text('전체 교체')),
           ],
         ),
       ),

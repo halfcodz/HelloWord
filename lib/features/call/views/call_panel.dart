@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -34,6 +36,13 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
   bool _micOn = true;
   bool _restarting = false;
 
+  /// 한 번이라도 연결된 적이 있는지(앱 복귀 후 완전 재연결 판단에 사용).
+  bool _everConnected = false;
+
+  /// 연결이 끊겨 자동으로 다시 붙이고 있는 중인지.
+  bool _reconnecting = false;
+  Timer? _resumeCheck;
+
   @override
   void initState() {
     super.initState();
@@ -43,14 +52,19 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // 마이크(음성입력) 버튼 등으로 앱이 백그라운드에 갔다 돌아오면
-    // 카메라·마이크가 꺼진 채 멈추므로, 돌아왔을 때 자동으로 다시 연결한다.
-    if (state == AppLifecycleState.resumed &&
-        _ready &&
-        !_restarting &&
-        mounted) {
-      _restarting = true;
-      _retry().whenComplete(() => _restarting = false);
+    if (state != AppLifecycleState.resumed || !_ready || !mounted) return;
+    // 앱이 돌아오면 통화를 통째로 다시 만들지 않고 먼저 부드럽게 되살린다.
+    // (통째로 다시 만들면 카메라가 껐다 켜지고 상대 화면이 끊긴다.)
+    _service?.resume();
+    _resumeCheck?.cancel();
+    // 마이크(음성입력) 등으로 카메라가 아예 멈춰버린 경우를 대비해,
+    // 잘 되던 통화가 잠시 뒤에도 살아나지 않으면 완전히 다시 연결한다.
+    if (_everConnected) {
+      _resumeCheck = Timer(const Duration(seconds: 8), () {
+        if (!mounted || _connected || _restarting) return;
+        _restarting = true;
+        _retry().whenComplete(() => _restarting = false);
+      });
     }
   }
 
@@ -66,7 +80,14 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
         if (!mounted) return;
         setState(() {
           _connected = state == 'connected';
-          if (state == 'failed') _error = '상대와 연결하지 못했어요. 네트워크를 확인해 다시 시도해 주세요.';
+          if (_connected) {
+            _everConnected = true;
+            _error = null;
+            _reconnecting = false;
+          } else if (state == 'failed' || state == 'disconnected') {
+            // 서비스가 스스로 다시 연결을 시도하므로 화면을 에러로 덮지 않는다.
+            _reconnecting = true;
+          }
         });
       },
     );
@@ -97,6 +118,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
       _ready = false;
       _remoteActive = false;
       _connected = false;
+      _reconnecting = false;
     });
     await _init();
   }
@@ -104,6 +126,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _resumeCheck?.cancel();
     _service?.dispose();
     super.dispose();
   }
@@ -183,11 +206,25 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
                   ),
                   SizedBox(height: 10.h),
                   Text(
-                    _remoteActive
-                        ? '상대 영상 불러오는 중…'
-                        : (_connected ? '상대 영상 불러오는 중…' : '상대가 들어오길 기다리는 중…'),
+                    _reconnecting
+                        ? '다시 연결하는 중…'
+                        : (_remoteActive || _connected
+                            ? '상대 영상 불러오는 중…'
+                            : '상대가 들어오길 기다리는 중…'),
                     style: TextStyle(color: Colors.white54, fontSize: 12.sp),
                   ),
+                  if (_reconnecting) ...[
+                    SizedBox(height: 6.h),
+                    TextButton(
+                      onPressed: _restarting ? null : _retry,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: Text('다시 연결',
+                          style: TextStyle(fontSize: 12.sp)),
+                    ),
+                  ],
                 ],
               ),
             ),
