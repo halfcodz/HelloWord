@@ -70,6 +70,20 @@ class WordSetRepository {
 
   Future<void> delete(String id) => _collection.doc(id).delete();
 
+  /// 이 자료로 시험을 배정(또는 출제)했다는 표시를 자료에 남긴다.
+  /// 자료 목록·상세에서 "시험 배정" 배지로 보여 준다.
+  Future<void> markExamAssigned({
+    required String id,
+    DateTime? scheduledDate,
+  }) {
+    return _collection.doc(id).set({
+      'examAssignedAt': FieldValue.serverTimestamp(),
+      'examAssignedCount': FieldValue.increment(1),
+      if (scheduledDate != null)
+        'examScheduledDate': Timestamp.fromDate(scheduledDate),
+    }, SetOptions(merge: true));
+  }
+
   /// 단어 세트의 단어 목록을 교체한다(단어 개별/일괄 삭제 등에 사용).
   Future<void> updateWords(String id, List<WordPair> words) {
     return _collection.doc(id).update({

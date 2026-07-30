@@ -15,6 +15,7 @@ import '../../social/repositories/friend_repository.dart';
 import '../models/word_pair.dart';
 import '../models/word_set.dart';
 import '../repositories/word_set_repository.dart';
+import 'exam_assigned_badge.dart';
 
 /// 저장된 단어 세트의 상세(단어 목록) 화면.
 /// 각 단어를 '뜻 적기'로 낼지 선택할 수 있다.
@@ -31,6 +32,20 @@ class WordSetDetailView extends StatefulWidget {
 class _WordSetDetailViewState extends State<WordSetDetailView> {
   /// 화면에서 편집(삭제) 가능한 현재 단어 목록.
   late final List<WordPair> _words = [...widget.set.words];
+
+  /// 시험 배정 표시(이 화면에서 시험을 내면 곧바로 반영한다).
+  late bool _examAssigned = widget.set.examAssigned;
+  late DateTime? _examScheduledDate = widget.set.examScheduledDate;
+  late int _examAssignedCount = widget.set.examAssignedCount;
+
+  /// 이 자료로 시험을 냈을 때 배정 표시를 갱신한다.
+  void _onExamAssigned(DateTime scheduledDate) {
+    setState(() {
+      _examAssigned = true;
+      _examScheduledDate = scheduledDate;
+      _examAssignedCount = _examAssignedCount + 1;
+    });
+  }
 
   /// '뜻 적기'로 낼 단어(객체 참조로 추적해 삭제 후에도 유지).
   final Set<WordPair> _ask = {};
@@ -152,7 +167,12 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
               }),
               onDelete: _saving ? null : _deleteSelected,
             )
-          : _StartExamButton(set: set, user: widget.user, words: _examWords),
+          : _StartExamButton(
+              set: set,
+              user: widget.user,
+              words: _examWords,
+              onAssigned: _onExamAssigned,
+            ),
       body: Column(
         children: [
           Container(
@@ -173,6 +193,24 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
                     Text('${_words.length}개', style: theme.textTheme.bodyMedium),
                   ],
                 ),
+                if (_examAssigned) ...[
+                  SizedBox(height: 10.h),
+                  Row(
+                    children: [
+                      ExamAssignedBadge(
+                        assigned: true,
+                        scheduledDate: _examScheduledDate,
+                        count: _examAssignedCount,
+                      ),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Text('시험에 배정한 자료예요.',
+                            style: TextStyle(
+                                fontSize: 12.sp, color: AppColors.mintDeep)),
+                      ),
+                    ],
+                  ),
+                ],
                 if (set.message.trim().isNotEmpty) ...[
                   SizedBox(height: 10.h),
                   Text(set.message, style: theme.textTheme.bodyMedium),
@@ -391,12 +429,19 @@ class _AskMeaningToggle extends StatelessWidget {
 
 /// "이 단어로 시험 내기" 버튼. 세션을 만들고 감독 화면으로 이동한다.
 class _StartExamButton extends StatefulWidget {
-  const _StartExamButton(
-      {required this.set, required this.user, required this.words});
+  const _StartExamButton({
+    required this.set,
+    required this.user,
+    required this.words,
+    required this.onAssigned,
+  });
 
   final WordSet set;
   final AppUser user;
   final List<WordPair> words;
+
+  /// 시험을 냈을 때(자료에 배정 표시를 남긴 뒤) 호출된다.
+  final void Function(DateTime scheduledDate) onAssigned;
 
   @override
   State<_StartExamButton> createState() => _StartExamButtonState();
@@ -436,6 +481,7 @@ class _StartExamButtonState extends State<_StartExamButton> {
     }
 
     setState(() => _creating = true);
+    final wordSetRepo = context.read<WordSetRepository>();
     try {
       final session = await context.read<ExamRepository>().createSession(
             wordSet: widget.set,
@@ -445,6 +491,15 @@ class _StartExamButtonState extends State<_StartExamButton> {
             invitedUid: target.uid,
             invitedName: target.name,
           );
+      // 이 자료로 시험을 냈다는 표시를 자료에 남긴다.
+      final now = DateTime.now();
+      try {
+        await wordSetRepo.markExamAssigned(
+            id: widget.set.id, scheduledDate: now);
+        if (mounted) widget.onAssigned(now);
+      } catch (_) {
+        // 표시 저장에 실패해도 시험 진행은 막지 않는다.
+      }
       if (!mounted) return;
       Navigator.of(context).push(
         MaterialPageRoute(

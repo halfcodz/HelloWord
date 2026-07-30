@@ -12,6 +12,7 @@ import '../../social/views/notification_bell.dart';
 import '../models/word_set.dart';
 import '../repositories/word_set_repository.dart';
 import '../viewmodels/word_set_list_viewmodel.dart';
+import 'exam_assigned_badge.dart';
 import 'word_set_detail_view.dart';
 import 'word_set_upload_view.dart';
 
@@ -256,6 +257,10 @@ class _DayDialog extends StatelessWidget {
                                       style: TextStyle(
                                           fontSize: 12.sp,
                                           color: AppColors.lavender)),
+                                  if (set.examAssigned) ...[
+                                    SizedBox(height: 4.h),
+                                    ExamAssignedBadge.of(set),
+                                  ],
                                 ],
                               ),
                             ),

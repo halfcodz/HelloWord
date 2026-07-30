@@ -13,6 +13,9 @@ class WordSet {
     required this.createdBy,
     this.sharedWith = const [],
     this.createdAt,
+    this.examAssignedAt,
+    this.examScheduledDate,
+    this.examAssignedCount = 0,
   });
 
   final String id;
@@ -36,6 +39,18 @@ class WordSet {
 
   /// 서버 저장 시각.
   final DateTime? createdAt;
+
+  /// 이 자료로 시험을 배정(또는 출제)한 시각. null이면 아직 시험에 쓰지 않은 자료.
+  final DateTime? examAssignedAt;
+
+  /// 배정한 시험의 예정일(바로 출제한 경우 그날 날짜).
+  final DateTime? examScheduledDate;
+
+  /// 이 자료로 시험을 낸 횟수.
+  final int examAssignedCount;
+
+  /// 시험에 배정한 자료인지.
+  bool get examAssigned => examAssignedAt != null || examAssignedCount > 0;
 
   int get wordCount => words.length;
 
@@ -65,6 +80,10 @@ class WordSet {
       sharedWith:
           (data['sharedWith'] as List?)?.cast<String>() ?? const [],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      examAssignedAt: (data['examAssignedAt'] as Timestamp?)?.toDate(),
+      examScheduledDate:
+          (data['examScheduledDate'] as Timestamp?)?.toDate(),
+      examAssignedCount: (data['examAssignedCount'] as num?)?.toInt() ?? 0,
     );
   }
 }

@@ -30,7 +30,9 @@ class ExamDashboardView extends StatelessWidget {
   WordSetRepository _wordSets(BuildContext c) => c.read<WordSetRepository>();
 
   Future<void> _assignExam(BuildContext context) async {
-    final sets = await _wordSets(context).watchByCreator(user.uid).first;
+    final examRepo = _exam(context);
+    final wordSetRepo = _wordSets(context);
+    final sets = await wordSetRepo.watchByCreator(user.uid).first;
     if (!context.mounted) return;
     if (sets.isEmpty) {
       showToast(context, '먼저 단어 세트를 만들어 주세요. (자료 탭)');
@@ -42,7 +44,7 @@ class ExamDashboardView extends StatelessWidget {
     );
     if (assigned == null || !context.mounted) return;
     try {
-      await _exam(context).createPlan(ExamPlan(
+      await examRepo.createPlan(ExamPlan(
         id: '',
         hostUid: user.uid,
         hostName: user.name,
@@ -52,7 +54,12 @@ class ExamDashboardView extends StatelessWidget {
         wordCount: assigned.set.wordCount,
         scheduledDate: assigned.date,
       ));
-      if (context.mounted) showToast(context, '시험을 배정했어요!');
+      // 이 자료가 "시험에 배정한 자료"라는 표시를 남긴다(자료 목록·상세에 배지로 보임).
+      await wordSetRepo.markExamAssigned(
+        id: assigned.set.id,
+        scheduledDate: assigned.date,
+      );
+      if (context.mounted) showToast(context, '시험을 배정했어요! 자료에 배정 표시를 남겼어요.');
     } catch (_) {
       if (context.mounted) {
         showToast(context, '배정에 실패했어요. (examPlans 규칙 확인)', isError: true);
@@ -464,7 +471,10 @@ class _AssignDialogState extends State<_AssignDialog> {
               for (final s in widget.sets)
                 DropdownMenuItem(
                   value: s,
-                  child: Text('${s.title} (${s.wordCount}개)',
+                  // 이미 시험에 배정한 자료는 한눈에 보이게 표시한다.
+                  child: Text(
+                      '${s.title} (${s.wordCount}개)'
+                      '${s.examAssigned ? " · 배정됨" : ""}',
                       overflow: TextOverflow.ellipsis),
                 ),
             ],
