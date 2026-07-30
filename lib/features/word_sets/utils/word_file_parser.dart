@@ -162,7 +162,12 @@ class WordFileParser {
     } else {
       raw = [line];
     }
-    return raw.map((c) => c.trim()).where((c) => c.isNotEmpty).toList();
+    // 앞뒤 공백을 없애고, 구분자만 남은 칸(`,` `-` `|` 등)은 버린다.
+    // (`apple  ,  사과`처럼 넓은 공백과 쉼표가 섞인 줄도 두 칸으로 읽히게 한다.)
+    return raw
+        .map((c) => c.trim())
+        .where((c) => c.isNotEmpty && !RegExp(r'^[,\-|:]+$').hasMatch(c))
+        .toList();
   }
 
   /// `|---|:--:|` 같은 마크다운 표 구분선인지.
