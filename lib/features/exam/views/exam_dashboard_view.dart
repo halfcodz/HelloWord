@@ -44,16 +44,18 @@ class ExamDashboardView extends StatelessWidget {
     );
     if (assigned == null || !context.mounted) return;
     try {
-      await examRepo.createPlan(ExamPlan(
-        id: '',
-        hostUid: user.uid,
-        hostName: user.name,
-        guestUids: assigned.set.sharedWith,
-        wordSetId: assigned.set.id,
-        title: assigned.set.title,
-        wordCount: assigned.set.wordCount,
-        scheduledDate: assigned.date,
-      ));
+      await examRepo.createPlan(
+        ExamPlan(
+          id: '',
+          hostUid: user.uid,
+          hostName: user.name,
+          guestUids: assigned.set.sharedWith,
+          wordSetId: assigned.set.id,
+          title: assigned.set.title,
+          wordCount: assigned.set.wordCount,
+          scheduledDate: assigned.date,
+        ),
+      );
       // 이 자료가 "시험에 배정한 자료"라는 표시를 남긴다(자료 목록·상세에 배지로 보임).
       await wordSetRepo.markExamAssigned(
         id: assigned.set.id,
@@ -74,9 +76,11 @@ class ExamDashboardView extends StatelessWidget {
       showToast(context, '단어 세트를 찾을 수 없어요. 삭제되었을 수 있어요.', isError: true);
       return;
     }
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => WordSetDetailView(set: set, user: user),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => WordSetDetailView(set: set, user: user),
+      ),
+    );
   }
 
   Future<void> _planMenu(BuildContext context, ExamPlan plan) async {
@@ -129,7 +133,8 @@ class ExamDashboardView extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(
-                parent: ClampingScrollPhysics()),
+              parent: ClampingScrollPhysics(),
+            ),
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: Padding(
@@ -137,102 +142,119 @@ class ExamDashboardView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.w),
-              child: HomeGreeting(
-                name: user.name,
-                mascot: '🐰',
-                subtitle: '우리 동생 관리하기',
-              ),
-            ),
-            SizedBox(height: 6.h),
-            FriendBar(me: user),
-            SizedBox(height: 4.h),
-            _SectionTitle(icon: Icons.event_available_rounded, label: '오늘 시험'),
-            StreamBuilder<List<ExamPlan>>(
-              stream: exam.watchPlansByHost(user.uid),
-              builder: (context, snap) {
-                final plans = (snap.data ?? const <ExamPlan>[])
-                    .where((p) => !p.done && _isToday(p.scheduledDate))
-                    .toList();
-                if (plans.isEmpty) {
-                  return const _EmptyHint(
-                      text: '오늘 예정된 시험이 없어요.\n아래 "시험 배정"으로 추가해요.');
-                }
-                return Column(
-                  children: [
-                    for (final plan in plans)
-                      _PlanCard(
-                        plan: plan,
-                        today: today,
-                        onTap: () => _planMenu(context, plan),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      child: HomeGreeting(
+                        name: user.name,
+                        mascot: '🐰',
+                        subtitle: '우리 동생 관리하기',
                       ),
-                  ],
-                );
-              },
-            ),
-            SizedBox(height: 16.h),
-            _SectionTitle(icon: Icons.fact_check_rounded, label: '시험 결과'),
-            StreamBuilder<List<ExamResult>>(
-              stream: exam.watchResultsByHost(user.uid),
-              builder: (context, snap) {
-                final results = snap.data ?? const <ExamResult>[];
-                final todayR =
-                    results.where((r) => _isToday(r.createdAt)).toList();
-                final pastR =
-                    results.where((r) => !_isToday(r.createdAt)).toList();
-                return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20.w),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: ResultNavCard(
-                          emoji: '📊',
-                          label: '오늘 시험 결과',
-                          count: todayR.length,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => TodayResultsView(
-                                results: todayR,
-                                emptyText:
-                                    '오늘 채점된 시험이 없어요.\n동생이 시험을 마치면 여기에 나와요.',
+                    ),
+                    SizedBox(height: 6.h),
+                    FriendBar(me: user),
+                    SizedBox(height: 4.h),
+                    _SectionTitle(
+                      icon: Icons.event_available_rounded,
+                      label: '오늘 시험',
+                    ),
+                    StreamBuilder<List<ExamPlan>>(
+                      stream: exam.watchPlansByHost(user.uid),
+                      builder: (context, snap) {
+                        final plans = (snap.data ?? const <ExamPlan>[])
+                            .where((p) => !p.done && _isToday(p.scheduledDate))
+                            .toList();
+                        if (plans.isEmpty) {
+                          return const _EmptyHint(
+                            text: '오늘 예정된 시험이 없어요.\n아래 "시험 배정"으로 추가해요.',
+                          );
+                        }
+                        return Column(
+                          children: [
+                            for (final plan in plans)
+                              _PlanCard(
+                                plan: plan,
+                                today: today,
+                                onTap: () => _planMenu(context, plan),
                               ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      Expanded(
-                        child: ResultNavCard(
-                          emoji: '🗓️',
-                          label: '지난 시험 결과',
-                          count: pastR.length,
-                          dark: true,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => HistoryCalendarView(
-                                title: '지난 시험 결과',
-                                items: [
-                                  for (final r in pastR)
-                                    DatedItem(
-                                      date: r.createdAt ?? DateTime.now(),
-                                      child: _ResultCard(
-                                        result: r,
-                                        onTap: () => _openResult(context, r),
+                          ],
+                        );
+                      },
+                    ),
+                    SizedBox(height: 16.h),
+                    _SectionTitle(
+                      icon: Icons.fact_check_rounded,
+                      label: '시험 결과',
+                    ),
+                    StreamBuilder<List<ExamResult>>(
+                      stream: exam.watchResultsByHost(user.uid),
+                      builder: (context, snap) {
+                        final results = snap.data ?? const <ExamResult>[];
+                        final todayR = results
+                            .where((r) => _isToday(r.createdAt))
+                            .toList();
+                        final pastR = results
+                            .where((r) => !_isToday(r.createdAt))
+                            .toList();
+                        return Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20.w),
+                          // 두 카드의 높이를 맞추려고 stretch를 쓰는데, 스크롤 안에서는
+                          // 높이가 무한이라 stretch가 그대로 터진다(화면이 안 그려짐).
+                          // IntrinsicHeight로 '가장 큰 카드 높이'를 정해 준 뒤 늘린다.
+                          child: IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: ResultNavCard(
+                                    emoji: '📊',
+                                    label: '오늘 시험 결과',
+                                    count: todayR.length,
+                                    onTap: () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => TodayResultsView(
+                                          results: todayR,
+                                          emptyText:
+                                              '오늘 채점된 시험이 없어요.\n동생이 시험을 마치면 여기에 나와요.',
+                                        ),
                                       ),
                                     ),
-                                ],
-                              ),
+                                  ),
+                                ),
+                                SizedBox(width: 12.w),
+                                Expanded(
+                                  child: ResultNavCard(
+                                    emoji: '🗓️',
+                                    label: '지난 시험 결과',
+                                    count: pastR.length,
+                                    dark: true,
+                                    onTap: () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => HistoryCalendarView(
+                                          title: '지난 시험 결과',
+                                          items: [
+                                            for (final r in pastR)
+                                              DatedItem(
+                                                date:
+                                                    r.createdAt ??
+                                                    DateTime.now(),
+                                                child: _ResultCard(
+                                                  result: r,
+                                                  onTap: () =>
+                                                      _openResult(context, r),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -250,8 +272,9 @@ class ExamDashboardView extends StatelessWidget {
   }
 
   void _openResult(BuildContext context, ExamResult result) {
-    Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => ExamResultDetailView(result: result)));
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ExamResultDetailView(result: result)),
+    );
   }
 }
 
@@ -269,11 +292,14 @@ class _SectionTitle extends StatelessWidget {
         children: [
           Icon(icon, size: 18.sp, color: AppColors.pink),
           SizedBox(width: 6.w),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.ink)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
+            ),
+          ),
         ],
       ),
     );
@@ -296,16 +322,22 @@ class _EmptyHint extends StatelessWidget {
           color: AppColors.rowBg,
           borderRadius: BorderRadius.circular(16.r),
         ),
-        child: Text(text,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13.sp, color: AppColors.gray),
+        ),
       ),
     );
   }
 }
 
 class _PlanCard extends StatelessWidget {
-  const _PlanCard({required this.plan, required this.today, required this.onTap});
+  const _PlanCard({
+    required this.plan,
+    required this.today,
+    required this.onTap,
+  });
 
   final ExamPlan plan;
   final DateTime today;
@@ -338,28 +370,35 @@ class _PlanCard extends StatelessWidget {
                   color: urgent ? AppColors.pink : AppColors.blueSoft,
                   borderRadius: BorderRadius.circular(14.r),
                 ),
-                child: Text(label,
-                    style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w800,
-                        color: urgent ? Colors.white : AppColors.pink)),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w800,
+                    color: urgent ? Colors.white : AppColors.pink,
+                  ),
+                ),
               ),
               SizedBox(width: 14.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(plan.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.ink)),
+                    Text(
+                      plan.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
                     SizedBox(height: 3.h),
-                    Text('${formatYmd(plan.scheduledDate)} · ${plan.wordCount}개',
-                        style:
-                            TextStyle(fontSize: 12.sp, color: AppColors.gray)),
+                    Text(
+                      '${formatYmd(plan.scheduledDate)} · ${plan.wordCount}개',
+                      style: TextStyle(fontSize: 12.sp, color: AppColors.gray),
+                    ),
                   ],
                 ),
               ),
@@ -400,18 +439,21 @@ class _ResultCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(result.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.ink)),
+                    Text(
+                      result.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
                     SizedBox(height: 3.h),
                     Text(
-                        '${result.guestName.isEmpty ? "동생" : result.guestName} · ${result.percent}점 · ${result.score}/${result.total} 정답${result.createdAt != null ? " · ${formatYmd(result.createdAt!)}" : ""}',
-                        style:
-                            TextStyle(fontSize: 12.sp, color: AppColors.gray)),
+                      '${result.guestName.isEmpty ? "동생" : result.guestName} · ${result.percent}점 · ${result.score}/${result.total} 정답${result.createdAt != null ? " · ${formatYmd(result.createdAt!)}" : ""}',
+                      style: TextStyle(fontSize: 12.sp, color: AppColors.gray),
+                    ),
                   ],
                 ),
               ),
@@ -462,7 +504,10 @@ class _AssignDialogState extends State<_AssignDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('단어 세트', style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+          Text(
+            '단어 세트',
+            style: TextStyle(fontSize: 13.sp, color: AppColors.gray),
+          ),
           SizedBox(height: 6.h),
           DropdownButton<WordSet>(
             value: _set,
@@ -473,15 +518,19 @@ class _AssignDialogState extends State<_AssignDialog> {
                   value: s,
                   // 이미 시험에 배정한 자료는 한눈에 보이게 표시한다.
                   child: Text(
-                      '${s.title} (${s.wordCount}개)'
-                      '${s.examAssigned ? " · 배정됨" : ""}',
-                      overflow: TextOverflow.ellipsis),
+                    '${s.title} (${s.wordCount}개)'
+                    '${s.examAssigned ? " · 배정됨" : ""}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
             ],
             onChanged: (v) => setState(() => _set = v ?? _set),
           ),
           SizedBox(height: 12.h),
-          Text('예정일', style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+          Text(
+            '예정일',
+            style: TextStyle(fontSize: 13.sp, color: AppColors.gray),
+          ),
           SizedBox(height: 6.h),
           InkWell(
             onTap: _pickDate,
@@ -494,11 +543,16 @@ class _AssignDialogState extends State<_AssignDialog> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.calendar_today_outlined,
-                      size: 18.sp, color: AppColors.pink),
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: 18.sp,
+                    color: AppColors.pink,
+                  ),
                   SizedBox(width: 8.w),
-                  Text(formatYmd(_date),
-                      style: TextStyle(fontSize: 14.sp, color: AppColors.ink)),
+                  Text(
+                    formatYmd(_date),
+                    style: TextStyle(fontSize: 14.sp, color: AppColors.ink),
+                  ),
                 ],
               ),
             ),
@@ -511,8 +565,7 @@ class _AssignDialogState extends State<_AssignDialog> {
           child: const Text('취소'),
         ),
         FilledButton(
-          onPressed: () =>
-              Navigator.of(context).pop(_Assignment(_set, _date)),
+          onPressed: () => Navigator.of(context).pop(_Assignment(_set, _date)),
           child: const Text('배정'),
         ),
       ],

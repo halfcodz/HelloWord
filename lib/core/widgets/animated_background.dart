@@ -81,29 +81,30 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
   @override
   Widget build(BuildContext context) {
     final dark = AppColors.isDark;
+    // Stack이 아니라 CustomPaint에 자식을 물린다.
+    // (Stack은 자식이 전부 Positioned면 '제약의 최대 크기'로 커져서, 높이가
+    //  무한인 자리에 놓이면 그대로 터진다. CustomPaint는 예전 DecoratedBox처럼
+    //  자식 크기에 맞춰지므로 어디에 놓아도 안전하다.)
+    // painter는 자식보다 뒤에 그려지고, 자식은 RepaintBoundary로 감싸 두어
+    // 배경이 매 프레임 다시 그려져도 화면 내용은 다시 그리지 않는다.
     return DecoratedBox(
       decoration: BoxDecoration(gradient: AppColors.background),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: RepaintBoundary(
-              child: AnimatedBuilder(
-                animation: _controller,
-                builder: (context, _) => CustomPaint(
-                  painter: _BackgroundPainter(
-                    t: _controller.value,
-                    dark: dark,
-                    primary: AppColors.pink,
-                    secondary: AppColors.purple,
-                    accent: AppColors.gold,
-                    glyphs: _glyphs,
-                  ),
-                ),
-              ),
-            ),
+      child: AnimatedBuilder(
+        animation: _controller,
+        child: RepaintBoundary(
+          child: widget.child ?? const SizedBox.shrink(),
+        ),
+        builder: (context, child) => CustomPaint(
+          painter: _BackgroundPainter(
+            t: _controller.value,
+            dark: dark,
+            primary: AppColors.pink,
+            secondary: AppColors.purple,
+            accent: AppColors.gold,
+            glyphs: _glyphs,
           ),
-          if (widget.child != null) Positioned.fill(child: widget.child!),
-        ],
+          child: child,
+        ),
       ),
     );
   }

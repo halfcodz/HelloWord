@@ -232,10 +232,12 @@ class _BarItem extends StatelessWidget {
       label: item.label,
       child: BouncyTap(
         onTap: onTap,
-        child: SizedBox(
-          // 최소 터치 영역 확보.
-          height: 52.h,
+        // 최소 터치 영역은 확보하되, 글자 크기 설정을 키워도 잘리지 않도록
+        // 고정 높이가 아니라 '최소 높이 + 내용에 맞춤'으로 둔다.
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: 52.h),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // 선택 표시는 색과 옅은 배경 두 가지로 준다(색만으로 구분하지 않기).
