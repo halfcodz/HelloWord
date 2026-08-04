@@ -66,13 +66,6 @@ class _LoadingScaffold extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: AppColors.primaryButton,
                 borderRadius: BorderRadius.circular(24.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.mint.withValues(alpha: 0.35),
-                    blurRadius: 28,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
               ),
               // 이모지 대신 앱에 포함된 아이콘을 쓴다.
               // (폰트를 내려받기 전에는 이모지가 □로 보일 수 있다.)

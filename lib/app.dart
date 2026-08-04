@@ -3,8 +3,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import 'auth/auth_gate.dart';
+import 'core/services/bgm_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'core/widgets/animated_background.dart';
 import 'features/chat/repositories/chat_repository.dart';
 import 'features/exam/repositories/exam_repository.dart';
 import 'features/social/repositories/friend_repository.dart';
@@ -12,9 +14,14 @@ import 'features/todo/repositories/todo_repository.dart';
 import 'features/word_sets/repositories/word_set_repository.dart';
 
 class HelloWordApp extends StatelessWidget {
-  const HelloWordApp({super.key, required this.themeController});
+  const HelloWordApp({
+    super.key,
+    required this.themeController,
+    required this.bgm,
+  });
 
   final ThemeController themeController;
+  final BgmService bgm;
 
   /// 콘텐츠 최대 폭. 모바일 사파리에서는 화면 전체, 데스크톱 브라우저에서는
   /// 이 폭의 "폰 컬럼"이 가운데 정렬된다.
@@ -33,6 +40,7 @@ class HelloWordApp extends StatelessWidget {
         Provider<ChatRepository>(create: (_) => ChatRepository()),
         Provider<TodoRepository>(create: (_) => TodoRepository()),
         ChangeNotifierProvider<ThemeController>.value(value: themeController),
+        ChangeNotifierProvider<BgmService>.value(value: bgm),
       ],
       // 팔레트가 바뀌면 테마를 다시 계산해 앱 전체에 반영한다.
       child: Consumer<ThemeController>(
@@ -78,24 +86,25 @@ class _ResponsiveShell extends StatelessWidget {
 
         final content = MediaQuery(
           data: clampedMedia,
-          child: DecoratedBox(
-            decoration: BoxDecoration(gradient: AppColors.background),
+          child: AnimatedBackground(
             child: child ?? const SizedBox.shrink(),
           ),
         );
 
         if (!isWide) return content;
 
-        // 데스크톱: 옅은 라벤더 배경 위에 그림자를 준 폰 컬럼을 가운데 배치.
+        // 데스크톱: 옅은 블루그레이 배경 위에 폰 컬럼을 가운데 배치.
         return ColoredBox(
-          color: const Color(0xFFE7E1F5),
+          color: AppColors.isDark
+              ? const Color(0xFF070C17)
+              : const Color(0xFFE2EAF8),
           child: Center(
             child: Container(
               width: contentWidth,
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.lavender.withValues(alpha: 0.28),
+                    color: AppColors.navy.withValues(alpha: 0.18),
                     blurRadius: 32,
                     spreadRadius: 2,
                   ),

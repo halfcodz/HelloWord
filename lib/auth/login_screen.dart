@@ -98,14 +98,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: AppColors.pink,
-                            borderRadius: BorderRadius.circular(22.r),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.pink.withValues(alpha: 0.35),
-                                blurRadius: 24,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.lg.r),
                           ),
                           // 로딩 화면과 같은 로고. 이모지 대신 앱에 포함된 아이콘을 쓴다.
                           child: Icon(Icons.menu_book_rounded,
@@ -113,9 +107,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         SizedBox(height: 14.h),
                         Text('HelloWord',
-                            style: TextStyle(
-                                fontSize: 28.sp,
-                                fontWeight: FontWeight.w800,
+                            style: AppTheme.display(
+                                fontSize: 30.sp,
+                                fontWeight: FontWeight.w600,
                                 color: AppColors.ink,
                                 letterSpacing: -0.5)),
                         SizedBox(height: 6.h),
@@ -272,21 +266,11 @@ class BlueButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        height: 56.h,
+        height: 54.h,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          gradient: onTap == null ? null : AppColors.primaryButton,
-          color: onTap == null ? AppColors.hint : null,
-          borderRadius: BorderRadius.circular(999.r),
-          boxShadow: onTap == null
-              ? null
-              : [
-                  BoxShadow(
-                    color: AppColors.mint.withValues(alpha: 0.35),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+          color: onTap == null ? AppColors.border : AppColors.pink,
+          borderRadius: BorderRadius.circular(AppRadius.md.r),
         ),
         child: loading
             ? SizedBox(
@@ -297,10 +281,10 @@ class BlueButton extends StatelessWidget {
                     valueColor: AlwaysStoppedAnimation(Colors.white)),
               )
             : Text(label,
-                style: TextStyle(
+                style: AppTheme.font(
                     fontSize: 16.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white)),
+                    fontWeight: FontWeight.w800,
+                    color: onTap == null ? AppColors.hint : Colors.white)),
       ),
     );
   }

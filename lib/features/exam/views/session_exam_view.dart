@@ -236,10 +236,8 @@ class _ExamBodyState extends State<_ExamBody> {
               children: [
                 Text('${vm.currentIndex + 1} / ${vm.total}',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.gray)),
+                    style: AppTheme.tabularNumber(
+                        fontSize: 14.sp, color: AppColors.gray)),
                 SizedBox(height: 12.h),
                 Container(
                   width: double.infinity,
@@ -259,11 +257,12 @@ class _ExamBodyState extends State<_ExamBody> {
                               fontWeight: FontWeight.w600,
                               color: AppColors.hint)),
                       SizedBox(height: 12.h),
+                      // 문제로 나온 단어는 제목용 폰트로 크게.
                       Text(word.quizPrompt,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontSize: 28.sp,
-                              fontWeight: FontWeight.w800,
+                          style: AppTheme.display(
+                              fontSize: 30.sp,
+                              fontWeight: FontWeight.w600,
                               color: AppColors.ink)),
                     ],
                   ),

@@ -312,7 +312,8 @@ class _LiveMonitor extends StatelessWidget {
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold)),
                 Text('${viewModel.submittedCount} / ${session.total}',
-                    style: theme.textTheme.titleMedium),
+                    style: AppTheme.tabularNumber(
+                        fontSize: 16.sp, color: AppColors.grayText)),
               ],
             ),
           ),

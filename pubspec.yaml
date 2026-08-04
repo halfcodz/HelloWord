@@ -52,6 +52,7 @@ dependencies:
   flutter_webrtc: ^1.5.2
   web: ^1.1.1
   flutter_tts: ^4.2.5
+  audioplayers: ^6.7.1
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +79,8 @@ flutter:
   # 환경변수 파일을 에셋으로 포함 (flutter_dotenv에서 로드)
   assets:
     - .env
+    # 배경음악(tool/generate_bgm.py로 직접 합성한 16초 루프)
+    - assets/audio/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

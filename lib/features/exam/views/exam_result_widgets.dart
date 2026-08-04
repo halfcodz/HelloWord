@@ -23,14 +23,17 @@ class ExamScoreBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = _points >= 60 ? AppColors.mint : AppColors.danger;
+    // 60점 미만은 '더 하면 된다'는 뜻으로 골드, 그 이상은 포인트 색.
+    final accent = _points >= 60 ? AppColors.pink : AppColors.gold;
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      padding: EdgeInsets.symmetric(horizontal: 22.w, vertical: 20.h),
+      margin: EdgeInsets.symmetric(
+          horizontal: AppSpace.md.w, vertical: AppSpace.xs.h),
+      padding: EdgeInsets.symmetric(
+          horizontal: AppSpace.lg.w, vertical: AppSpace.lg.h),
       decoration: BoxDecoration(
         color: AppColors.cream,
-        borderRadius: BorderRadius.circular(24.r),
-        boxShadow: AppColors.softShadow(),
+        borderRadius: BorderRadius.circular(AppRadius.xl.r),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
@@ -42,15 +45,15 @@ class ExamScoreBanner extends StatelessWidget {
               children: [
                 if (name != null) ...[
                   Text(name!,
-                      style: TextStyle(
+                      style: AppTheme.font(
                           fontSize: 13.sp,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.grayText)),
-                  SizedBox(height: 10.h),
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.gray)),
+                  SizedBox(height: AppSpace.xs.h),
                 ],
                 _StatLine(
-                    label: '맞음', value: score, color: AppColors.mint),
-                SizedBox(height: 8.h),
+                    label: '맞음', value: score, color: AppColors.green),
+                SizedBox(height: AppSpace.xs.h),
                 _StatLine(label: '틀림', value: _wrong, color: AppColors.danger),
               ],
             ),
@@ -128,13 +131,13 @@ class ScoreRing extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('$percent',
-                  style: TextStyle(
-                      fontSize: (size * 0.3).sp,
-                      height: 1.0,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.ink)),
+                  style: AppTheme.tabularNumber(
+                          fontSize: (size * 0.3).sp,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.ink)
+                      .copyWith(height: 1.0)),
               Text('점',
-                  style: TextStyle(
+                  style: AppTheme.font(
                       fontSize: (size * 0.13).sp,
                       fontWeight: FontWeight.w800,
                       color: AppColors.gray)),
@@ -212,14 +215,13 @@ class _StatLine extends StatelessWidget {
         ),
         SizedBox(width: 8.w),
         Text(label,
-            style: TextStyle(
+            style: AppTheme.font(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w600,
                 color: AppColors.grayText)),
-        SizedBox(width: 8.w),
+        SizedBox(width: AppSpace.xs.w),
         Text('$value개',
-            style: TextStyle(
-                fontSize: 20.sp, fontWeight: FontWeight.w800, color: color)),
+            style: AppTheme.tabularNumber(fontSize: 19.sp, color: color)),
       ],
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../core/services/bgm_service.dart';
 import '../core/services/presence_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/theme_controller.dart';
@@ -42,6 +43,7 @@ class _MainShellState extends State<MainShell> {
     _updateStudying();
     _restoreTabAfterReload();
     _reconnectIfNeeded();
+    _startBgm();
   }
 
   /// 앱 시작(재접속) 시 진행 중인 시험이 있으면 자동으로 다시 들어간다.
@@ -119,6 +121,14 @@ class _MainShellState extends State<MainShell> {
     AppRefresh.saveCurrentTab(i); // 새로고침 후 이 탭으로 복원되도록 저장
   }
 
+  /// 로그인 후 첫 화면에 들어왔을 때 배경음악을 시작한다.
+  /// (설정에서 꺼 뒀으면 서비스가 알아서 아무것도 하지 않는다.)
+  void _startBgm() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<BgmService>().start();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // 다크 모드 토글 시 하단바·현재 탭이 즉시 다시 그려지도록 테마를 구독한다.
@@ -173,39 +183,30 @@ class _BlingBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 말해보카풍: 하단 중앙에 떠 있는 네이비 필 탭바(아이콘 전용).
-    return SafeArea(
-      top: false,
-      minimum: EdgeInsets.only(bottom: 14.h, top: 6.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: EdgeInsets.all(7.w),
-            decoration: BoxDecoration(
-              color: AppColors.navy,
-              borderRadius: BorderRadius.circular(999.r),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.navy.withValues(alpha: 0.35),
-                  blurRadius: 26,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 0; i < items.length; i++)
-                  _BarItem(
-                    icon: items[i].icon,
+    // 학습 앱 표준: 아이콘 + 글자 라벨을 함께 둔 하단 탭바.
+    // (아이콘만 있으면 무슨 탭인지 알기 어렵고 스크린리더도 읽어 주지 못한다.)
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cream,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+          child: Row(
+            children: [
+              for (var i = 0; i < items.length; i++)
+                Expanded(
+                  child: _BarItem(
+                    item: items[i],
                     selected: index == i,
                     onTap: () => onTap(i),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -213,31 +214,53 @@ class _BlingBottomBar extends StatelessWidget {
 
 class _BarItem extends StatelessWidget {
   const _BarItem({
-    required this.icon,
+    required this.item,
     required this.selected,
     required this.onTap,
   });
 
-  final IconData icon;
+  final _NavItem item;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return BouncyTap(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 56.w,
-        height: 46.h,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.mint : Colors.transparent,
-          borderRadius: BorderRadius.circular(999.r),
+    final color = selected ? AppColors.pink : AppColors.gray;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: item.label,
+      child: BouncyTap(
+        onTap: onTap,
+        child: SizedBox(
+          // 최소 터치 영역 확보.
+          height: 52.h,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 선택 표시는 색과 옅은 배경 두 가지로 준다(색만으로 구분하지 않기).
+              AnimatedContainer(
+                duration: AppMotion.fast,
+                curve: AppMotion.enter,
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 3.h),
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.pinkSoft : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppRadius.pill.r),
+                ),
+                child: Icon(item.icon, size: 22.sp, color: color),
+              ),
+              SizedBox(height: 3.h),
+              Text(
+                item.label,
+                style: AppTheme.font(
+                  fontSize: 11.sp,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
         ),
-        child: Icon(icon,
-            size: 23.sp,
-            color: selected ? Colors.white : const Color(0xFF5D6580)),
       ),
     );
   }

@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:provider/provider.dart';
 
+import '../../../core/services/bgm_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../services/call_service.dart';
 
@@ -47,10 +49,14 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
   bool _reconnecting = false;
   Timer? _resumeCheck;
 
+  /// 통화 중에는 배경음악을 멈춘다(마이크로 흘러 들어가지 않게).
+  BgmService? _bgm;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _bgm = context.read<BgmService>()..suspend();
     _init();
   }
 
@@ -132,6 +138,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _resumeCheck?.cancel();
     _service?.dispose();
+    _bgm?.resume();
     super.dispose();
   }
 

@@ -232,15 +232,6 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
           color: bg,
           border: border,
           shape: BoxShape.circle,
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: AppColors.mint.withValues(alpha: 0.35),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
         ),
         child: Text('${day.day}',
             style: TextStyle(
@@ -284,13 +275,6 @@ class HistoryEntryButton extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: AppColors.primaryButton,
                 borderRadius: BorderRadius.circular(13.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.mint.withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
               child: Icon(Icons.calendar_month_rounded,
                   color: Colors.white, size: 22.sp),
