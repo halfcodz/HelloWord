@@ -60,8 +60,18 @@ def pad(freqs, duration, amp):
     return out * envelope * amp
 
 
-def build_track(chords, melody, swing=0.0):
-    """코드 진행과 멜로디로 한 곡을 만든다. 끝은 처음으로 이어진다."""
+def build_track(chords, melody, swing=0.0, repeats=2):
+    """코드 진행과 멜로디로 한 곡을 만든다. 끝은 처음으로 이어진다.
+
+    [repeats]만큼 진행을 반복해 한 곡을 길게 만든다(너무 자주 곡이 바뀌지 않게).
+    """
+    base_bars = len(chords)
+    chords = list(chords) * repeats
+    melody = [
+        (start + r * base_bars * BAR, note, amp)
+        for r in range(repeats)
+        for (start, note, amp) in melody
+    ]
     loop_seconds = len(chords) * BAR
     total = int(SR * (loop_seconds + TAIL))
     buf = np.zeros(total)

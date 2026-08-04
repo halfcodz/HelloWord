@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/widgets/bouncy_tap.dart';
+import '../../../core/widgets/app_components.dart';
 import '../../../core/widgets/history_calendar_view.dart';
 import '../../../models/app_user.dart';
 import '../../exam/models/exam_result.dart';
@@ -59,11 +60,14 @@ Future<void> openStudyMenu(BuildContext context, WordSet set) async {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Center(
-              child: Text(set.title,
-                  style: TextStyle(
-                      fontSize: 17.sp,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.ink)),
+              child: Text(
+                set.title,
+                style: TextStyle(
+                  fontSize: 17.sp,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink,
+                ),
+              ),
             ),
             SizedBox(height: 16.h),
             _MenuTile(
@@ -110,7 +114,11 @@ Future<void> openStudyMenu(BuildContext context, WordSet set) async {
 }
 
 /// 공부 세트 커버 카드 한 장(여백 포함). 학습에서 돌아오면 onChanged로 진행률 갱신.
-Widget studySetCard(BuildContext context, WordSet set, {VoidCallback? onChanged}) {
+Widget studySetCard(
+  BuildContext context,
+  WordSet set, {
+  VoidCallback? onChanged,
+}) {
   return Padding(
     padding: EdgeInsets.only(bottom: 12.h),
     child: _StudyCard(
@@ -127,8 +135,9 @@ Widget studySetCard(BuildContext context, WordSet set, {VoidCallback? onChanged}
 Widget examResultTile(BuildContext context, ExamResult r) {
   return _ExamResultTile(
     result: r,
-    onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => ExamReviewStudyView(result: r))),
+    onTap: () => Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => ExamReviewStudyView(result: r))),
   );
 }
 
@@ -157,68 +166,155 @@ class _StudyHome extends StatelessWidget {
       stream: exam.watchResultsForGuest(uid),
       builder: (context, snap) {
         final results = snap.data ?? const <ExamResult>[];
-        final todayResults = results.where((r) => _isToday(r.createdAt)).toList();
-        final pastResults = results.where((r) => !_isToday(r.createdAt)).toList();
+        final todayResults = results
+            .where((r) => _isToday(r.createdAt))
+            .toList();
+        final pastResults = results
+            .where((r) => !_isToday(r.createdAt))
+            .toList();
 
-        final todaySets = viewModel.sets.where((s) => _isToday(s.date)).toList();
-        final pastSets = viewModel.sets.where((s) => !_isToday(s.date)).toList();
+        final todaySets = viewModel.sets
+            .where((s) => _isToday(s.date))
+            .toList();
+        final pastSets = viewModel.sets
+            .where((s) => !_isToday(s.date))
+            .toList();
 
-        // 지난 자료(단어 + 시험)를 하나의 달력으로.
+        // 지난 단어·시험을 한 목록으로 모아 기록 화면에 넘긴다.
         final pastItems = <DatedItem>[
           for (final set in pastSets)
             DatedItem(date: set.date, child: studySetCard(context, set)),
           for (final r in pastResults)
             DatedItem(
-                date: r.createdAt ?? now, child: examResultTile(context, r)),
+              date: r.createdAt ?? now,
+              child: examResultTile(context, r),
+            ),
         ];
 
-        final todayCount = todaySets.length + todayResults.length;
-        final pastCount = pastItems.length;
+        // 오늘 받은 단어 중 얼마나 외웠는지.
+        var total = 0;
+        var memorized = 0;
+        for (final set in todaySets) {
+          total += set.words.length;
+          memorized += set.words
+              .where((w) => MemorizedStore.isMemorized(w.english))
+              .length;
+        }
+        final ratio = total == 0 ? 0.0 : memorized / total;
 
         return ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
+          padding: EdgeInsets.only(bottom: kBottomInset.h),
           children: [
-            Text('무엇을 공부해 볼까요?',
-                style: TextStyle(
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.ink)),
-            SizedBox(height: 4.h),
-            Text('오늘의 자료로 공부하거나, 지난 기록을 달력에서 찾아봐요.',
-                style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
-            SizedBox(height: 18.h),
-            _BigChoiceCard(
-              emoji: '📖',
-              badge: 'TODAY',
-              title: '오늘의 공부',
-              subtitle: todayCount == 0
-                  ? '오늘 받은 자료가 아직 없어요'
-                  : '받은 단어 ${todaySets.length}개 · 시험 ${todayResults.length}개',
-              action: '공부하러 가기',
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) =>
-                    TodayStudyView(sets: todaySets, results: todayResults),
-              )),
-            ),
-            SizedBox(height: 14.h),
-            _BigChoiceCard(
-              emoji: '🗓️',
-              badge: 'HISTORY',
-              title: '지난 기록',
-              subtitle: pastCount == 0
-                  ? '아직 지난 기록이 없어요'
-                  : '달력에서 지난 단어·시험 $pastCount건 찾기',
-              action: '달력으로 보기',
-              dark: true,
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => HistoryCalendarView(
-                  title: '지난 자료',
-                  items: pastItems,
-                  emptyText: '이 날은 받은 단어나 시험이 없어요.',
+            // 오늘 진행 상황을 맨 위에 숫자와 막대로 먼저 보여 준다.
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpace.gutter.w,
+                AppSpace.sm.h,
+                AppSpace.gutter.w,
+                0,
+              ),
+              child: AppCard(
+                color: AppColors.cream.withValues(alpha: 0.78),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            total == 0 ? '오늘 받은 단어가 없어요' : '오늘 외운 단어',
+                            style: AppTheme.font(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.gray,
+                            ),
+                          ),
+                        ),
+                        if (total > 0)
+                          Text(
+                            '$memorized / $total',
+                            style: AppTheme.tabularNumber(
+                              fontSize: 16.sp,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                      ],
+                    ),
+                    SizedBox(height: AppSpace.xs.h),
+                    ProgressBar(value: ratio),
+                  ],
                 ),
-              )),
+              ),
             ),
+            SectionHeader(
+              icon: Icons.menu_book_rounded,
+              label: '오늘의 단어',
+              actionLabel: todaySets.isEmpty ? null : '모아 보기',
+              onAction: todaySets.isEmpty
+                  ? null
+                  : () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => TodayStudyView(
+                          sets: todaySets,
+                          results: todayResults,
+                        ),
+                      ),
+                    ),
+            ),
+            if (todaySets.isEmpty)
+              const EmptyState(
+                icon: Icons.menu_book_rounded,
+                text: '오늘 받은 단어가 없어요.\n언니가 자료를 올리면 여기에 바로 나와요.',
+              )
+            else
+              // 카드를 눌러 바로 공부를 시작한다(예전처럼 화면을 한 번 더 들어가지 않는다).
+              for (final set in todaySets)
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpace.md.w),
+                  child: studySetCard(context, set),
+                ),
+            if (todayResults.isNotEmpty) ...[
+              SectionHeader(icon: Icons.fact_check_rounded, label: '오늘 본 시험'),
+              for (final r in todayResults)
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpace.md.w),
+                  child: examResultTile(context, r),
+                ),
+            ],
+            SectionHeader(
+              icon: Icons.history_rounded,
+              label: '지난 기록',
+              actionLabel: pastItems.isEmpty ? null : '전체 보기',
+              onAction: pastItems.isEmpty
+                  ? null
+                  : () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => HistoryCalendarView(
+                          title: '지난 기록',
+                          items: pastItems,
+                          emptyText: '이 날은 받은 단어나 시험이 없어요.',
+                        ),
+                      ),
+                    ),
+            ),
+            if (pastItems.isEmpty)
+              const EmptyState(
+                icon: Icons.history_rounded,
+                text: '아직 지난 기록이 없어요.',
+              )
+            else
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpace.gutter.w),
+                child: Text(
+                  '지난 단어와 시험 ${pastItems.length}건이 있어요. "전체 보기"에서 날짜별로 볼 수 있어요.',
+                  style: AppTheme.font(
+                    fontSize: 13.sp,
+                    height: 1.5,
+                    color: AppColors.gray,
+                  ),
+                ),
+              ),
           ],
         );
       },
@@ -258,8 +354,7 @@ class _TodayStudyViewState extends State<TodayStudyView> {
               const _EmptySets()
             else
               for (final set in widget.sets)
-                studySetCard(context, set,
-                    onChanged: () => setState(() {})),
+                studySetCard(context, set, onChanged: () => setState(() {})),
           ],
         ),
       ),
@@ -281,11 +376,14 @@ class _SectionLabel extends StatelessWidget {
         children: [
           Text(icon, style: TextStyle(fontSize: 17.sp)),
           SizedBox(width: 7.w),
-          Text(text,
-              style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.ink)),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
+            ),
+          ),
         ],
       ),
     );
@@ -307,9 +405,11 @@ class _Hint extends StatelessWidget {
         color: AppColors.rowBg,
         borderRadius: BorderRadius.circular(16.r),
       ),
-      child: Text(text,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 13.sp, color: AppColors.gray),
+      ),
     );
   }
 }
@@ -330,12 +430,16 @@ class _EmptySets extends StatelessWidget {
         children: [
           Text('📚', style: TextStyle(fontSize: 40.sp)),
           SizedBox(height: 10.h),
-          Text('받은 단어가 아직 없어요',
-              style: TextStyle(fontSize: 15.sp, color: AppColors.ink)),
+          Text(
+            '받은 단어가 아직 없어요',
+            style: TextStyle(fontSize: 15.sp, color: AppColors.ink),
+          ),
           SizedBox(height: 6.h),
-          Text('언니가 단어를 보내주면 여기서 공부할 수 있어요!',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.sp, color: AppColors.gray)),
+          Text(
+            '언니가 단어를 보내주면 여기서 공부할 수 있어요!',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12.sp, color: AppColors.gray),
+          ),
         ],
       ),
     );
@@ -343,117 +447,6 @@ class _EmptySets extends StatelessWidget {
 }
 
 /// '오늘' / '지난'을 고르는 큰 선택 카드. dark=true면 네이비, 아니면 민트 그라디언트.
-class _BigChoiceCard extends StatelessWidget {
-  const _BigChoiceCard({
-    required this.emoji,
-    required this.badge,
-    required this.title,
-    required this.subtitle,
-    required this.action,
-    required this.onTap,
-    this.dark = false,
-  });
-
-  final String emoji;
-  final String badge;
-  final String title;
-  final String subtitle;
-  final String action;
-  final VoidCallback onTap;
-  final bool dark;
-
-  @override
-  Widget build(BuildContext context) {
-    final sub = Colors.white.withValues(alpha: 0.85);
-    return BouncyTap(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(22.w),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: dark ? AppColors.navy : null,
-          gradient: dark ? null : AppColors.primaryButton,
-          borderRadius: BorderRadius.circular(26.r),
-          boxShadow: [
-            BoxShadow(
-              color: (dark ? AppColors.navy : AppColors.mint)
-                  .withValues(alpha: dark ? 0.28 : 0.3),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -10.w,
-              bottom: -22.h,
-              child: Text(emoji,
-                  style: TextStyle(
-                      fontSize: 96.sp,
-                      color: Colors.white.withValues(alpha: 0.16))),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(999.r),
-                  ),
-                  child: Text(badge,
-                      style: TextStyle(
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.5,
-                          color: Colors.white)),
-                ),
-                SizedBox(height: 14.h),
-                Text(title,
-                    style: TextStyle(
-                        fontSize: 23.sp,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white)),
-                SizedBox(height: 4.h),
-                Text(subtitle,
-                    style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600,
-                        color: sub)),
-                SizedBox(height: 16.h),
-                Row(
-                  children: [
-                    Text(action,
-                        style: TextStyle(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white)),
-                    SizedBox(width: 6.w),
-                    Container(
-                      width: 26.w,
-                      height: 26.w,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.arrow_forward_rounded,
-                          size: 16.sp, color: Colors.white),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 지난 시험 한 줄(점수 + 틀린 개수). 누르면 틀린 것 확인·공부.
 class _ExamResultTile extends StatelessWidget {
   const _ExamResultTile({required this.result, required this.onTap});
 
@@ -485,31 +478,38 @@ class _ExamResultTile extends StatelessWidget {
                   color: pass ? AppColors.greenSoft : AppColors.dangerSoft,
                   shape: BoxShape.circle,
                 ),
-                child: Text('${result.percent}점',
-                    style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w800,
-                        color: pass ? AppColors.green : AppColors.danger)),
+                child: Text(
+                  '${result.percent}점',
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w800,
+                    color: pass ? AppColors.green : AppColors.danger,
+                  ),
+                ),
               ),
               SizedBox(width: 14.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(result.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.ink)),
+                    Text(
+                      result.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
                     SizedBox(height: 2.h),
                     Text(
-                        '${result.createdAt != null ? "${formatYmd(result.createdAt!)} · " : ""}${wrong > 0 ? "틀린 $wrong개 · 눌러서 확인·공부" : "다 맞았어요 🎉"}',
-                        style: TextStyle(
-                            fontSize: 12.sp,
-                            color:
-                                wrong > 0 ? AppColors.danger : AppColors.green)),
+                      '${result.createdAt != null ? "${formatYmd(result.createdAt!)} · " : ""}${wrong > 0 ? "틀린 $wrong개 · 눌러서 확인·공부" : "다 맞았어요 🎉"}',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: wrong > 0 ? AppColors.danger : AppColors.green,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -562,12 +562,18 @@ class _MenuTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label,
-                      style: TextStyle(fontSize: 16.sp, color: AppColors.ink)),
+                  Text(
+                    label,
+                    style: TextStyle(fontSize: 16.sp, color: AppColors.ink),
+                  ),
                   SizedBox(height: 2.h),
-                  Text(hint,
-                      style: TextStyle(
-                          fontSize: 12.sp, color: AppColors.lavender)),
+                  Text(
+                    hint,
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: AppColors.lavender,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -596,86 +602,89 @@ class _StudyCard extends StatelessWidget {
     final complete = total > 0 && done >= total;
     final progress = total == 0 ? 0.0 : done / total;
 
-    final onCard = complete ? AppColors.ink : Colors.white;
-    final subColor =
-        complete ? AppColors.gray : Colors.white.withValues(alpha: 0.85);
-
-    return BouncyTap(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(20.w),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: complete ? AppColors.cream : null,
-          gradient: complete ? null : AppColors.primaryButton,
-          borderRadius: BorderRadius.circular(26.r),
-          boxShadow: complete
-              ? AppColors.softShadow()
-              : [
-                  BoxShadow(
-                      color: AppColors.mint.withValues(alpha: 0.3),
-                      blurRadius: 22,
-                      offset: const Offset(0, 10)),
-                ],
-        ),
-        child: Stack(
+    return Padding(
+      padding: EdgeInsets.only(bottom: AppSpace.sm.h),
+      child: AppCard(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Positioned(
-              right: -12.w,
-              bottom: -18.h,
-              child: Text('📚',
-                  style: TextStyle(
-                      fontSize: 82.sp,
-                      color: Colors.white
-                          .withValues(alpha: complete ? 0.06 : 0.22))),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               children: [
-                Text(complete ? '완료' : 'STUDY',
-                    style: TextStyle(
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 2,
-                        color: subColor)),
-                SizedBox(height: 4.h),
-                Text(set.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 19.sp,
-                        fontWeight: FontWeight.w800,
-                        color: onCard)),
-                SizedBox(height: 2.h),
-                Text(complete ? '$total단어 · 다 외웠어요 🎉' : '$total단어 · 혼자 공부',
-                    style: TextStyle(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w700,
-                        color: subColor)),
-                SizedBox(height: 14.h),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4.r),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 7.h,
-                          backgroundColor: complete
-                              ? AppColors.border
-                              : Colors.white.withValues(alpha: 0.25),
-                          valueColor: AlwaysStoppedAnimation(
-                              complete ? AppColors.mint : Colors.white),
+                // 진행 상태를 아이콘 하나로 먼저 알린다.
+                Container(
+                  width: 46.w,
+                  height: 46.w,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: complete ? AppColors.greenSoft : AppColors.pinkSoft,
+                    borderRadius: BorderRadius.circular(AppRadius.sm.r),
+                  ),
+                  child: Icon(
+                    complete
+                        ? Icons.check_circle_rounded
+                        : Icons.menu_book_rounded,
+                    size: AppIconSize.md.sp,
+                    color: complete ? AppColors.green : AppColors.pink,
+                  ),
+                ),
+                SizedBox(width: AppSpace.sm.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        set.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTheme.display(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.ink,
                         ),
                       ),
-                    ),
-                    SizedBox(width: 10.w),
-                    Text('$done/$total',
-                        style: TextStyle(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w800,
-                            color: onCard)),
-                  ],
+                      SizedBox(height: AppSpace.xxs.h),
+                      Text(
+                        '${formatYmd(set.date)} · $total단어',
+                        style: AppTheme.font(
+                          fontSize: 12.sp,
+                          color: AppColors.gray,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: AppSpace.xs.w),
+                StatusChip(
+                  label: complete ? '완료' : '$done/$total',
+                  color: complete ? AppColors.green : AppColors.pink,
+                  background: complete
+                      ? AppColors.greenSoft
+                      : AppColors.pinkSoft,
+                ),
+              ],
+            ),
+            SizedBox(height: AppSpace.sm.h),
+            ProgressBar(
+              value: progress,
+              color: complete ? AppColors.green : AppColors.pink,
+            ),
+            SizedBox(height: AppSpace.xs.h),
+            Row(
+              children: [
+                Icon(
+                  Icons.play_circle_fill_rounded,
+                  size: AppIconSize.sm.sp,
+                  color: AppColors.pink,
+                ),
+                SizedBox(width: AppSpace.xxs.w),
+                Text(
+                  complete ? '다시 복습하기' : '공부 시작하기',
+                  style: AppTheme.font(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.pink,
+                  ),
                 ),
               ],
             ),
