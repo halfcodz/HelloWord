@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../theme/app_theme.dart';
+import 'app_components.dart';
 
 /// 달력에 얹을 기록 한 건(날짜 + 화면에 보여줄 카드).
 class DatedItem {
@@ -37,6 +38,13 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
   late DateTime _focused;
   late DateTime _selected;
 
+  /// 기본은 '목록(타임라인)'. 날짜를 하나씩 눌러야 하는 달력보다 한눈에 보기 편하다.
+  /// 달력이 편한 사람을 위해 오른쪽 위 버튼으로 언제든 바꿀 수 있다.
+  bool _calendarMode = false;
+
+  /// 목록에서 고른 월(연*100+월). null이면 전체 기간.
+  int? _monthFilter;
+
   DateTime _key(DateTime d) => DateTime(d.year, d.month, d.day);
 
   @override
@@ -55,124 +63,312 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          IconButton(
+            tooltip: _calendarMode ? '목록으로 보기' : '달력으로 보기',
+            icon: Icon(
+              _calendarMode
+                  ? Icons.view_agenda_rounded
+                  : Icons.calendar_month_rounded,
+            ),
+            onPressed: () => setState(() => _calendarMode = !_calendarMode),
+          ),
+          SizedBox(width: AppSpace.xxs.w),
+        ],
+      ),
+      body: SafeArea(
+        child: _calendarMode ? _buildCalendar() : _buildTimeline(),
+      ),
+    );
+  }
+
+  /// 달력 보기. 날짜를 누르면 그 날 기록만 아래에 펼쳐진다.
+  Widget _buildCalendar() {
     final now = DateTime.now();
     final dayItems = _eventsFor(_selected);
-
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body: SafeArea(
-        // 아래로 스크롤하면 달력이 위로 올라가 사라지고, 리스트가 전체화면으로.
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-              child: Container(
-                margin: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
-                padding: EdgeInsets.fromLTRB(8.w, 10.h, 8.w, 6.h),
-                decoration: BoxDecoration(
-                  color: AppColors.cream,
-                  borderRadius: BorderRadius.circular(24.r),
-                  boxShadow: AppColors.softShadow(),
-                ),
-                child: TableCalendar<DatedItem>(
-                firstDay: DateTime.utc(2023, 1, 1),
-                lastDay: DateTime.utc(now.year + 1, 12, 31),
-                focusedDay: _focused,
-                currentDay: now,
-                selectedDayPredicate: (d) => isSameDay(_selected, d),
-                startingDayOfWeek: StartingDayOfWeek.monday,
-                rowHeight: 46.h,
-                daysOfWeekHeight: 30.h,
-                availableGestures: AvailableGestures.horizontalSwipe,
-                onDaySelected: (sel, foc) => setState(() {
-                  _selected = _key(sel);
-                  _focused = foc;
-                }),
-                onPageChanged: (foc) => _focused = foc,
-                headerStyle: const HeaderStyle(
-                  formatButtonVisible: false,
-                  titleCentered: true,
-                ),
-                calendarBuilders: CalendarBuilders<DatedItem>(
-                  headerTitleBuilder: (context, day) => Center(
-                    child: Text('${day.year}년 ${day.month}월',
-                        style: TextStyle(
-                            fontSize: 17.sp,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.ink)),
-                  ),
-                  dowBuilder: (context, day) {
-                    final i = day.weekday - 1;
-                    final color = i == 6
-                        ? AppColors.danger
-                        : (i == 5 ? AppColors.mintDeep : AppColors.gray);
-                    return Center(
-                      child: Text(_dow[i],
-                          style: TextStyle(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w700,
-                              color: color)),
-                    );
-                  },
-                  defaultBuilder: (context, day, _) => _cell(day),
-                  outsideBuilder: (context, day, _) =>
-                      _cell(day, outside: true),
-                  todayBuilder: (context, day, _) => _cell(day, today: true),
-                  selectedBuilder: (context, day, _) =>
-                      _cell(day, selected: true),
-                  ),
-                ),
-              ),
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(
+          child: Container(
+            margin: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
+            padding: EdgeInsets.fromLTRB(8.w, 10.h, 8.w, 6.h),
+            decoration: BoxDecoration(
+              color: AppColors.cream,
+              borderRadius: BorderRadius.circular(24.r),
+              boxShadow: AppColors.softShadow(),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20.w, 6.h, 20.w, 8.h),
-                child: Row(
-                  children: [
-                    Text(_selectedLabel(),
-                        style: TextStyle(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.ink)),
-                    SizedBox(width: 8.w),
-                    if (dayItems.isNotEmpty)
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 9.w, vertical: 3.h),
-                        decoration: BoxDecoration(
-                          color: AppColors.blueSoft,
-                          borderRadius: BorderRadius.circular(999.r),
-                        ),
-                        child: Text('${dayItems.length}건',
-                            style: TextStyle(
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.mintDeep)),
+            child: TableCalendar<DatedItem>(
+              firstDay: DateTime.utc(2023, 1, 1),
+              lastDay: DateTime.utc(now.year + 1, 12, 31),
+              focusedDay: _focused,
+              currentDay: now,
+              selectedDayPredicate: (d) => isSameDay(_selected, d),
+              startingDayOfWeek: StartingDayOfWeek.monday,
+              rowHeight: 46.h,
+              daysOfWeekHeight: 30.h,
+              availableGestures: AvailableGestures.horizontalSwipe,
+              onDaySelected: (sel, foc) => setState(() {
+                _selected = _key(sel);
+                _focused = foc;
+              }),
+              onPageChanged: (foc) => _focused = foc,
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+              ),
+              calendarBuilders: CalendarBuilders<DatedItem>(
+                headerTitleBuilder: (context, day) => Center(
+                  child: Text(
+                    '${day.year}년 ${day.month}월',
+                    style: TextStyle(
+                      fontSize: 17.sp,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                ),
+                dowBuilder: (context, day) {
+                  final i = day.weekday - 1;
+                  final color = i == 6
+                      ? AppColors.danger
+                      : (i == 5 ? AppColors.mintDeep : AppColors.gray);
+                  return Center(
+                    child: Text(
+                      _dow[i],
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w700,
+                        color: color,
                       ),
-                  ],
-                ),
+                    ),
+                  );
+                },
+                defaultBuilder: (context, day, _) => _cell(day),
+                outsideBuilder: (context, day, _) => _cell(day, outside: true),
+                todayBuilder: (context, day, _) => _cell(day, today: true),
+                selectedBuilder: (context, day, _) =>
+                    _cell(day, selected: true),
               ),
             ),
-            if (dayItems.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Padding(
-                  padding: EdgeInsets.only(top: 48.h),
-                  child: _emptyState(),
-                ),
-              )
-            else
-              SliverPadding(
-                padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 24.h),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, i) => dayItems[i].child,
-                    childCount: dayItems.length,
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(20.w, 6.h, 20.w, 8.h),
+            child: Row(
+              children: [
+                Text(
+                  _selectedLabel(),
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
                   ),
                 ),
-              ),
-          ],
+                SizedBox(width: 8.w),
+                if (dayItems.isNotEmpty)
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 9.w,
+                      vertical: 3.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.blueSoft,
+                      borderRadius: BorderRadius.circular(999.r),
+                    ),
+                    child: Text(
+                      '${dayItems.length}건',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.mintDeep,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
+        if (dayItems.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Padding(
+              padding: EdgeInsets.only(top: 48.h),
+              child: _emptyState(),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 24.h),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, i) => dayItems[i].child,
+                childCount: dayItems.length,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// 목록(타임라인) 보기: 최근 것부터 날짜별로 묶어 쭉 보여 주고,
+  /// 위쪽 월 버튼으로 기간만 좁힌다. 날짜를 일일이 눌러 볼 필요가 없다.
+  Widget _buildTimeline() {
+    final all = [...widget.items]..sort((a, b) => b.date.compareTo(a.date));
+    final months = <int>{
+      for (final i in all) i.date.year * 100 + i.date.month,
+    }.toList()..sort((a, b) => b.compareTo(a));
+    final filtered = _monthFilter == null
+        ? all
+        : all
+              .where((i) => i.date.year * 100 + i.date.month == _monthFilter)
+              .toList();
+
+    final groups = <DateTime, List<DatedItem>>{};
+    for (final item in filtered) {
+      groups.putIfAbsent(_key(item.date), () => []).add(item);
+    }
+    final days = groups.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    final rows = <Widget>[];
+    for (final day in days) {
+      rows.add(_dayHeader(day, groups[day]!.length));
+      rows.addAll(groups[day]!.map((e) => e.child));
+      rows.add(SizedBox(height: AppSpace.xs.h));
+    }
+
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        if (months.length > 1) SliverToBoxAdapter(child: _monthChips(months)),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpace.gutter.w,
+              AppSpace.sm.h,
+              AppSpace.gutter.w,
+              AppSpace.xxs.h,
+            ),
+            child: Text(
+              filtered.isEmpty ? '기록이 없어요' : '모두 ${filtered.length}개',
+              style: AppTheme.font(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.gray,
+              ),
+            ),
+          ),
+        ),
+        if (rows.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Padding(
+              padding: EdgeInsets.only(top: AppSpace.xl.h),
+              child: EmptyState(
+                icon: Icons.history_rounded,
+                text: widget.emptyText,
+              ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpace.md.w,
+              AppSpace.xxs.h,
+              AppSpace.md.w,
+              AppSpace.xl.h,
+            ),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, i) => rows[i],
+                childCount: rows.length,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// 기간을 좁히는 월 버튼 줄.
+  Widget _monthChips(List<int> months) {
+    Widget chip(String label, int? key) {
+      final selected = _monthFilter == key;
+      return Padding(
+        padding: EdgeInsets.only(right: AppSpace.xs.w),
+        child: GestureDetector(
+          onTap: () => setState(() => _monthFilter = key),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpace.sm.w,
+              vertical: AppSpace.xs.h,
+            ),
+            decoration: BoxDecoration(
+              color: selected ? AppColors.pink : AppColors.cream,
+              borderRadius: BorderRadius.circular(AppRadius.pill.r),
+              border: Border.all(
+                color: selected ? AppColors.pink : AppColors.border,
+              ),
+            ),
+            child: Text(
+              label,
+              style: AppTheme.font(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w800,
+                color: selected ? Colors.white : AppColors.grayText,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 52.h,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.fromLTRB(
+          AppSpace.gutter.w,
+          AppSpace.xs.h,
+          AppSpace.gutter.w,
+          0,
+        ),
+        children: [
+          chip('전체', null),
+          for (final m in months) chip('${m ~/ 100}.${m % 100}', m),
+        ],
+      ),
+    );
+  }
+
+  /// 날짜 묶음 제목.
+  Widget _dayHeader(DateTime day, int count) {
+    final w = _dow[day.weekday - 1];
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpace.xxs.w,
+        AppSpace.sm.h,
+        AppSpace.xxs.w,
+        AppSpace.xs.h,
+      ),
+      child: Row(
+        children: [
+          Text(
+            '${day.month}월 ${day.day}일 ($w)',
+            style: AppTheme.display(
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w600,
+              color: AppColors.ink,
+            ),
+          ),
+          SizedBox(width: AppSpace.xs.w),
+          StatusChip(label: '$count개'),
+          SizedBox(width: AppSpace.xs.w),
+          Expanded(child: Divider(color: AppColors.border, height: 1)),
+        ],
       ),
     );
   }
@@ -189,15 +385,21 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
         children: [
           Text('🗓️', style: TextStyle(fontSize: 40.sp)),
           SizedBox(height: 10.h),
-          Text(widget.emptyText,
-              style: TextStyle(fontSize: 14.sp, color: AppColors.gray)),
+          Text(
+            widget.emptyText,
+            style: TextStyle(fontSize: 14.sp, color: AppColors.gray),
+          ),
         ],
       ),
     );
   }
 
-  Widget _cell(DateTime day,
-      {bool selected = false, bool today = false, bool outside = false}) {
+  Widget _cell(
+    DateTime day, {
+    bool selected = false,
+    bool today = false,
+    bool outside = false,
+  }) {
     final hasEvents = !outside && _eventsFor(day).isNotEmpty;
 
     // 우선순위: 선택일(민트) > 오늘(네이비 링) > 기록 있는 날(연민트) > 일반.
@@ -233,9 +435,10 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
           border: border,
           shape: BoxShape.circle,
         ),
-        child: Text('${day.day}',
-            style: TextStyle(
-                fontSize: 14.sp, fontWeight: weight, color: fg)),
+        child: Text(
+          '${day.day}',
+          style: TextStyle(fontSize: 14.sp, fontWeight: weight, color: fg),
+        ),
       ),
     );
   }
@@ -276,23 +479,30 @@ class HistoryEntryButton extends StatelessWidget {
                 gradient: AppColors.primaryButton,
                 borderRadius: BorderRadius.circular(13.r),
               ),
-              child: Icon(Icons.calendar_month_rounded,
-                  color: Colors.white, size: 22.sp),
+              child: Icon(
+                Icons.calendar_month_rounded,
+                color: Colors.white,
+                size: 22.sp,
+              ),
             ),
             SizedBox(width: 14.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.ink)),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                    ),
+                  ),
                   SizedBox(height: 2.h),
-                  Text('달력에서 지난 기록 $count건 보기',
-                      style:
-                          TextStyle(fontSize: 12.sp, color: AppColors.gray)),
+                  Text(
+                    '달력에서 지난 기록 $count건 보기',
+                    style: TextStyle(fontSize: 12.sp, color: AppColors.gray),
+                  ),
                 ],
               ),
             ),

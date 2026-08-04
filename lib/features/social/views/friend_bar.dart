@@ -43,13 +43,9 @@ class _FriendBarBody extends StatelessWidget {
   }
 
   /// 언니는 '동생', 동생은 '웅니'를 초대한다.
-  String get _inviteTargetLabel =>
-      me.role == UserRole.elder ? '동생' : '웅니';
+  String get _inviteTargetLabel => me.role == UserRole.elder ? '동생' : '웅니';
 
-  Future<void> _invite(
-    BuildContext context,
-    FriendsViewModel viewModel,
-  ) async {
+  Future<void> _invite(BuildContext context, FriendsViewModel viewModel) async {
     final controller = TextEditingController();
     final email = await showDialog<String>(
       context: context,
@@ -90,8 +86,7 @@ class _FriendBarBody extends StatelessWidget {
       FriendAddResult.self => '내 이메일은 초대할 수 없어요.',
       FriendAddResult.alreadyFriend => '이미 친구예요!',
       FriendAddResult.alreadyPending => '이미 초대장을 보냈어요.',
-      FriendAddResult.error =>
-        '초대 저장에 실패했어요. (friendInvites 규칙 확인)',
+      FriendAddResult.error => '초대 저장에 실패했어요. (friendInvites 규칙 확인)',
     };
     showToast(context, message, isError: result != FriendAddResult.success);
   }
@@ -141,6 +136,8 @@ class _AddFriendButton extends StatelessWidget {
     return SizedBox(
       width: 64.w,
       child: Column(
+        // 라벨이 두 줄로 접히면 칸 높이를 넘겨 잘리므로 한 줄로 고정한다.
+        mainAxisSize: MainAxisSize.min,
         children: [
           GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -156,8 +153,16 @@ class _AddFriendButton extends StatelessWidget {
             ),
           ),
           SizedBox(height: 4.h),
-          Text(label,
-              style: TextStyle(fontSize: 11.sp, color: AppColors.hint)),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTheme.font(
+              fontSize: 11.sp,
+              height: 1.1,
+              color: AppColors.hint,
+            ),
+          ),
         ],
       ),
     );
