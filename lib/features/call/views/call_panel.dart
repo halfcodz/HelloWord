@@ -36,6 +36,10 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
   bool _micOn = true;
   bool _restarting = false;
 
+  /// 상대 영상을 꽉 채워(잘라서) 볼지 여부.
+  /// 기본은 false(전체 보기) — 잘라서 보면 세로 영상이 눈만 보이게 잘린다.
+  bool _fillRemote = false;
+
   /// 한 번이라도 연결된 적이 있는지(앱 복귀 후 완전 재연결 판단에 사용).
   bool _everConnected = false;
 
@@ -133,11 +137,16 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    // 높이 0이면(키보드가 열려 접힌 상태) 여백까지 없애 화면을 완전히 비워 준다.
+    final height = widget.height ?? 200.h;
+    final collapsed = height <= 0;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
-      height: widget.height ?? 200.h,
-      margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+      height: height,
+      margin: collapsed
+          ? EdgeInsets.zero
+          : EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.navy,
@@ -189,10 +198,14 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
     return Stack(
       children: [
         // 원격(상대) 영상 - 크게.
+        // 기본은 '전체 보기'(Contain). 잘라서 채우면 세로로 찍힌 상대 영상이
+        // 가로로 긴 패널에 맞춰 크게 잘려 얼굴이 눈만 보이게 된다.
         Positioned.fill(
           child: RTCVideoView(
             service.remoteRenderer,
-            objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+            objectFit: _fillRemote
+                ? RTCVideoViewObjectFit.RTCVideoViewObjectFitCover
+                : RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
             placeholderBuilder: (_) => Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -271,6 +284,14 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
                   setState(() => _micOn = !_micOn);
                   service.toggleMic(_micOn);
                 },
+              ),
+              SizedBox(width: 16.w),
+              // 상대 영상을 '전체 보기 ↔ 꽉 채우기'로 바꾼다.
+              _CircleButton(
+                icon: _fillRemote
+                    ? Icons.fullscreen_exit_rounded
+                    : Icons.fullscreen_rounded,
+                onTap: () => setState(() => _fillRemote = !_fillRemote),
               ),
             ],
           ),

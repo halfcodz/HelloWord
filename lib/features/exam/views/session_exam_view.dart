@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -113,8 +115,10 @@ class _ExamBodyState extends State<_ExamBody> {
       ),
     );
     if (ok == true) {
-      await vm.endSession();
+      // 정리(답안·세션 삭제)를 기다리지 않고 곧바로 화면을 닫는다.
+      final closing = vm.endSession();
       if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+      unawaited(closing.catchError((Object _) {}));
     }
   }
 
@@ -176,10 +180,10 @@ class _ExamBodyState extends State<_ExamBody> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // 키보드가 열리면 영상을 작게 줄여 문제·입력칸이 잘 보이게 한다.
+    // 답을 쓰는 동안에는(키보드가 열리면) 영상을 접어 문제·입력칸에 화면을 다 준다.
+    // 통화는 그대로 유지되고, 키보드를 내리면 다시 펼쳐진다.
     final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
-    final callHeight =
-        (!vm.isFinished && keyboardOpen) ? 84.h : 190.h;
+    final callHeight = (!vm.isFinished && keyboardOpen) ? 0.0 : 260.h;
 
     // 바깥(입력칸 밖)을 터치하면 키보드를 내린다.
     return GestureDetector(
@@ -197,14 +201,14 @@ class _ExamBodyState extends State<_ExamBody> {
           Expanded(
             child: vm.isFinished
                 ? _buildFinished(vm, session)
-                : _buildActive(vm, session),
+                : _buildActive(vm, keyboardOpen),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActive(SessionExamViewModel vm, ExamSession session) {
+  Widget _buildActive(SessionExamViewModel vm, bool keyboardOpen) {
     _syncField(vm);
     final word = vm.currentWord;
     if (word == null) {
@@ -239,8 +243,8 @@ class _ExamBodyState extends State<_ExamBody> {
                 SizedBox(height: 12.h),
                 Container(
                   width: double.infinity,
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 20.w, vertical: keyboardOpen ? 16.h : 24.h),
                   decoration: BoxDecoration(
                     color: AppColors.cream,
                     borderRadius: BorderRadius.circular(20.r),
@@ -272,6 +276,7 @@ class _ExamBodyState extends State<_ExamBody> {
         _InputBar(
           controller: _answerController,
           hintText: word.quizInputHint,
+          compact: keyboardOpen,
           canPrev: vm.currentIndex > 0,
           isLast: isLast,
           onPrev: () => _goPrev(vm),
@@ -324,6 +329,7 @@ class _InputBar extends StatelessWidget {
     required this.hintText,
     required this.canPrev,
     required this.isLast,
+    required this.compact,
     required this.onPrev,
     required this.onNext,
     required this.onTyped,
@@ -334,6 +340,9 @@ class _InputBar extends StatelessWidget {
   final String hintText;
   final bool canPrev;
   final bool isLast;
+
+  /// 키보드가 열려 있을 때는 여백을 줄여 문제를 더 많이 보여준다.
+  final bool compact;
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final ValueChanged<String> onTyped;
@@ -349,7 +358,8 @@ class _InputBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 18.h),
+          padding: EdgeInsets.fromLTRB(
+              14.w, compact ? 8.h : 12.h, 14.w, compact ? 10.h : 18.h),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -367,14 +377,15 @@ class _InputBar extends StatelessWidget {
                 onChanged: onTyped,
                 onSubmitted: (_) => onSubmitted(),
               ),
-              SizedBox(height: 10.h),
+              SizedBox(height: compact ? 8.h : 10.h),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
                       onPressed: canPrev ? onPrev : null,
                       style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 11.h),
+                        padding: EdgeInsets.symmetric(
+                            vertical: compact ? 9.h : 11.h),
                         side: BorderSide(color: AppColors.border),
                         foregroundColor: AppColors.grayText,
                       ),
@@ -386,7 +397,8 @@ class _InputBar extends StatelessWidget {
                     child: FilledButton(
                       onPressed: isLast ? null : onNext,
                       style: FilledButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 11.h),
+                        padding: EdgeInsets.symmetric(
+                            vertical: compact ? 9.h : 11.h),
                       ),
                       child: const Text('다음 →'),
                     ),

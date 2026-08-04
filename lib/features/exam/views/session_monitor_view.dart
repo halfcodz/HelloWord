@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -59,11 +61,12 @@ class _MonitorBody extends StatelessWidget {
       ),
     );
     if (confirmed == true && context.mounted) {
-      await viewModel.closeSession();
+      // 세션·답안 삭제를 기다리면 그동안 답안이 하나씩 지워지며
+      // 점수·개수 숫자가 줄어드는 화면이 잠깐 보인다. 화면을 먼저 닫고 뒤에서 정리한다.
+      final closing = viewModel.closeSession();
       // popUntil은 idempotent라 세션 삭제 자동 이동과 겹쳐도 루트까지만 이동한다.
-      if (context.mounted) {
-        Navigator.of(context).popUntil((r) => r.isFirst);
-      }
+      Navigator.of(context).popUntil((r) => r.isFirst);
+      unawaited(closing.catchError((Object _) {}));
     }
   }
 
