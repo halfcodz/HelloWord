@@ -1,11 +1,12 @@
-"""assets/audio/bgm.mp3 를 만드는 스크립트.
+"""assets/audio/ 안의 배경음악·효과음을 만드는 스크립트.
 
-외부 음원을 쓰지 않고 직접 합성한다(저작권 문제 없음).
-잔잔한 벨 소리 아르페지오 + 아주 옅은 패드로 이루어진 16초짜리 루프이며,
-꼬리가 앞으로 이어지도록 겹쳐서 반복 재생해도 이음매가 들리지 않는다.
+저작권 있는 음원(게임 BGM 등)을 가져다 쓰지 않고 전부 직접 합성한다.
+- bgm_1.mp3 ~ bgm_4.mp3 : 잔잔한 마림바/비브라폰 + 포근한 패드.
+  마을 같은 분위기로 서로 다른 조성·진행을 써서 이어 들어도 지루하지 않다.
+- tap.mp3 : 버튼을 눌렀을 때 나는 아주 짧고 부드러운 '톡' 소리.
 
 사용법:
-    python3 tool/generate_bgm.py          # WAV 생성 후 ffmpeg로 mp3 변환
+    python3 tool/generate_bgm.py
 """
 
 import math
@@ -15,126 +16,176 @@ import wave
 
 import numpy as np
 
-SR = 44100          # 샘플레이트
-LOOP_SECONDS = 16.0  # 한 바퀴 길이(코드 4개 × 4초)
+SR = 44100
 OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "assets", "audio")
 
 # 음 이름 → 주파수(A4=440 기준).
 NOTES = {
-    "C3": 130.81, "E3": 164.81, "F3": 174.61, "G3": 196.00, "A3": 220.00,
+    "C3": 130.81, "D3": 146.83, "E3": 164.81, "F3": 174.61, "G3": 196.00,
+    "A3": 220.00, "B3": 246.94,
     "C4": 261.63, "D4": 293.66, "E4": 329.63, "F4": 349.23, "G4": 392.00,
-    "A4": 440.00, "C5": 523.25, "D5": 587.33, "E5": 659.25, "G5": 783.99,
+    "A4": 440.00, "B4": 493.88,
+    "C5": 523.25, "D5": 587.33, "E5": 659.25, "F5": 698.46, "G5": 783.99,
+    "A5": 880.00,
 }
 
-# 코드 진행: C - Am - F - G (따뜻하고 익숙한 진행)
-CHORDS = [
-    ("C3", "E3", "G3"),
-    ("A3", "C4", "E4"),
-    ("F3", "A3", "C4"),
-    ("G3", "C4", "E4"),
-]
-
-# 마디마다 흐르는 멜로디(펜타토닉이라 어떤 순서로 겹쳐도 부딪히지 않는다).
-MELODY = [
-    # (시작 초, 음, 세기)
-    (0.0, "C5", 0.9), (0.75, "E5", 0.7), (1.5, "G4", 0.6), (2.5, "D5", 0.55),
-    (4.0, "A4", 0.9), (4.75, "C5", 0.7), (5.5, "E5", 0.6), (6.5, "G4", 0.55),
-    (8.0, "F4", 0.9), (8.75, "A4", 0.7), (9.5, "C5", 0.6), (10.5, "E5", 0.55),
-    (12.0, "G4", 0.9), (12.75, "D5", 0.7), (13.5, "E5", 0.6), (14.5, "C5", 0.5),
-]
-
-# 꼬리가 다음 바퀴 앞부분으로 넘어가도 되도록 뒤에 여유를 두고 만든 뒤 접는다.
-TAIL_SECONDS = 3.0
+BAR = 4.0          # 한 마디 길이(초)
+TAIL = 3.0         # 마지막 음의 여운. 앞으로 접어 이음매를 없앤다.
 
 
-def bell(freq, duration, amp):
-    """벨/마림바 느낌의 한 음. 배음 몇 개 + 지수 감쇠."""
+def bell(freq, duration, amp, decay=2.2, detune=0.0):
+    """마림바/비브라폰 느낌의 한 음."""
     n = int(SR * duration)
     t = np.arange(n) / SR
-    # 배음 구성: 기음이 크고 위로 갈수록 빠르게 작아진다.
+    f = freq * (1.0 + detune)
     wave_data = (
-        np.sin(2 * math.pi * freq * t)
-        + 0.38 * np.sin(2 * math.pi * freq * 2 * t)
-        + 0.12 * np.sin(2 * math.pi * freq * 3.01 * t)
+        np.sin(2 * math.pi * f * t)
+        + 0.34 * np.sin(2 * math.pi * f * 2 * t)
+        + 0.10 * np.sin(2 * math.pi * f * 3.01 * t)
+        + 0.05 * np.sin(2 * math.pi * f * 4.02 * t)
     )
-    # 어택은 짧게(딱딱하지 않게 5ms), 릴리즈는 길게.
-    attack = np.clip(t / 0.005, 0, 1)
-    decay = np.exp(-t * 2.2)
-    return wave_data * attack * decay * amp
+    attack = np.clip(t / 0.006, 0, 1)
+    return wave_data * attack * np.exp(-t * decay) * amp
 
 
-def pad(freqs, start, duration, amp):
-    """코드를 아주 여리게 깔아 주는 패드. 부드럽게 들어오고 나간다."""
+def pad(freqs, duration, amp):
+    """코드를 여리게 깔아 주는 패드. 양 끝이 0이라 이어 붙여도 안 튄다."""
     n = int(SR * duration)
     t = np.arange(n) / SR
     out = np.zeros(n)
     for i, f in enumerate(freqs):
-        # 살짝 디튠해 두께감을 준다.
-        detune = 1.0 + (i - 1) * 0.0007
-        out += np.sin(2 * math.pi * f * detune * t) * (1.0 / len(freqs))
-    # 사인 모양 엔벨로프(양 끝이 0이라 이음매가 안 들린다).
+        detune = 1.0 + (i - 1) * 0.0006
+        out += np.sin(2 * math.pi * f * detune * t) / len(freqs)
     envelope = np.sin(np.pi * np.clip(t / duration, 0, 1)) ** 1.5
     return out * envelope * amp
 
 
-def build():
-    total = int(SR * (LOOP_SECONDS + TAIL_SECONDS))
+def build_track(chords, melody, swing=0.0):
+    """코드 진행과 멜로디로 한 곡을 만든다. 끝은 처음으로 이어진다."""
+    loop_seconds = len(chords) * BAR
+    total = int(SR * (loop_seconds + TAIL))
     buf = np.zeros(total)
 
-    # 1) 패드(코드) — 마디마다 4초씩, 살짝 겹치게.
-    for i, chord in enumerate(CHORDS):
-        start = i * 4.0
-        freqs = [NOTES[n] for n in chord]
-        seg = pad(freqs, start, 4.6, amp=0.16)
-        s = int(SR * start)
-        buf[s:s + len(seg)] += seg[:max(0, total - s)]
-
-    # 2) 멜로디(벨).
-    for start, note, amp in MELODY:
-        seg = bell(NOTES[note], 2.6, amp * 0.28)
-        s = int(SR * start)
+    for i, chord in enumerate(chords):
+        seg = pad([NOTES[n] for n in chord], BAR + 0.6, amp=0.15)
+        s = int(SR * i * BAR)
         end = min(total, s + len(seg))
-        buf[s:end] += seg[:end - s]
+        buf[s:end] += seg[: end - s]
 
-    # 3) 꼬리를 앞으로 접어 넣어 이음매 없는 루프로 만든다.
-    loop_len = int(SR * LOOP_SECONDS)
+    for start, note, amp in melody:
+        # 살짝 어긋난 타이밍(스윙)으로 기계 느낌을 뺀다.
+        offset = swing if int(start * 2) % 2 else 0.0
+        seg = bell(NOTES[note], 2.8, amp * 0.26)
+        s = int(SR * (start + offset))
+        end = min(total, s + len(seg))
+        if s < total:
+            buf[s:end] += seg[: end - s]
+
+    loop_len = int(SR * loop_seconds)
     tail = buf[loop_len:]
     loop = buf[:loop_len].copy()
-    loop[:len(tail)] += tail
+    loop[: len(tail)] += tail
 
-    # 4) 아주 살짝 로우패스(부드럽게) + 노멀라이즈.
-    kernel = np.ones(24) / 24
-    loop = np.convolve(loop, kernel, mode="same")
+    loop = np.convolve(loop, np.ones(24) / 24, mode="same")
     peak = np.max(np.abs(loop))
     if peak > 0:
-        loop = loop / peak * 0.5  # -6 dBFS 정도. 배경음악이라 여유 있게.
+        loop = loop / peak * 0.5
     return loop
 
 
-def main():
-    os.makedirs(OUT_DIR, exist_ok=True)
-    loop = build()
-    pcm = (loop * 32767).astype("<i2")
+# ── 곡 4개. 조성과 진행을 달리해 이어 들어도 물리지 않게. ──────────────
+TRACKS = {
+    # 1) 포근한 아침 (C - Am - F - G)
+    "bgm_1": dict(
+        chords=[("C3", "E3", "G3"), ("A3", "C4", "E4"),
+                ("F3", "A3", "C4"), ("G3", "B3", "D4")],
+        melody=[(0.0, "C5", .9), (0.75, "E5", .7), (1.5, "G4", .6), (2.5, "D5", .55),
+                (4.0, "A4", .9), (4.75, "C5", .7), (5.5, "E5", .6), (6.5, "G4", .55),
+                (8.0, "F4", .9), (8.75, "A4", .7), (9.5, "C5", .6), (10.5, "E5", .55),
+                (12.0, "G4", .9), (12.75, "D5", .7), (13.5, "E5", .6), (14.5, "C5", .5)],
+        swing=0.02,
+    ),
+    # 2) 산책 (F - C - G - Am)
+    "bgm_2": dict(
+        chords=[("F3", "A3", "C4"), ("C3", "E3", "G3"),
+                ("G3", "B3", "D4"), ("A3", "C4", "E4")],
+        melody=[(0.0, "A4", .85), (1.0, "C5", .65), (2.0, "F5", .6), (3.0, "C5", .5),
+                (4.0, "G4", .85), (1.0 + 4, "E5", .65), (6.0, "C5", .6), (7.0, "G4", .5),
+                (8.0, "B4", .85), (9.0, "D5", .65), (10.0, "G5", .6), (11.0, "D5", .5),
+                (12.0, "A4", .85), (13.0, "E5", .65), (14.0, "C5", .6), (15.0, "A4", .5)],
+        swing=0.03,
+    ),
+    # 3) 오후의 낮잠 (Dm - G - C - Am)
+    "bgm_3": dict(
+        chords=[("D3", "F3", "A3"), ("G3", "B3", "D4"),
+                ("C3", "E3", "G3"), ("A3", "C4", "E4")],
+        melody=[(0.0, "D5", .8), (1.25, "F5", .6), (2.5, "A4", .55),
+                (4.0, "B4", .8), (5.25, "D5", .6), (6.5, "G4", .55),
+                (8.0, "E5", .8), (9.25, "C5", .6), (10.5, "G4", .55),
+                (12.0, "C5", .8), (13.25, "A4", .6), (14.5, "E5", .5)],
+        swing=0.025,
+    ),
+    # 4) 별 보는 밤 (Am - F - C - G)
+    "bgm_4": dict(
+        chords=[("A3", "C4", "E4"), ("F3", "A3", "C4"),
+                ("C3", "E3", "G3"), ("G3", "B3", "D4")],
+        melody=[(0.0, "A4", .8), (1.5, "E5", .6), (3.0, "C5", .5),
+                (4.0, "F4", .8), (5.5, "C5", .6), (7.0, "A4", .5),
+                (8.0, "G4", .8), (9.5, "E5", .6), (11.0, "C5", .5),
+                (12.0, "D5", .8), (13.5, "B4", .6), (15.0, "G4", .5)],
+        swing=0.02,
+    ),
+}
 
-    wav_path = os.path.join(OUT_DIR, "bgm.wav")
+
+def tap_sound():
+    """버튼 누를 때 나는 짧고 부드러운 '톡'. 귀에 거슬리지 않게 아주 짧다."""
+    dur = 0.09
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    # 높은 음에서 살짝 떨어지는 짧은 톤 + 아주 여린 배음.
+    freq = 1250 * np.exp(-t * 9)
+    phase = 2 * math.pi * np.cumsum(freq) / SR
+    wave_data = np.sin(phase) + 0.25 * np.sin(2 * phase)
+    envelope = np.exp(-t * 42) * np.clip(t / 0.002, 0, 1)
+    out = wave_data * envelope
+    peak = np.max(np.abs(out))
+    if peak > 0:
+        out = out / peak * 0.45
+    return out
+
+
+def write_mp3(name, samples, bitrate="96k"):
+    os.makedirs(OUT_DIR, exist_ok=True)
+    wav_path = os.path.join(OUT_DIR, f"{name}.wav")
+    mp3_path = os.path.join(OUT_DIR, f"{name}.mp3")
+    pcm = (samples * 32767).astype("<i2")
     with wave.open(wav_path, "w") as f:
         f.setnchannels(1)
         f.setsampwidth(2)
         f.setframerate(SR)
         f.writeframes(pcm.tobytes())
-    print("wrote", wav_path)
-
-    mp3_path = os.path.join(OUT_DIR, "bgm.mp3")
     subprocess.run(
         ["ffmpeg", "-y", "-i", wav_path, "-codec:a", "libmp3lame",
-         "-b:a", "96k", "-ar", "44100", "-ac", "1", mp3_path],
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+         "-b:a", bitrate, "-ar", str(SR), "-ac", "1", mp3_path],
+        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
     os.remove(wav_path)
     size = os.path.getsize(mp3_path) / 1024
-    print(f"wrote {mp3_path} ({size:.0f} KB)")
+    print(f"wrote {os.path.basename(mp3_path)} ({size:.0f} KB)")
+
+
+def main():
+    for name, spec in TRACKS.items():
+        write_mp3(name, build_track(**spec))
+    # 효과음은 아주 짧으니 음질을 조금 더 준다.
+    write_mp3("tap", tap_sound(), bitrate="128k")
+
+    # 예전 단일 파일은 더 이상 쓰지 않는다.
+    old = os.path.join(OUT_DIR, "bgm.mp3")
+    if os.path.exists(old):
+        os.remove(old)
+        print("removed old bgm.mp3")
 
 
 if __name__ == "__main__":

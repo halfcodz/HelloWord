@@ -1,4 +1,6 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,12 +9,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// - 켬/끔은 기기에 저장돼 다음 실행에도 이어진다.
 /// - 앱을 내리면 자동으로 멈추고, 돌아오면 다시 켠다.
 /// - 영상통화(시험)처럼 소리가 겹치면 안 되는 화면에서는 [suspend]로 잠시 멈춘다.
-/// - 음원은 `assets/audio/bgm.mp3` (tool/generate_bgm.py로 직접 합성한 16초 루프).
+/// - 음원은 `assets/audio/bgm_1~4.mp3`. 한 곡이 끝나면 다음 곡으로 넘어가고,
+///   마지막 곡 다음에는 다시 첫 곡으로 돌아가 계속 이어진다.
+///   (게임 BGM 등 저작권 있는 음원 대신 tool/generate_bgm.py로 직접 합성한 곡)
 class BgmService extends ChangeNotifier with WidgetsBindingObserver {
   BgmService._(this._enabled);
 
   static const _prefKey = 'bgm_enabled';
-  static const _asset = 'audio/bgm.mp3';
+
+  /// 이어서 트는 곡 목록.
+  static const _playlist = [
+    'audio/bgm_1.mp3',
+    'audio/bgm_2.mp3',
+    'audio/bgm_3.mp3',
+    'audio/bgm_4.mp3',
+  ];
 
   /// 배경음악이라 존재감이 없을 만큼 작게 튼다.
   static const double _volume = 0.22;
@@ -28,6 +39,12 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
   /// 겹쳐 쓸 수 있도록 '멈춰 달라'는 요청 수를 센다.
   int _suspendCount = 0;
   bool get isSuspended => _suspendCount > 0;
+
+  /// 지금 트는 곡 번호.
+  int _track = 0;
+
+  /// 곡이 끝나면 다음 곡으로 넘기는 구독.
+  StreamSubscription<void>? _completeSub;
 
   /// 소리를 낼 수 없는 환경(웹 자동재생 차단 등)인지.
   bool _unavailable = false;
@@ -88,12 +105,17 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _sync() async {
     try {
       if (_shouldPlay) {
-        await _player.setReleaseMode(ReleaseMode.loop);
+        // 한 곡이 끝나면 자동으로 다음 곡을 잇는다.
+        _completeSub ??= _player.onPlayerComplete.listen((_) => _playNext());
+        await _player.setReleaseMode(ReleaseMode.stop);
         await _player.setVolume(_volume);
         if (_player.state == PlayerState.paused) {
           await _player.resume();
-        } else {
-          await _player.play(AssetSource(_asset), volume: _volume);
+        } else if (_player.state != PlayerState.playing) {
+          await _player.play(
+            AssetSource(_playlist[_track]),
+            volume: _volume,
+          );
         }
       } else {
         if (_player.state == PlayerState.playing) {
@@ -105,6 +127,17 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
       debugPrint('BGM 재생 실패: $e');
       _unavailable = true;
       notifyListeners();
+    }
+  }
+
+  /// 다음 곡으로 넘어간다. 마지막 곡 다음은 다시 첫 곡.
+  Future<void> _playNext() async {
+    if (!_shouldPlay) return;
+    _track = (_track + 1) % _playlist.length;
+    try {
+      await _player.play(AssetSource(_playlist[_track]), volume: _volume);
+    } catch (e) {
+      debugPrint('BGM 다음 곡 재생 실패: $e');
     }
   }
 
@@ -121,6 +154,7 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _completeSub?.cancel();
     _player.dispose();
     super.dispose();
   }

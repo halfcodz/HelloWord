@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/sfx_service.dart';
 import '../theme/app_theme.dart';
 
 /// 누르면 살짝 작아졌다 통통 돌아오는 탭 애니메이션 래퍼.
@@ -36,7 +37,13 @@ class _BouncyTapState extends State<BouncyTap> {
       onTapDown: (_) => _setPressed(true),
       onTapUp: (_) => _setPressed(false),
       onTapCancel: () => _setPressed(false),
-      onTap: widget.onTap,
+      onTap: widget.onTap == null
+          ? null
+          : () {
+              // 누르는 느낌을 소리로도 준다(설정에서 끌 수 있음).
+              SfxService.tap();
+              widget.onTap!();
+            },
       child: AnimatedScale(
         scale: _pressed ? widget.scale : 1.0,
         duration: AppMotion.fast,

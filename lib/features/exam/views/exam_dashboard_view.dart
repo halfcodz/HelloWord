@@ -121,14 +121,8 @@ class ExamDashboardView extends StatelessWidget {
     final exam = _exam(context);
     final today = DateTime.now();
 
+    // 시험 배정은 '오늘 시험' 섹션 안에서 하므로 떠 있는 버튼은 두지 않는다.
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        // 같은 화면 묶음(IndexedStack)에 FAB이 여러 개라 태그를 구분해 준다.
-        heroTag: 'fab-assign-exam',
-        onPressed: () => _assignExam(context),
-        icon: const Icon(Icons.event_note_rounded),
-        label: const Text('시험 배정'),
-      ),
       // 헤더가 상태바 뒤까지 색을 채우도록 위쪽 SafeArea는 헤더가 직접 처리한다.
       body: LayoutBuilder(
         builder: (context, constraints) => SingleChildScrollView(
@@ -141,11 +135,9 @@ class ExamDashboardView extends StatelessWidget {
               stream: exam.watchPlansByHost(user.uid),
               builder: (context, planSnap) {
                 final allPlans = planSnap.data ?? const <ExamPlan>[];
+                // 시험은 당일에 올려서 바로 보는 방식이라 '오늘 것'만 본다.
                 final todayPlans = allPlans
                     .where((p) => !p.done && _isToday(p.scheduledDate))
-                    .toList();
-                final upcoming = allPlans
-                    .where((p) => !p.done && p.dDay(today) > 0)
                     .toList();
 
                 return StreamBuilder<List<ExamResult>>(
@@ -162,7 +154,8 @@ class ExamDashboardView extends StatelessWidget {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _header(context, todayPlans, upcoming, results),
+                        _header(context, todayPlans, results),
+                        const QuoteCard(),
                         SizedBox(height: AppSpace.md.h),
                         FriendBar(me: user),
                         SectionHeader(
@@ -187,29 +180,6 @@ class ExamDashboardView extends StatelessWidget {
                               today: today,
                               onTap: () => _planMenu(context, plan),
                             ),
-                        if (upcoming.isNotEmpty) ...[
-                          SectionHeader(
-                            icon: Icons.upcoming_rounded,
-                            label: '다가오는 시험',
-                          ),
-                          SizedBox(
-                            height: 104.h,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: AppSpace.gutter.w,
-                              ),
-                              itemCount: upcoming.length,
-                              separatorBuilder: (_, _) =>
-                                  SizedBox(width: AppSpace.sm.w),
-                              itemBuilder: (context, i) => _UpcomingCard(
-                                plan: upcoming[i],
-                                today: today,
-                                onTap: () => _planMenu(context, upcoming[i]),
-                              ),
-                            ),
-                          ),
-                        ],
                         SectionHeader(
                           icon: Icons.fact_check_rounded,
                           label: '시험 결과',
@@ -274,7 +244,7 @@ class ExamDashboardView extends StatelessWidget {
                             ),
                           ),
                         ),
-                        SizedBox(height: 92.h),
+                        SizedBox(height: kBottomInset.h),
                       ],
                     );
                   },
@@ -291,20 +261,15 @@ class ExamDashboardView extends StatelessWidget {
   Widget _header(
     BuildContext context,
     List<ExamPlan> todayPlans,
-    List<ExamPlan> upcoming,
     List<ExamResult> results,
   ) {
-    final average = results.isEmpty
-        ? '-'
-        : '${(results.map((r) => r.total == 0 ? 0.0 : r.score / r.total * 100).reduce((a, b) => a + b) / results.length).round()}점';
+    final todayResults = results.where((r) => _isToday(r.createdAt)).length;
     return SafeArea(
       bottom: false,
       child: HeroHeader(
         subtitle: _dateLabel(),
         title: '${user.name}, 안녕! 🐰',
-        badge: todayPlans.isEmpty
-            ? '오늘은 예정된 시험이 없어요'
-            : '오늘 시험 ${todayPlans.length}개가 있어요',
+        badge: todayPlans.isEmpty ? null : '오늘 시험 ${todayPlans.length}개가 있어요',
         stats: [
           HeroStat(
             icon: Icons.today_rounded,
@@ -312,14 +277,14 @@ class ExamDashboardView extends StatelessWidget {
             label: '오늘 시험',
           ),
           HeroStat(
-            icon: Icons.calendar_month_rounded,
-            value: '${upcoming.length}',
-            label: '예정된 시험',
+            icon: Icons.fact_check_rounded,
+            value: '$todayResults',
+            label: '오늘 채점',
           ),
           HeroStat(
-            icon: Icons.emoji_events_rounded,
-            value: average,
-            label: '평균 점수',
+            icon: Icons.style_rounded,
+            value: '${results.length}',
+            label: '전체 시험',
           ),
         ],
       ),
@@ -472,58 +437,6 @@ class _PlanCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 다가오는 시험을 가로로 넘겨 보는 작은 카드.
-class _UpcomingCard extends StatelessWidget {
-  const _UpcomingCard({
-    required this.plan,
-    required this.today,
-    required this.onTap,
-  });
-
-  final ExamPlan plan;
-  final DateTime today;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final d = plan.dDay(today);
-    return SizedBox(
-      width: 168.w,
-      child: AppCard(
-        onTap: onTap,
-        padding: EdgeInsets.all(AppSpace.sm.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            StatusChip(
-              label: 'D-$d',
-              color: AppColors.gold,
-              background: AppColors.goldSoft,
-            ),
-            Text(
-              plan.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTheme.display(
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w600,
-                color: AppColors.ink,
-              ),
-            ),
-            Text(
-              '${formatYmd(plan.scheduledDate)} · ${plan.wordCount}단어',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTheme.font(fontSize: 11.sp, color: AppColors.gray),
             ),
           ],
         ),

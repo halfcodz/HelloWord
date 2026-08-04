@@ -23,8 +23,10 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    // 한 바퀴 도는 데 60초. 시선을 끌지 않을 만큼 느리게.
-    duration: const Duration(seconds: 60),
+    // 한 바퀴 = 180초. 아래 요소들의 speed를 모두 정수로 두어
+    // 한 바퀴가 끝나는 순간의 위치가 시작 위치와 정확히 같아진다.
+    // (예전엔 speed가 소수라 한 바퀴마다 위치가 튀면서 뚝 끊겨 보였다.)
+    duration: const Duration(seconds: 180),
   );
 
   /// 글자는 한 번만 레이아웃해 두고 매 프레임 위치만 옮긴다.
@@ -129,7 +131,9 @@ class _Floater {
   /// 반지름(논리 픽셀 기준 배율).
   final double size;
 
-  /// 위로 흐르는 속도(한 바퀴에 화면 몇 배를 지나는지).
+  /// 위로 흐르는 속도. 한 바퀴(180초)에 화면을 몇 번 지나갈지.
+  /// 반드시 정수로 둔다 — 그래야 한 바퀴가 끝날 때 위치가 딱 맞아
+  /// 이어지는 지점이 보이지 않는다.
   final double speed;
 
   /// 좌우로 흔들리는 폭.
@@ -144,29 +148,29 @@ class _Floater {
 
 // 손으로 배치한 궤도들. 난수를 쓰지 않아 매번 같은 화면이 나온다.
 const List<_Floater> _blobs = [
-  _Floater(x: 0.14, y: 0.18, size: 120, speed: 0.35, drift: 0.05, phase: 0.0, tone: 0),
-  _Floater(x: 0.82, y: 0.32, size: 150, speed: 0.28, drift: 0.06, phase: 0.35, tone: 1),
-  _Floater(x: 0.30, y: 0.72, size: 130, speed: 0.32, drift: 0.04, phase: 0.6, tone: 2),
-  _Floater(x: 0.72, y: 0.88, size: 110, speed: 0.4, drift: 0.05, phase: 0.15, tone: 0),
+  _Floater(x: 0.14, y: 0.18, size: 120, speed: 1, drift: 0.05, phase: 0.0, tone: 0),
+  _Floater(x: 0.82, y: 0.32, size: 150, speed: 1, drift: 0.06, phase: 0.35, tone: 1),
+  _Floater(x: 0.30, y: 0.72, size: 130, speed: 1, drift: 0.04, phase: 0.6, tone: 2),
+  _Floater(x: 0.72, y: 0.88, size: 110, speed: 2, drift: 0.05, phase: 0.15, tone: 0),
 ];
 
 const List<_Floater> _bubbles = [
-  _Floater(x: 0.08, y: 0.9, size: 7, speed: 1.0, drift: 0.03, phase: 0.05, tone: 0),
-  _Floater(x: 0.22, y: 0.5, size: 5, speed: 1.3, drift: 0.04, phase: 0.4, tone: 1),
-  _Floater(x: 0.42, y: 0.95, size: 9, speed: 0.9, drift: 0.02, phase: 0.7, tone: 2),
-  _Floater(x: 0.58, y: 0.6, size: 6, speed: 1.15, drift: 0.05, phase: 0.2, tone: 0),
-  _Floater(x: 0.76, y: 0.82, size: 8, speed: 1.05, drift: 0.03, phase: 0.55, tone: 1),
-  _Floater(x: 0.9, y: 0.45, size: 5, speed: 1.35, drift: 0.04, phase: 0.85, tone: 2),
-  _Floater(x: 0.5, y: 0.25, size: 6, speed: 1.2, drift: 0.03, phase: 0.3, tone: 0),
+  _Floater(x: 0.08, y: 0.9, size: 7, speed: 3, drift: 0.03, phase: 0.05, tone: 0),
+  _Floater(x: 0.22, y: 0.5, size: 5, speed: 4, drift: 0.04, phase: 0.4, tone: 1),
+  _Floater(x: 0.42, y: 0.95, size: 9, speed: 3, drift: 0.02, phase: 0.7, tone: 2),
+  _Floater(x: 0.58, y: 0.6, size: 6, speed: 4, drift: 0.05, phase: 0.2, tone: 0),
+  _Floater(x: 0.76, y: 0.82, size: 8, speed: 3, drift: 0.03, phase: 0.55, tone: 1),
+  _Floater(x: 0.9, y: 0.45, size: 5, speed: 5, drift: 0.04, phase: 0.85, tone: 2),
+  _Floater(x: 0.5, y: 0.25, size: 6, speed: 4, drift: 0.03, phase: 0.3, tone: 0),
 ];
 
 const List<_Floater> _letters = [
-  _Floater(x: 0.12, y: 0.62, size: 1, speed: 0.55, drift: 0.03, phase: 0.1, tone: 0),
-  _Floater(x: 0.86, y: 0.2, size: 1, speed: 0.5, drift: 0.04, phase: 0.45, tone: 1),
-  _Floater(x: 0.34, y: 0.35, size: 1, speed: 0.6, drift: 0.02, phase: 0.75, tone: 2),
-  _Floater(x: 0.68, y: 0.7, size: 1, speed: 0.52, drift: 0.03, phase: 0.25, tone: 0),
-  _Floater(x: 0.2, y: 0.05, size: 1, speed: 0.58, drift: 0.04, phase: 0.9, tone: 1),
-  _Floater(x: 0.55, y: 0.5, size: 1, speed: 0.48, drift: 0.03, phase: 0.6, tone: 2),
+  _Floater(x: 0.12, y: 0.62, size: 1, speed: 2, drift: 0.03, phase: 0.1, tone: 0),
+  _Floater(x: 0.86, y: 0.2, size: 1, speed: 1, drift: 0.04, phase: 0.45, tone: 1),
+  _Floater(x: 0.34, y: 0.35, size: 1, speed: 2, drift: 0.02, phase: 0.75, tone: 2),
+  _Floater(x: 0.68, y: 0.7, size: 1, speed: 1, drift: 0.03, phase: 0.25, tone: 0),
+  _Floater(x: 0.2, y: 0.05, size: 1, speed: 2, drift: 0.04, phase: 0.9, tone: 1),
+  _Floater(x: 0.55, y: 0.5, size: 1, speed: 1, drift: 0.03, phase: 0.6, tone: 2),
 ];
 
 class _BackgroundPainter extends CustomPainter {

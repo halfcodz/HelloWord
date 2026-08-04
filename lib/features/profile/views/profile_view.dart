@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../auth/auth_service.dart';
 import '../../../core/services/bgm_service.dart';
+import '../../../core/services/sfx_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../../core/utils/toast.dart';
@@ -175,6 +176,7 @@ class ProfileView extends StatelessWidget {
                   const _SettingCard(children: [
                     _ThemeToggleRow(),
                     _BgmToggleRow(),
+                    _SfxToggleRow(),
                   ]),
                   SizedBox(height: AppSpace.lg.h),
                   _SettingCard(children: [
@@ -342,6 +344,25 @@ class _BgmToggleRow extends StatelessWidget {
           : '공부할 때 잔잔하게 흘러나와요 (영상통화 중엔 자동으로 꺼져요)',
       value: bgm.enabled,
       onChanged: bgm.setEnabled,
+    );
+  }
+}
+
+/// 버튼 효과음 토글 행.
+class _SfxToggleRow extends StatelessWidget {
+  const _SfxToggleRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final sfx = context.watch<SfxService>();
+    return _SwitchRow(
+      icon: sfx.enabled
+          ? Icons.touch_app_rounded
+          : Icons.do_not_touch_rounded,
+      label: '버튼 효과음',
+      description: '버튼을 누를 때 짧은 소리가 나요',
+      value: sfx.enabled,
+      onChanged: sfx.setEnabled,
       isLast: true,
     );
   }

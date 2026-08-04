@@ -129,7 +129,6 @@ class _WordSetListBody extends StatelessWidget {
       sets: viewModel.sets,
       onDelete: (set) =>
           _confirmDeleteSet(context, set, () => viewModel.delete(set.id)),
-      onAdd: enableAdd ? () => _openUpload(context, user) : null,
     );
   }
 }
@@ -142,13 +141,11 @@ class _MaterialsBrowser extends StatefulWidget {
     required this.user,
     required this.sets,
     required this.onDelete,
-    required this.onAdd,
   });
 
   final AppUser user;
   final List<WordSet> sets;
   final void Function(WordSet set) onDelete;
-  final VoidCallback? onAdd;
 
   @override
   State<_MaterialsBrowser> createState() => _MaterialsBrowserState();
@@ -216,13 +213,12 @@ class _MaterialsBrowserState extends State<_MaterialsBrowser> {
             hasScrollBody: false,
             child: Padding(
               padding: EdgeInsets.only(top: AppSpace.xl.h),
+              // 추가 버튼은 화면 아래 '단어 추가' 하나로만 둔다(중복 방지).
               child: EmptyState(
                 icon: Icons.folder_open_rounded,
                 text: _filter == _MaterialFilter.today
-                    ? '오늘 올린 자료가 없어요.\n새 단어 세트를 만들어 볼까요?'
+                    ? '오늘 올린 자료가 없어요.\n아래 "단어 추가"로 새 자료를 만들어요.'
                     : '아직 자료가 없어요.',
-                actionLabel: widget.onAdd == null ? null : '단어 추가하기',
-                onAction: widget.onAdd,
               ),
             ),
           )
@@ -232,7 +228,7 @@ class _MaterialsBrowserState extends State<_MaterialsBrowser> {
               AppSpace.md.w,
               AppSpace.sm.h,
               AppSpace.md.w,
-              100.h,
+              kBottomInset.h,
             ),
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(

@@ -76,16 +76,17 @@ class ExamScheduleView extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _header(context, next, plans, results, today),
+                        const QuoteCard(),
                         SizedBox(height: AppSpace.md.h),
                         FriendBar(me: user),
                         SectionHeader(
                           icon: Icons.event_available_rounded,
-                          label: '다가오는 시험',
+                          label: '오늘 시험',
                         ),
                         if (plans.isEmpty)
                           const EmptyState(
                             icon: Icons.event_note_rounded,
-                            text: '예정된 시험이 없어요.\n언니가 시험을 내면 여기에 표시돼요.',
+                            text: '아직 시험이 없어요.\n언니가 시험을 내면 여기에 바로 표시돼요.',
                           )
                         else
                           for (final plan in plans)
@@ -148,7 +149,7 @@ class ExamScheduleView extends StatelessWidget {
                             ),
                           ),
                         ),
-                        SizedBox(height: AppSpace.xl.h),
+                        SizedBox(height: kBottomInset.h),
                       ],
                     );
                   },
@@ -179,10 +180,10 @@ class ExamScheduleView extends StatelessWidget {
         subtitle: _dateLabel(),
         title: '${user.name}, 안녕! 🐥',
         badge: next == null
-            ? '예정된 시험이 없어요. 오늘도 단어 공부해요!'
+            ? null
             : (d == 0
-                  ? '오늘이 시험날이에요! "${next.title}"'
-                  : '"${next.title}" 시험이 $d일 남았어요'),
+                  ? '오늘 시험이 있어요 · ${next.title}'
+                  : '${next.title} 시험이 $d일 남았어요'),
         trailing: MaterialBell(user: user),
         stats: [
           HeroStat(

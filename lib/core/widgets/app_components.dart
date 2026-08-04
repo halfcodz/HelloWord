@@ -1,14 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../theme/app_theme.dart';
+import '../utils/motivation_quotes.dart';
 import 'bouncy_tap.dart';
 
 /// 화면을 짜는 데 쓰는 공용 조각들.
 /// 화면마다 카드·제목·빈 상태를 따로 만들지 않고 여기 것만 가져다 쓴다.
 
-/// 홈 맨 위에 깔리는 큰 헤더 패널.
-/// 인사말과 오늘의 숫자(통계)를 한 덩어리로 묶어 첫 화면의 중심을 만든다.
+/// 스크롤 화면이 하단 탭바·떠 있는 버튼에 가리지 않도록 두는 아래 여백.
+/// 모든 스크롤 화면이 같은 값을 써서 화면마다 끝이 달라 보이지 않게 한다.
+double get kBottomInset => 96.0;
+
+/// 홈 맨 위 헤더.
+/// 뒤에서 움직이는 배경이 그대로 비치도록 색을 채우지 않고,
+/// 숫자 칸만 반투명 카드로 띄운다.
 class HeroHeader extends StatelessWidget {
   const HeroHeader({
     super.key,
@@ -25,7 +33,7 @@ class HeroHeader extends StatelessWidget {
   /// 제목 위 작은 글씨(예: 날짜).
   final String subtitle;
 
-  /// 제목 아래 강조 문구(예: "오늘 시험이 있어요").
+  /// 제목 아래 강조 문구(오늘 시험이 있을 때만).
   final String? badge;
 
   /// 오른쪽 위에 놓을 위젯(알림 벨 등).
@@ -36,25 +44,18 @@ class HeroHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
+    return Padding(
       padding: EdgeInsets.fromLTRB(
         AppSpace.gutter.w,
-        AppSpace.md.h,
+        AppSpace.sm.h,
         AppSpace.gutter.w,
-        AppSpace.md.h,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.pink,
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(AppRadius.xl.r),
-        ),
+        AppSpace.xs.h,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: Column(
@@ -65,7 +66,7 @@ class HeroHeader extends StatelessWidget {
                       style: AppTheme.font(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white.withValues(alpha: 0.82),
+                        color: AppColors.gray,
                       ),
                     ),
                     SizedBox(height: AppSpace.xxs.h),
@@ -76,7 +77,7 @@ class HeroHeader extends StatelessWidget {
                       style: AppTheme.display(
                         fontSize: 26.sp,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: AppColors.ink,
                       ),
                     ),
                   ],
@@ -93,7 +94,7 @@ class HeroHeader extends StatelessWidget {
                 vertical: AppSpace.xxs.h + 2,
               ),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
+                color: AppColors.pinkSoft,
                 borderRadius: BorderRadius.circular(AppRadius.pill.r),
               ),
               child: Text(
@@ -101,7 +102,7 @@ class HeroHeader extends StatelessWidget {
                 style: AppTheme.font(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w800,
-                  color: Colors.white,
+                  color: AppColors.mintDeep,
                 ),
               ),
             ),
@@ -127,6 +128,7 @@ class HeroHeader extends StatelessWidget {
 }
 
 /// [HeroHeader] 안에 들어가는 숫자 한 칸.
+/// 배경이 살짝 비치는 반투명 카드.
 class HeroStat extends StatelessWidget {
   const HeroStat({
     super.key,
@@ -149,8 +151,9 @@ class HeroStat extends StatelessWidget {
         vertical: AppSpace.sm.h,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.16),
+        color: AppColors.cream.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(AppRadius.md.r),
+        border: Border.all(color: AppColors.border),
       ),
       // 글자 크기 설정이 큰 기기에서도 칸을 넘치지 않도록
       // 각 줄을 Flexible + 축소 허용으로 둔다.
@@ -160,7 +163,7 @@ class HeroStat extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: AppIconSize.sm.sp, color: Colors.white),
+            Icon(icon, size: AppIconSize.sm.sp, color: AppColors.pink),
             SizedBox(height: AppSpace.xxs.h),
           ],
           Flexible(
@@ -172,7 +175,7 @@ class HeroStat extends StatelessWidget {
                 maxLines: 1,
                 style: AppTheme.tabularNumber(
                   fontSize: 20.sp,
-                  color: Colors.white,
+                  color: AppColors.ink,
                 ).copyWith(height: 1.1),
               ),
             ),
@@ -186,7 +189,7 @@ class HeroStat extends StatelessWidget {
                 fontSize: 11.sp,
                 height: 1.2,
                 fontWeight: FontWeight.w700,
-                color: Colors.white.withValues(alpha: 0.82),
+                color: AppColors.gray,
               ),
             ),
           ),
@@ -195,6 +198,115 @@ class HeroStat extends StatelessWidget {
     );
     if (onTap == null) return card;
     return BouncyTap(onTap: onTap, child: card);
+  }
+}
+
+/// 30분마다 바뀌는 동기부여 명언 카드(영어 원문 + 한글 뜻).
+class QuoteCard extends StatefulWidget {
+  const QuoteCard({super.key});
+
+  @override
+  State<QuoteCard> createState() => _QuoteCardState();
+}
+
+class _QuoteCardState extends State<QuoteCard> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleNext();
+  }
+
+  /// 다음 30분 경계에 맞춰 한 번만 깨우고, 그때 다시 예약한다.
+  void _scheduleNext() {
+    _timer?.cancel();
+    _timer = Timer(untilNextQuote(), () {
+      if (!mounted) return;
+      setState(() {});
+      _scheduleNext();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final quote = currentQuote();
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: AppSpace.gutter.w),
+      child: AnimatedSwitcher(
+        duration: AppMotion.slow,
+        child: Container(
+          key: ValueKey(quote.english),
+          width: double.infinity,
+          padding: EdgeInsets.all(AppSpace.md.w),
+          decoration: BoxDecoration(
+            color: AppColors.cream.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(AppRadius.lg.r),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.format_quote_rounded,
+                    size: AppIconSize.sm.sp,
+                    color: AppColors.pink,
+                  ),
+                  SizedBox(width: AppSpace.xxs.w),
+                  Text(
+                    '오늘의 한 문장',
+                    style: AppTheme.font(
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.pink,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: AppSpace.xs.h),
+              Text(
+                quote.english,
+                style: AppTheme.display(
+                  fontSize: 16.sp,
+                  height: 1.4,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.ink,
+                ),
+              ),
+              SizedBox(height: AppSpace.xxs.h + 2),
+              Text(
+                quote.korean,
+                style: AppTheme.font(
+                  fontSize: 12.sp,
+                  height: 1.5,
+                  color: AppColors.gray,
+                ),
+              ),
+              SizedBox(height: AppSpace.xs.h),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  '— ${quote.author}',
+                  style: AppTheme.font(
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.hint,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

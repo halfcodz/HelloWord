@@ -6,6 +6,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/services/bgm_service.dart';
+import '../../../core/services/sfx_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../services/call_service.dart';
 
@@ -57,6 +58,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _bgm = context.read<BgmService>()..suspend();
+    SfxService.instance?.suspend();
     _init();
   }
 
@@ -139,6 +141,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
     _resumeCheck?.cancel();
     _service?.dispose();
     _bgm?.resume();
+    SfxService.instance?.resume();
     super.dispose();
   }
 

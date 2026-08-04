@@ -48,57 +48,125 @@ class AuthGate extends StatelessWidget {
   }
 }
 
-class _LoadingScaffold extends StatelessWidget {
+/// 로딩 화면. 배경 애니메이션 위에 카드 하나만 띄우고,
+/// 로고가 살짝 통통 뛰며 점 세 개가 차례로 깜빡인다.
+class _LoadingScaffold extends StatefulWidget {
   const _LoadingScaffold();
+
+  @override
+  State<_LoadingScaffold> createState() => _LoadingScaffoldState();
+}
+
+class _LoadingScaffoldState extends State<_LoadingScaffold>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 76.w,
-              height: 76.w,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryButton,
-                borderRadius: BorderRadius.circular(24.r),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 28.w, vertical: 26.h),
+          margin: EdgeInsets.symmetric(horizontal: 40.w),
+          decoration: BoxDecoration(
+            color: AppColors.cream.withValues(alpha: 0.86),
+            borderRadius: BorderRadius.circular(28.r),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedBuilder(
+                animation: _c,
+                builder: (context, child) {
+                  // 0~1을 오르내리게 만들어 통통 뛰는 느낌을 준다.
+                  final t = _c.value;
+                  final bounce = (1 - (2 * t - 1).abs());
+                  final eased = Curves.easeOut.transform(bounce);
+                  return Transform.translate(
+                    offset: Offset(0, -8.h * eased),
+                    child: Transform.rotate(
+                      angle: 0.06 * (eased - 0.5),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 76.w,
+                  height: 76.w,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.pink,
+                    borderRadius: BorderRadius.circular(24.r),
+                  ),
+                  child: Icon(
+                    Icons.menu_book_rounded,
+                    size: 38.sp,
+                    color: Colors.white,
+                  ),
+                ),
               ),
-              // 이모지 대신 앱에 포함된 아이콘을 쓴다.
-              // (폰트를 내려받기 전에는 이모지가 □로 보일 수 있다.)
-              child: Icon(Icons.menu_book_rounded,
-                  size: 38.sp, color: Colors.white),
-            ),
-            SizedBox(height: 18.h),
-            // 로딩 화면은 구글 폰트를 내려받기 전에 보이는 화면이므로,
-            // 기기 기본 폰트로 그려 글자가 □로 보이지 않게 한다.
-            Text('HelloWord',
+              SizedBox(height: 18.h),
+              // 로딩 화면은 구글 폰트를 내려받기 전에 보이는 화면이므로,
+              // 기기 기본 폰트로 그려 글자가 □로 보이지 않게 한다.
+              Text(
+                'HelloWord',
                 style: AppTheme.systemFont(
-                    fontSize: 26.sp,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                    color: AppColors.ink)),
-            SizedBox(height: 6.h),
-            Text('자매 영어 단어 시험',
-                style: AppTheme.systemFont(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.grayText)),
-            SizedBox(height: 28.h),
-            SizedBox(
-              width: 34.w,
-              height: 34.w,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation(AppColors.mint),
-                backgroundColor: AppColors.mint.withValues(alpha: 0.2),
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  color: AppColors.ink,
+                ),
               ),
-            ),
-          ],
+              SizedBox(height: 4.h),
+              Text(
+                '자매 영어 단어 시험',
+                style: AppTheme.systemFont(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.gray,
+                ),
+              ),
+              SizedBox(height: 20.h),
+              // 점 세 개가 차례로 커졌다 작아진다.
+              AnimatedBuilder(
+                animation: _c,
+                builder: (context, _) => Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (var i = 0; i < 3; i++) ...[
+                      if (i > 0) SizedBox(width: 7.w),
+                      _dot(i),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _dot(int index) {
+    final phase = (_c.value + index * 0.22) % 1.0;
+    final pop = (1 - (2 * phase - 1).abs());
+    return Container(
+      width: 8.w + 3.w * pop,
+      height: 8.w + 3.w * pop,
+      decoration: BoxDecoration(
+        color: AppColors.pink.withValues(alpha: 0.35 + 0.5 * pop),
+        shape: BoxShape.circle,
       ),
     );
   }
