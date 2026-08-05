@@ -154,10 +154,12 @@ class ExamDashboardView extends StatelessWidget {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _header(context, todayPlans, results),
-                        const QuoteCard(),
-                        SizedBox(height: AppSpace.md.h),
+                        _header(context, todayPlans),
+                        // 인사 바로 아래에 프로필(나·동생) 줄.
                         FriendBar(me: user),
+                        SizedBox(height: AppSpace.sm.h),
+                        // 숫자 통계 대신 오늘의 한 문장.
+                        const QuoteCard(),
                         SectionHeader(
                           icon: Icons.event_available_rounded,
                           label: '오늘 시험',
@@ -258,35 +260,13 @@ class ExamDashboardView extends StatelessWidget {
   }
 
   /// 홈 맨 위 헤더. 오늘 할 일과 성적을 숫자로 먼저 보여 준다.
-  Widget _header(
-    BuildContext context,
-    List<ExamPlan> todayPlans,
-    List<ExamResult> results,
-  ) {
-    final todayResults = results.where((r) => _isToday(r.createdAt)).length;
+  Widget _header(BuildContext context, List<ExamPlan> todayPlans) {
     return SafeArea(
       bottom: false,
       child: HeroHeader(
         subtitle: _dateLabel(),
         title: '${user.name}, 안녕! 🐰',
         badge: todayPlans.isEmpty ? null : '오늘 시험 ${todayPlans.length}개가 있어요',
-        stats: [
-          HeroStat(
-            icon: Icons.today_rounded,
-            value: '${todayPlans.length}',
-            label: '오늘 시험',
-          ),
-          HeroStat(
-            icon: Icons.fact_check_rounded,
-            value: '$todayResults',
-            label: '오늘 채점',
-          ),
-          HeroStat(
-            icon: Icons.style_rounded,
-            value: '${results.length}',
-            label: '전체 시험',
-          ),
-        ],
       ),
     );
   }

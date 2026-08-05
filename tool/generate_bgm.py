@@ -3,7 +3,7 @@
 저작권 있는 음원(게임 BGM 등)을 가져다 쓰지 않고 전부 직접 합성한다.
 - bgm_1.mp3 ~ bgm_4.mp3 : 잔잔한 마림바/비브라폰 + 포근한 패드.
   마을 같은 분위기로 서로 다른 조성·진행을 써서 이어 들어도 지루하지 않다.
-- tap.mp3 : 버튼을 눌렀을 때 나는 아주 짧고 부드러운 '톡' 소리.
+- tap.mp3 : 버튼을 눌렀을 때 나는 소리. 조약돌이 가볍게 부딪히는 느낌.
 
 사용법:
     python3 tool/generate_bgm.py
@@ -149,19 +149,38 @@ TRACKS = {
 
 
 def tap_sound():
-    """버튼 누를 때 나는 짧고 부드러운 '톡'. 귀에 거슬리지 않게 아주 짧다."""
-    dur = 0.09
-    n = int(SR * dur)
-    t = np.arange(n) / SR
-    # 높은 음에서 살짝 떨어지는 짧은 톤 + 아주 여린 배음.
-    freq = 1250 * np.exp(-t * 9)
-    phase = 2 * math.pi * np.cumsum(freq) / SR
-    wave_data = np.sin(phase) + 0.25 * np.sin(2 * phase)
-    envelope = np.exp(-t * 42) * np.clip(t / 0.002, 0, 1)
-    out = wave_data * envelope
+    """버튼 누를 때 나는 소리. 조약돌 두 개가 가볍게 부딪히는 느낌으로,
+    작고 동글동글하게 '똑' 하고 두 번 튕긴다."""
+
+    def knock(freq, dur, amp, decay):
+        n = int(SR * dur)
+        t = np.arange(n) / SR
+        # 나무·돌 두드리는 소리는 배음이 정수배가 아니라 살짝 어긋나 있다.
+        w = (
+            np.sin(2 * math.pi * freq * t)
+            + 0.5 * np.sin(2 * math.pi * freq * 2.76 * t)
+            + 0.22 * np.sin(2 * math.pi * freq * 5.4 * t)
+        )
+        # 아주 짧은 '탁' 성분(부딪히는 순간의 잡음).
+        rng = np.random.default_rng(7)
+        click = rng.standard_normal(n) * np.exp(-t * 900) * 0.35
+        env = np.exp(-t * decay) * np.clip(t / 0.0012, 0, 1)
+        return (w + click) * env * amp
+
+    total = int(SR * 0.22)
+    out = np.zeros(total)
+
+    # 첫 번째 부딪힘.
+    a = knock(880, 0.16, 1.0, 52)
+    out[: len(a)] += a
+    # 살짝 뒤에 작게 한 번 더(조약돌이 튕기는 느낌).
+    b = knock(1180, 0.12, 0.42, 70)
+    s2 = int(SR * 0.055)
+    out[s2 : s2 + len(b)] += b
+
     peak = np.max(np.abs(out))
     if peak > 0:
-        out = out / peak * 0.45
+        out = out / peak * 0.42
     return out
 
 

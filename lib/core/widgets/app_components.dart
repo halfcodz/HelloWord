@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../theme/app_theme.dart';
+import '../services/tts_service.dart';
 import '../utils/motivation_quotes.dart';
 import 'bouncy_tap.dart';
 
@@ -241,68 +242,81 @@ class _QuoteCardState extends State<QuoteCard> {
       padding: EdgeInsets.symmetric(horizontal: AppSpace.gutter.w),
       child: AnimatedSwitcher(
         duration: AppMotion.slow,
-        child: Container(
+        child: GestureDetector(
           key: ValueKey(quote.english),
-          width: double.infinity,
-          padding: EdgeInsets.all(AppSpace.md.w),
-          decoration: BoxDecoration(
-            color: AppColors.cream.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(AppRadius.lg.r),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.format_quote_rounded,
-                    size: AppIconSize.sm.sp,
-                    color: AppColors.pink,
-                  ),
-                  SizedBox(width: AppSpace.xxs.w),
-                  Text(
-                    '오늘의 한 문장',
-                    style: AppTheme.font(
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w800,
+          behavior: HitTestBehavior.opaque,
+          // iOS·웹의 음성합성은 '누르는 순간'에 호출해야 소리가 나므로
+          // onTap이 아니라 onTapDown에서 읽는다.
+          onTapDown: (_) => TtsService.speak(quote.english),
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(AppSpace.md.w),
+            decoration: BoxDecoration(
+              color: AppColors.cream.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(AppRadius.lg.r),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.format_quote_rounded,
+                      size: AppIconSize.sm.sp,
                       color: AppColors.pink,
                     ),
+                    SizedBox(width: AppSpace.xxs.w),
+                    Text(
+                      '오늘의 한 문장',
+                      style: AppTheme.font(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.pink,
+                      ),
+                    ),
+                    const Spacer(),
+                    // 눌러서 들을 수 있다는 것을 아이콘으로 알린다.
+                    Icon(
+                      Icons.volume_up_rounded,
+                      size: AppIconSize.sm.sp,
+                      color: AppColors.hint,
+                    ),
+                  ],
+                ),
+                SizedBox(height: AppSpace.xs.h),
+                Text(
+                  quote.english,
+                  style: AppTheme.display(
+                    fontSize: 16.sp,
+                    height: 1.4,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.ink,
                   ),
-                ],
-              ),
-              SizedBox(height: AppSpace.xs.h),
-              Text(
-                quote.english,
-                style: AppTheme.display(
-                  fontSize: 16.sp,
-                  height: 1.4,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.ink,
                 ),
-              ),
-              SizedBox(height: AppSpace.xxs.h + 2),
-              Text(
-                quote.korean,
-                style: AppTheme.font(
-                  fontSize: 12.sp,
-                  height: 1.5,
-                  color: AppColors.gray,
-                ),
-              ),
-              SizedBox(height: AppSpace.xs.h),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  '— ${quote.author}',
+                SizedBox(height: AppSpace.xxs.h + 2),
+                Text(
+                  quote.korean,
                   style: AppTheme.font(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.hint,
+                    fontSize: 12.sp,
+                    height: 1.5,
+                    color: AppColors.gray,
                   ),
                 ),
-              ),
-            ],
+                SizedBox(height: AppSpace.xs.h),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '— ${quote.author}',
+                    style: AppTheme.font(
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.hint,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

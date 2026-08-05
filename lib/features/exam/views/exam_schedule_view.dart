@@ -10,9 +10,11 @@ import '../../../models/app_user.dart';
 import '../../social/views/friend_bar.dart';
 import '../../social/views/material_bell.dart';
 import '../models/exam_plan.dart';
+import '../models/exam_session.dart';
 import '../models/exam_result.dart';
 import '../repositories/exam_repository.dart';
 import 'exam_result_detail_view.dart';
+import 'exam_invite.dart';
 import 'exam_result_widgets.dart';
 import 'result_section.dart';
 
@@ -36,121 +38,140 @@ class ExamScheduleView extends StatelessWidget {
           ),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: StreamBuilder<List<ExamPlan>>(
-              stream: exam.watchPlansForGuest(user.uid),
-              builder: (context, planSnap) {
-                final plans =
-                    (planSnap.data ?? const <ExamPlan>[])
-                        .where((p) => !p.done && p.dDay(today) >= 0)
-                        .toList()
-                      ..sort((a, b) => a.dDay(today).compareTo(b.dDay(today)));
-                final next = plans.isEmpty ? null : plans.first;
+            child: StreamBuilder<List<ExamSession>>(
+              // 언니가 시험을 내면 초대가 여기로 들어와 카드로 쌓인다.
+              stream: exam.watchInvitesForGuest(user.uid),
+              builder: (context, inviteSnap) {
+                final invites = inviteSnap.data ?? const <ExamSession>[];
+                return StreamBuilder<List<ExamPlan>>(
+                  stream: exam.watchPlansForGuest(user.uid),
+                  builder: (context, planSnap) {
+                    final plans =
+                        (planSnap.data ?? const <ExamPlan>[])
+                            .where((p) => !p.done && p.dDay(today) >= 0)
+                            .toList()
+                          ..sort(
+                            (a, b) => a.dDay(today).compareTo(b.dDay(today)),
+                          );
+                    final next = plans.isEmpty ? null : plans.first;
 
-                return StreamBuilder<List<ExamResult>>(
-                  stream: exam.watchResultsForGuest(user.uid),
-                  builder: (context, resultSnap) {
-                    final results = resultSnap.data ?? const <ExamResult>[];
-                    bool isToday(DateTime? d) {
-                      if (d == null) return false;
-                      return d.year == today.year &&
-                          d.month == today.month &&
-                          d.day == today.day;
-                    }
+                    return StreamBuilder<List<ExamResult>>(
+                      stream: exam.watchResultsForGuest(user.uid),
+                      builder: (context, resultSnap) {
+                        final results = resultSnap.data ?? const <ExamResult>[];
+                        bool isToday(DateTime? d) {
+                          if (d == null) return false;
+                          return d.year == today.year &&
+                              d.month == today.month &&
+                              d.day == today.day;
+                        }
 
-                    final todayR = results
-                        .where((r) => isToday(r.createdAt))
-                        .toList();
-                    final pastR = results
-                        .where((r) => !isToday(r.createdAt))
-                        .toList();
-                    _ResultCard resultTile(ExamResult r) => _ResultCard(
-                      result: r,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ExamResultDetailView(result: r),
-                        ),
-                      ),
-                    );
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _header(context, next, plans, results, today),
-                        const QuoteCard(),
-                        SizedBox(height: AppSpace.md.h),
-                        FriendBar(me: user),
-                        SectionHeader(
-                          icon: Icons.event_available_rounded,
-                          label: '오늘 시험',
-                        ),
-                        if (plans.isEmpty)
-                          const EmptyState(
-                            icon: Icons.event_note_rounded,
-                            text: '아직 시험이 없어요.\n언니가 시험을 내면 여기에 바로 표시돼요.',
-                          )
-                        else
-                          for (final plan in plans)
-                            _PlanCard(plan: plan, today: today),
-                        SectionHeader(
-                          icon: Icons.fact_check_rounded,
-                          label: '내 시험 결과',
-                        ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpace.gutter.w,
-                          ),
-                          // 두 카드의 높이를 맞추려고 stretch를 쓰는데, 스크롤 안에서는
-                          // 높이가 무한이라 stretch가 그대로 터진다(화면이 안 그려짐).
-                          // IntrinsicHeight로 '가장 큰 카드 높이'를 정해 준 뒤 늘린다.
-                          child: IntrinsicHeight(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(
-                                  child: ResultNavCard(
-                                    emoji: '📊',
-                                    label: '오늘 시험 결과',
-                                    count: todayR.length,
-                                    onTap: () => Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => TodayResultsView(
-                                          results: todayR,
-                                          emptyText:
-                                              '오늘 본 시험이 없어요.\n시험을 마치면 여기에 나와요.',
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: AppSpace.sm.w),
-                                Expanded(
-                                  child: ResultNavCard(
-                                    emoji: '🗓️',
-                                    label: '지난 시험 결과',
-                                    count: pastR.length,
-                                    dark: true,
-                                    onTap: () => Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => HistoryCalendarView(
-                                          title: '지난 시험 결과',
-                                          items: [
-                                            for (final r in pastR)
-                                              DatedItem(
-                                                date: r.createdAt ?? today,
-                                                child: resultTile(r),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                        final todayR = results
+                            .where((r) => isToday(r.createdAt))
+                            .toList();
+                        final pastR = results
+                            .where((r) => !isToday(r.createdAt))
+                            .toList();
+                        _ResultCard resultTile(ExamResult r) => _ResultCard(
+                          result: r,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ExamResultDetailView(result: r),
                             ),
                           ),
-                        ),
-                        SizedBox(height: kBottomInset.h),
-                      ],
+                        );
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _header(context, next, today),
+                            // 인사 바로 아래에 프로필(나·언니) 줄.
+                            FriendBar(me: user),
+                            SizedBox(height: AppSpace.sm.h),
+                            // 숫자 통계 대신 오늘의 한 문장.
+                            const QuoteCard(),
+                            SectionHeader(
+                              icon: Icons.event_available_rounded,
+                              label: '오늘 시험',
+                            ),
+                            // 도착한 초대를 맨 위에 눈에 띄게 둔다.
+                            for (final invite in invites)
+                              _InviteCard(
+                                session: invite,
+                                onTap: () =>
+                                    showExamInvite(context, invite, user),
+                              ),
+                            if (plans.isEmpty && invites.isEmpty)
+                              const EmptyState(
+                                icon: Icons.event_note_rounded,
+                                text: '아직 시험이 없어요.\n언니가 시험을 내면 여기에 바로 표시돼요.',
+                              )
+                            else
+                              for (final plan in plans)
+                                _PlanCard(plan: plan, today: today),
+                            SectionHeader(
+                              icon: Icons.fact_check_rounded,
+                              label: '내 시험 결과',
+                            ),
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSpace.gutter.w,
+                              ),
+                              // 두 카드의 높이를 맞추려고 stretch를 쓰는데, 스크롤 안에서는
+                              // 높이가 무한이라 stretch가 그대로 터진다(화면이 안 그려짐).
+                              // IntrinsicHeight로 '가장 큰 카드 높이'를 정해 준 뒤 늘린다.
+                              child: IntrinsicHeight(
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(
+                                      child: ResultNavCard(
+                                        emoji: '📊',
+                                        label: '오늘 시험 결과',
+                                        count: todayR.length,
+                                        onTap: () => Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => TodayResultsView(
+                                              results: todayR,
+                                              emptyText:
+                                                  '오늘 본 시험이 없어요.\n시험을 마치면 여기에 나와요.',
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: AppSpace.sm.w),
+                                    Expanded(
+                                      child: ResultNavCard(
+                                        emoji: '🗓️',
+                                        label: '지난 시험 결과',
+                                        count: pastR.length,
+                                        dark: true,
+                                        onTap: () => Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => HistoryCalendarView(
+                                              title: '지난 시험 결과',
+                                              items: [
+                                                for (final r in pastR)
+                                                  DatedItem(
+                                                    date: r.createdAt ?? today,
+                                                    child: resultTile(r),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: kBottomInset.h),
+                          ],
+                        );
+                      },
                     );
                   },
                 );
@@ -162,17 +183,8 @@ class ExamScheduleView extends StatelessWidget {
     );
   }
 
-  /// 홈 헤더. 가장 가까운 시험까지 며칠 남았는지를 가장 크게 보여 준다.
-  Widget _header(
-    BuildContext context,
-    ExamPlan? next,
-    List<ExamPlan> plans,
-    List<ExamResult> results,
-    DateTime today,
-  ) {
-    final best = results.isEmpty
-        ? '-'
-        : '${results.map((r) => r.total == 0 ? 0 : (r.score / r.total * 100).round()).reduce((a, b) => a > b ? a : b)}점';
+  /// 홈 헤더. 인사와 오늘 시험 여부만 담백하게 보여 준다.
+  Widget _header(BuildContext context, ExamPlan? next, DateTime today) {
     final d = next?.dDay(today);
     return SafeArea(
       bottom: false,
@@ -185,19 +197,6 @@ class ExamScheduleView extends StatelessWidget {
                   ? '오늘 시험이 있어요 · ${next.title}'
                   : '${next.title} 시험이 $d일 남았어요'),
         trailing: MaterialBell(user: user),
-        stats: [
-          HeroStat(
-            icon: Icons.hourglass_bottom_rounded,
-            value: next == null ? '-' : (d == 0 ? 'D-DAY' : 'D-$d'),
-            label: '다음 시험',
-          ),
-          HeroStat(
-            icon: Icons.checklist_rounded,
-            value: '${results.length}',
-            label: '본 시험',
-          ),
-          HeroStat(icon: Icons.star_rounded, value: best, label: '최고 점수'),
-        ],
       ),
     );
   }
@@ -207,6 +206,90 @@ class ExamScheduleView extends StatelessWidget {
   String _dateLabel() {
     final n = DateTime.now();
     return '${n.month}월 ${n.day}일 ${_weekdays[n.weekday - 1]}요일';
+  }
+}
+
+/// 도착한 시험 초대 카드. 누르면 초대 화면이 열린다.
+class _InviteCard extends StatelessWidget {
+  const _InviteCard({required this.session, required this.onTap});
+
+  final ExamSession session;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpace.gutter.w,
+        AppSpace.xxs.h,
+        AppSpace.gutter.w,
+        AppSpace.xs.h,
+      ),
+      child: AppCard(
+        onTap: onTap,
+        // 새로 온 초대라는 걸 알 수 있게 포인트 색 테두리를 준다.
+        borderColor: AppColors.pink,
+        child: Row(
+          children: [
+            Container(
+              width: 46.w,
+              height: 46.w,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.pink,
+                borderRadius: BorderRadius.circular(AppRadius.sm.r),
+              ),
+              child: Icon(
+                Icons.mark_email_unread_rounded,
+                size: AppIconSize.md.sp,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: AppSpace.sm.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const StatusChip(label: '새 초대'),
+                      SizedBox(width: AppSpace.xxs.w + 2),
+                      Expanded(
+                        child: Text(
+                          '${session.hostName}가 보냈어요',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTheme.font(
+                            fontSize: 12.sp,
+                            color: AppColors.gray,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: AppSpace.xxs.h),
+                  Text(
+                    '${session.title} · ${session.total}문제',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTheme.display(
+                      fontSize: 17.sp,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.hint,
+              size: AppIconSize.md.sp,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

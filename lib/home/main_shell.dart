@@ -10,12 +10,10 @@ import '../core/theme/app_theme.dart';
 import '../core/theme/theme_controller.dart';
 import '../core/utils/app_refresh.dart';
 import '../core/widgets/bouncy_tap.dart';
-import '../features/exam/models/exam_session.dart';
 import '../features/exam/repositories/exam_repository.dart';
 import '../features/exam/views/exam_dashboard_view.dart';
 import '../features/exam/views/exam_schedule_view.dart';
 import '../features/exam/views/session_exam_view.dart';
-import '../features/exam/views/session_join_view.dart';
 import '../features/exam/views/session_monitor_view.dart';
 import '../features/profile/views/profile_view.dart';
 import '../features/study/views/study_list_view.dart';
@@ -54,11 +52,13 @@ class _MainShellState extends State<MainShell> {
         ? await repo.watchMyActiveExamAsHost(widget.user.uid).first
         : await repo.watchMyActiveExamAsGuest(widget.user.uid).first;
     if (session == null || !mounted) return;
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => elder
-          ? SessionMonitorView(sessionId: session.id)
-          : SessionExamView(sessionId: session.id, user: widget.user),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => elder
+            ? SessionMonitorView(sessionId: session.id)
+            : SessionExamView(sessionId: session.id, user: widget.user),
+      ),
+    );
   }
 
   /// 새로고침(리로드) 직후라면 보던 탭으로 복원한다.
@@ -96,13 +96,11 @@ class _MainShellState extends State<MainShell> {
       pages: [
         ExamScheduleView(user: user),
         StudyListView(user: user),
-        SessionJoinView(user: user),
         ProfileView(user: user),
       ],
       items: const [
         _NavItem(Icons.home_rounded, '홈'),
         _NavItem(Icons.menu_book_rounded, '공부'),
-        _NavItem(Icons.quiz_rounded, '시험'),
         _NavItem(Icons.person_rounded, '내 정보'),
       ],
     );
@@ -110,8 +108,7 @@ class _MainShellState extends State<MainShell> {
 
   /// 동생이 '공부' 탭(index 1)에 있을 때만 공부중 상태를 켠다.
   void _updateStudying() {
-    final studying =
-        widget.user.role == UserRole.younger && _index == 1;
+    final studying = widget.user.role == UserRole.younger && _index == 1;
     _presence.setStudying(studying);
   }
 
@@ -146,11 +143,8 @@ class _MainShellState extends State<MainShell> {
           child: page,
         ),
     ];
-    // 동생이면 어느 탭에서든 시험 초대가 오면 팝업으로 알린다.
-    Widget body = IndexedStack(index: _index, children: pages);
-    if (widget.user.role == UserRole.younger) {
-      body = _InviteWatcher(user: widget.user, child: body);
-    }
+    // 시험 초대는 팝업으로 튀어나오지 않고 동생 홈의 '오늘 시험'에 쌓인다.
+    final Widget body = IndexedStack(index: _index, children: pages);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -260,204 +254,6 @@ class _BarItem extends StatelessWidget {
                   color: color,
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 동생 화면 전역: 언니가 보낸 시험 초대가 오면 팝업으로 승인/거절을 받는다.
-class _InviteWatcher extends StatefulWidget {
-  const _InviteWatcher({required this.user, required this.child});
-
-  final AppUser user;
-  final Widget child;
-
-  @override
-  State<_InviteWatcher> createState() => _InviteWatcherState();
-}
-
-class _InviteWatcherState extends State<_InviteWatcher>
-    with WidgetsBindingObserver {
-  StreamSubscription<List<ExamSession>>? _sub;
-  final _handled = <String>{};
-  bool _dialogOpen = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _sub = context
-        .read<ExamRepository>()
-        .watchInvitesForGuest(widget.user.uid)
-        .listen(_onInvites);
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // 앱이 다시 앞으로 오면(백그라운드 중 온 초대) 새로고침 없이 바로 확인한다.
-    if (state == AppLifecycleState.resumed && mounted) {
-      context
-          .read<ExamRepository>()
-          .watchInvitesForGuest(widget.user.uid)
-          .first
-          .then(_onInvites)
-          .catchError((_) {});
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _sub?.cancel();
-    super.dispose();
-  }
-
-  void _onInvites(List<ExamSession> invites) {
-    if (_dialogOpen || !mounted) return;
-    ExamSession? fresh;
-    for (final s in invites) {
-      if (!_handled.contains(s.id)) {
-        fresh = s;
-        break;
-      }
-    }
-    if (fresh == null) return;
-    _handled.add(fresh.id);
-    _showInvite(fresh);
-  }
-
-  Future<void> _showInvite(ExamSession s) async {
-    _dialogOpen = true;
-    final choice = await showGeneralDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      barrierLabel: '시험 초대',
-      barrierColor: AppColors.navy.withValues(alpha: 0.6),
-      transitionDuration: const Duration(milliseconds: 220),
-      pageBuilder: (context, _, _) => _InviteFullCard(session: s),
-      transitionBuilder: (context, anim, _, child) {
-        final curved =
-            CurvedAnimation(parent: anim, curve: Curves.easeOutBack);
-        return FadeTransition(
-          opacity: anim,
-          child: ScaleTransition(scale: Tween(begin: 0.9, end: 1.0).animate(curved), child: child),
-        );
-      },
-    );
-    _dialogOpen = false;
-    if (!mounted) return;
-    final repo = context.read<ExamRepository>();
-    if (choice == true) {
-      await repo.joinSession(
-        sessionId: s.id,
-        guestUid: widget.user.uid,
-        guestName: widget.user.name,
-      );
-      if (!mounted) return;
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => SessionExamView(sessionId: s.id, user: widget.user),
-      ));
-    } else if (choice == false) {
-      await repo.declineInvite(s.id);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
-}
-
-/// 시험 초대 전면 카드(말해보카풍 · 네이비 배경 + 바운스 마스코트).
-class _InviteFullCard extends StatelessWidget {
-  const _InviteFullCard({required this.session});
-
-  final ExamSession session;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.navy,
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 32.w),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(),
-              Container(
-                width: 110.w,
-                height: 110.w,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.navySoft,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.mintEnd, width: 4),
-                ),
-                child: Text('🐰', style: TextStyle(fontSize: 54.sp)),
-              ),
-              SizedBox(height: 22.h),
-              Text('언니가 시험에\n초대했어요! 📩',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: 23.sp,
-                      height: 1.4,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white)),
-              SizedBox(height: 10.h),
-              Text('${session.title} · ${session.total}문제 · 영상통화',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.onNavy)),
-              const Spacer(),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => Navigator.of(context).pop(true),
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(vertical: 18.h),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryButton,
-                    borderRadius: BorderRadius.circular(999.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.mint.withValues(alpha: 0.4),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Text('수락하고 시작하기',
-                      style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white)),
-                ),
-              ),
-              SizedBox(height: 10.h),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => Navigator.of(context).pop(false),
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(vertical: 16.h),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white24, width: 1.5),
-                    borderRadius: BorderRadius.circular(999.r),
-                  ),
-                  child: Text('지금은 어려워요',
-                      style: TextStyle(
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.onNavy)),
-                ),
-              ),
-              SizedBox(height: 24.h),
             ],
           ),
         ),
