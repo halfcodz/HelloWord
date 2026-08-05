@@ -228,9 +228,17 @@ class _ExamBodyState extends State<_ExamBody> {
           ),
         ),
         // 문제(뜻)는 위쪽에서 스크롤로 보여준다.
+        // 키보드가 열리면 문제 카드가 입력칸 바로 위에 붙도록 아래쪽으로 정렬해,
+        // 스크롤하지 않아도 '문제 + 내가 쓴 답'이 한눈에 보이게 한다.
         Expanded(
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(20.w, 14.h, 20.w, 8.h),
+            reverse: keyboardOpen,
+            padding: EdgeInsets.fromLTRB(
+              20.w,
+              keyboardOpen ? 6.h : 14.h,
+              20.w,
+              8.h,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -261,7 +269,7 @@ class _ExamBodyState extends State<_ExamBody> {
                       Text(word.quizPrompt,
                           textAlign: TextAlign.center,
                           style: AppTheme.display(
-                              fontSize: 30.sp,
+                              fontSize: keyboardOpen ? 24.sp : 30.sp,
                               fontWeight: FontWeight.w600,
                               color: AppColors.ink)),
                     ],
@@ -363,6 +371,7 @@ class _InputBar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // 입력칸을 먼저(위) 두어 무엇을 쓰는지 잘 보이게 한다.
+              // 키보드가 올라와도 이 줄은 항상 키보드 바로 위에 남는다.
               TextField(
                 controller: controller,
                 autofocus: true,

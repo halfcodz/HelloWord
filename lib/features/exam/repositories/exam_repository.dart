@@ -66,10 +66,29 @@ class ExamRepository {
   Stream<List<ExamSession>> watchInvitesForGuest(String uid) => _sessions
       .where('invitedUid', isEqualTo: uid)
       .snapshots()
-      .map((snap) => snap.docs
-          .map(ExamSession.fromDoc)
-          .where((s) => s.status == SessionStatus.waiting && s.guestUid == null)
-          .toList());
+      .map((snap) {
+        final list = snap.docs
+            .map(ExamSession.fromDoc)
+            .where(
+                (s) => s.status == SessionStatus.waiting && s.guestUid == null)
+            .toList();
+        // 최근에 낸 초대가 위로 오게 한다.
+        return _newestFirst(list);
+      });
+
+  /// 세션 목록을 최근 것부터 정렬한다.
+  ///
+  /// Firestore가 돌려주는 순서는 정해져 있지 않다. 그냥 첫 번째를 집으면
+  /// 어제 닫지 않은 시험이 잡혀, 언니 화면에만 지난 시험이 뜨는 일이 생긴다.
+  static List<ExamSession> _newestFirst(List<ExamSession> list) {
+    final sorted = [...list];
+    sorted.sort((a, b) {
+      final ad = a.createdAt ?? DateTime(2000);
+      final bd = b.createdAt ?? DateTime(2000);
+      return bd.compareTo(ad);
+    });
+    return sorted;
+  }
 
   /// 동생이 초대를 거절한다.
   Future<void> declineInvite(String sessionId) async {
@@ -81,11 +100,11 @@ class ExamRepository {
       .where('guestUid', isEqualTo: uid)
       .snapshots()
       .map((snap) {
-        for (final d in snap.docs) {
-          final s = ExamSession.fromDoc(d);
-          if (s.status == SessionStatus.active) return s;
-        }
-        return null;
+        final list = _newestFirst(snap.docs
+            .map(ExamSession.fromDoc)
+            .where((s) => s.status == SessionStatus.active)
+            .toList());
+        return list.isEmpty ? null : list.first;
       });
 
   /// 내가 출제자(언니)로 진행 중인(대기/응시 중) 시험을 구독한다. (재접속용)
@@ -93,14 +112,23 @@ class ExamRepository {
       .where('hostUid', isEqualTo: uid)
       .snapshots()
       .map((snap) {
-        for (final d in snap.docs) {
-          final s = ExamSession.fromDoc(d);
-          if (s.status == SessionStatus.waiting ||
-              s.status == SessionStatus.active) {
-            return s;
-          }
+        // 가장 최근에 낸 시험만 본다. 예전에는 순서 없이 처음 걸린 것을
+        // 집어서, 어제 닫지 않은 시험이 언니 화면에 뜨는 일이 있었다.
+        final list = _newestFirst(snap.docs
+            .map(ExamSession.fromDoc)
+            .where((s) =>
+                s.status == SessionStatus.waiting ||
+                s.status == SessionStatus.active)
+            .toList());
+        if (list.isEmpty) return null;
+        final newest = list.first;
+        // 하루가 지난 시험은 자동으로 들어가지 않는다(어제 것에 갇히지 않게).
+        final created = newest.createdAt;
+        if (created != null &&
+            DateTime.now().difference(created) > const Duration(hours: 12)) {
+          return null;
         }
-        return null;
+        return newest;
       });
 
   Stream<ExamSession?> watchSession(String sessionId) => _sessions

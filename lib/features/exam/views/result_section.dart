@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/bouncy_tap.dart';
 import '../models/exam_result.dart';
 import 'exam_result_detail_view.dart';
 
@@ -20,99 +21,87 @@ class ResultNavCard extends StatelessWidget {
   final String label;
   final int count;
   final VoidCallback onTap;
+
+  /// 두 장을 나란히 놓을 때 뒤쪽 카드를 살짝 다르게 보이게 한다.
   final bool dark;
 
   @override
   Widget build(BuildContext context) {
+    // 색 네모 대신 '건수'를 주인공으로 둔다.
+    // 알고 싶은 건 결과가 몇 건인지이지 아이콘이 아니다.
+    final accent = dark ? AppColors.purple : AppColors.pink;
+    final tint = dark ? AppColors.purpleSoft : AppColors.pinkSoft;
     return Semantics(
       button: true,
       label: '$label $count건 보기',
-      child: InkWell(
+      child: BouncyTap(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20.r),
         child: Container(
-          padding: EdgeInsets.all(16.w),
+          padding: EdgeInsets.all(AppSpace.md.w),
           decoration: BoxDecoration(
             color: AppColors.cream.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(20.r),
+            borderRadius: BorderRadius.circular(AppRadius.lg.r),
             border: Border.all(color: AppColors.border),
           ),
-          // 두 카드 높이를 맞추느라 세로가 딱 맞게 잡히므로,
-          // 글자 크기가 커져도 넘치지 않게 각 줄을 줄일 수 있게 둔다.
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 38.w,
-                    height: 38.w,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: dark ? AppColors.navy : AppColors.pink,
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Icon(
-                      icon,
-                      size: AppIconSize.sm.sp,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 9.w,
-                      vertical: 3.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.blueSoft,
-                      borderRadius: BorderRadius.circular(999.r),
-                    ),
-                    child: Text(
-                      '$count건',
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.mintDeep,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 10.h),
               Flexible(
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTheme.font(
-                    fontSize: 14.sp,
+                    fontSize: 13.sp,
                     height: 1.2,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.ink,
+                    color: AppColors.gray,
                   ),
                 ),
               ),
-              SizedBox(height: 2.h),
+              SizedBox(height: AppSpace.xxs.h),
               Flexible(
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      '결과 보기',
+                      '$count',
+                      style: AppTheme.tabularNumber(
+                        fontSize: 30.sp,
+                        color: count == 0 ? AppColors.hint : AppColors.ink,
+                      ).copyWith(height: 1.0),
+                    ),
+                    SizedBox(width: 2.w),
+                    Text(
+                      '건',
                       style: AppTheme.font(
-                        fontSize: 11.sp,
-                        height: 1.2,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w800,
                         color: AppColors.gray,
                       ),
                     ),
-                    Icon(
-                      Icons.chevron_right,
-                      size: 15.sp,
-                      color: AppColors.hint,
-                    ),
                   ],
+                ),
+              ),
+              SizedBox(height: AppSpace.xs.h),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpace.xs.w,
+                  vertical: AppSpace.xxs.h + 1,
+                ),
+                decoration: BoxDecoration(
+                  color: tint,
+                  borderRadius: BorderRadius.circular(AppRadius.xs.r),
+                ),
+                child: Text(
+                  '결과 보기',
+                  style: AppTheme.font(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w800,
+                    color: accent,
+                  ),
                 ),
               ),
             ],

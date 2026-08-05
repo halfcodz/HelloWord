@@ -100,9 +100,36 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
     return service;
   }
 
+  /// 음원을 미리 물려 둔 상태인지.
+  bool _prepared = false;
+
+  /// 소리를 내지 않고 음원만 미리 걸어 둔다.
+  ///
+  /// 브라우저는 '사용자가 누른 그 순간에 시작한 소리'만 허용한다.
+  /// play()는 내부에서 음원을 먼저 불러오느라 기다림이 생기고, 그 사이에
+  /// 제스처 자격이 풀려 재생이 거부된다. 그래서 불러오기는 미리 해 두고,
+  /// 누른 순간에는 resume()만 부른다.
+  Future<void> _prepare() async {
+    if (_prepared) return;
+    try {
+      await _player.setReleaseMode(ReleaseMode.stop);
+      await _player.setVolume(_volume);
+      await _player.setSource(AssetSource(_playlist[_track]));
+      _completeSub ??= _player.onPlayerComplete.listen((_) => _playNext());
+      _durationSub ??= _player.onDurationChanged.listen((d) {
+        _duration = d;
+        _scheduleAdvance();
+      });
+      _prepared = true;
+    } catch (e) {
+      debugPrint('BGM 준비 실패: $e');
+    }
+  }
+
   /// 로그인 후 등 '이제 틀어도 되는' 시점에 호출한다.
   Future<void> start() async {
     _started = true;
+    await _prepare();
     await _sync();
   }
 
@@ -110,7 +137,12 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
     if (_enabled == value) return;
     _enabled = value;
     notifyListeners();
-    await _sync();
+    // 스위치를 켜는 것도 사용자의 손짓이므로 그 자리에서 바로 재생한다.
+    if (value && _started) {
+      playFromGesture();
+    } else {
+      await _sync();
+    }
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefKey, value);
@@ -145,33 +177,28 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
     final service = _instance;
     if (service == null || !service._blocked) return;
     if (!service._started || !service._enabled || service.isSuspended) return;
-    service._blocked = false;
-    // 브라우저는 '탭 처리 도중에 바로 시작한 소리'만 허용한다.
-    // 볼륨 설정 같은 걸 await로 먼저 하면 그 사이에 제스처 자격이 풀려
-    // 재생이 거부된다. 그래서 여기서는 play를 가장 먼저 부른다.
-    service._playImmediately();
+    if (service._player.state == PlayerState.playing) return;
+    service.playFromGesture();
   }
 
-  /// 제스처 안에서 곧바로 재생을 시작한다.
-  Future<void> _playImmediately() async {
-    try {
-      _playToken++;
-      await _player.play(AssetSource(_playlist[_track]), volume: _volume);
-      _blocked = false;
-      // 재생이 시작된 뒤에 나머지 설정을 붙인다.
-      await _player.setReleaseMode(ReleaseMode.stop);
-      _completeSub ??= _player.onPlayerComplete.listen((_) => _playNext());
-      _durationSub ??= _player.onDurationChanged.listen((d) {
-        _duration = d;
-        _scheduleAdvance();
-      });
-      await _scheduleAdvance(force: true);
-      notifyListeners();
-    } catch (e) {
-      debugPrint('BGM 제스처 재생 실패: $e');
-      _blocked = true;
-      notifyListeners();
-    }
+  /// 사용자가 누른 그 순간에 재생을 시작한다.
+  /// 여기서는 resume()이 첫 호출이어야 한다. 앞에 다른 기다림을 두면
+  /// 브라우저가 '사용자가 시작한 소리'로 인정하지 않는다.
+  void playFromGesture() {
+    if (!_started || !_enabled || isSuspended) return;
+    _player
+        .resume()
+        .then((_) {
+          _blocked = false;
+          _playToken++;
+          notifyListeners();
+          _scheduleAdvance(force: true);
+        })
+        .catchError((Object e) {
+          debugPrint('BGM 제스처 재생 실패: $e');
+          _blocked = true;
+          notifyListeners();
+        });
   }
 
   /// 앱 어디서나 탭 시점을 알릴 수 있도록 하나만 두고 쓴다.
@@ -180,6 +207,7 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _sync() async {
     try {
       if (_shouldPlay) {
+        await _prepare();
         // 한 곡이 끝나면 자동으로 다음 곡을 잇는다.
         _completeSub ??= _player.onPlayerComplete.listen((_) => _playNext());
         _durationSub ??= _player.onDurationChanged.listen((d) {

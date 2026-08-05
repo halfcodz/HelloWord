@@ -35,7 +35,9 @@ echo "→ 의존성 확인"
 flutter pub get >/dev/null
 
 echo "→ 웹 빌드"
-flutter build web --release
+# --no-tree-shake-icons: 아이콘 글리프가 빌드에서 빠져
+# 화면에 빈 네모로 보이는 것을 막는다.
+flutter build web --release --no-tree-shake-icons
 
 echo "→ 배포"
 firebase deploy --only hosting
