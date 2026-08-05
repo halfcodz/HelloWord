@@ -46,13 +46,26 @@ class _ExamBody extends StatefulWidget {
 
 class _ExamBodyState extends State<_ExamBody> {
   final _answerController = TextEditingController();
+
+  /// 입력칸 포커스. 문제를 넘겨도 키보드가 내려가지 않도록 직접 들고 있는다.
+  final _answerFocus = FocusNode();
   int _shownIndex = -1;
   bool _leaving = false;
 
   @override
   void dispose() {
     _answerController.dispose();
+    _answerFocus.dispose();
     super.dispose();
+  }
+
+  /// 문제를 옮긴 뒤 입력칸에 다시 포커스를 준다.
+  /// (그러지 않으면 '다음'을 누를 때마다 키보드가 내려가 다시 눌러야 한다)
+  void _keepKeyboard() {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_answerFocus.hasFocus) _answerFocus.requestFocus();
+    });
   }
 
   /// 현재 문제로 이동할 때 입력칸을 그 문제의 저장된 답으로 채운다.
@@ -66,11 +79,13 @@ class _ExamBodyState extends State<_ExamBody> {
   Future<void> _goPrev(SessionExamViewModel vm) async {
     await vm.saveAnswer(_answerController.text);
     vm.goTo(vm.currentIndex - 1);
+    _keepKeyboard();
   }
 
   Future<void> _goNext(SessionExamViewModel vm) async {
     await vm.saveAnswer(_answerController.text);
     vm.goTo(vm.currentIndex + 1);
+    _keepKeyboard();
   }
 
   Future<void> _finish(SessionExamViewModel vm) async {
@@ -82,14 +97,17 @@ class _ExamBodyState extends State<_ExamBody> {
         builder: (context) => AlertDialog(
           title: const Text('아직 안 푼 문제가 있어요'),
           content: Text(
-              '${vm.total - vm.submittedCount}문제가 비어 있어요. 그래도 완료할까요?'),
+            '${vm.total - vm.submittedCount}문제가 비어 있어요. 그래도 완료할까요?',
+          ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('더 풀기')),
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('더 풀기'),
+            ),
             FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('완료')),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('완료'),
+            ),
           ],
         ),
       );
@@ -106,11 +124,13 @@ class _ExamBodyState extends State<_ExamBody> {
         content: const Text('나가면 카메라·마이크가 꺼지고 홈으로 이동해요.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('취소')),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('나가기')),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('나가기'),
+          ),
         ],
       ),
     );
@@ -156,8 +176,10 @@ class _ExamBodyState extends State<_ExamBody> {
                   shape: const StadiumBorder(),
                   padding: EdgeInsets.symmetric(horizontal: 18.w),
                 ),
-                child: const Text('완료',
-                    style: TextStyle(fontWeight: FontWeight.w800)),
+                child: const Text(
+                  '완료',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
               ),
             ),
           ],
@@ -180,31 +202,26 @@ class _ExamBodyState extends State<_ExamBody> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // 답을 쓰는 동안에는(키보드가 열리면) 영상을 접어 문제·입력칸에 화면을 다 준다.
-    // 통화는 그대로 유지되고, 키보드를 내리면 다시 펼쳐진다.
+    // 답을 쓰는 동안에는 영상을 작게 줄여 문제·입력칸 자리를 내주되,
+    // 언니 얼굴이 계속 보이도록 완전히 감추지는 않는다.
     final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
-    final callHeight = (!vm.isFinished && keyboardOpen) ? 0.0 : 260.h;
+    final callHeight = (!vm.isFinished && keyboardOpen) ? 84.h : 260.h;
 
-    // 바깥(입력칸 밖)을 터치하면 키보드를 내린다.
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Column(
-        children: [
-          // 영상통화는 응시 중·완료 후 모두 같은 위치에 유지해 끊기지 않게 한다.
-          CallPanel(
-            key: const ValueKey('exam-call'),
-            sessionId: session.id,
-            isCaller: false,
-            height: callHeight,
-          ),
-          Expanded(
-            child: vm.isFinished
-                ? _buildFinished(vm, session)
-                : _buildActive(vm, keyboardOpen),
-          ),
-        ],
-      ),
+    return Column(
+      children: [
+        // 영상통화는 응시 중·완료 후 모두 같은 위치에 유지해 끊기지 않게 한다.
+        CallPanel(
+          key: const ValueKey('exam-call'),
+          sessionId: session.id,
+          isCaller: false,
+          height: callHeight,
+        ),
+        Expanded(
+          child: vm.isFinished
+              ? _buildFinished(vm, session)
+              : _buildActive(vm, keyboardOpen),
+        ),
+      ],
     );
   }
 
@@ -230,58 +247,76 @@ class _ExamBodyState extends State<_ExamBody> {
         // 문제(뜻)는 위쪽에서 스크롤로 보여준다.
         // 키보드가 열리면 문제 카드가 입력칸 바로 위에 붙도록 아래쪽으로 정렬해,
         // 스크롤하지 않아도 '문제 + 내가 쓴 답'이 한눈에 보이게 한다.
+        // 자판이 아닌 곳(문제 영역)을 누르면 키보드를 내린다.
         Expanded(
-          child: SingleChildScrollView(
-            reverse: keyboardOpen,
-            padding: EdgeInsets.fromLTRB(
-              20.w,
-              keyboardOpen ? 6.h : 14.h,
-              20.w,
-              8.h,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('${vm.currentIndex + 1} / ${vm.total}',
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: SingleChildScrollView(
+              reverse: keyboardOpen,
+              padding: EdgeInsets.fromLTRB(
+                20.w,
+                keyboardOpen ? 6.h : 14.h,
+                20.w,
+                8.h,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    '${vm.currentIndex + 1} / ${vm.total}',
                     textAlign: TextAlign.center,
                     style: AppTheme.tabularNumber(
-                        fontSize: 14.sp, color: AppColors.gray)),
-                SizedBox(height: 12.h),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 20.w, vertical: keyboardOpen ? 16.h : 24.h),
-                  decoration: BoxDecoration(
-                    color: AppColors.cream,
-                    borderRadius: BorderRadius.circular(20.r),
-                    border: Border.all(color: AppColors.border),
-                    boxShadow: AppColors.softShadow(),
+                      fontSize: 14.sp,
+                      color: AppColors.gray,
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      Text(word.quizHint,
+                  SizedBox(height: 12.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 20.w,
+                      vertical: keyboardOpen ? 16.h : 24.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.cream,
+                      borderRadius: BorderRadius.circular(20.r),
+                      border: Border.all(color: AppColors.border),
+                      boxShadow: AppColors.softShadow(),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          word.quizHint,
                           style: TextStyle(
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.hint)),
-                      SizedBox(height: 12.h),
-                      // 문제로 나온 단어는 제목용 폰트로 크게.
-                      Text(word.quizPrompt,
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.hint,
+                          ),
+                        ),
+                        SizedBox(height: 12.h),
+                        // 문제로 나온 단어는 제목용 폰트로 크게.
+                        Text(
+                          word.quizPrompt,
                           textAlign: TextAlign.center,
                           style: AppTheme.display(
-                              fontSize: keyboardOpen ? 24.sp : 30.sp,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.ink)),
-                    ],
+                            fontSize: keyboardOpen ? 24.sp : 30.sp,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
         // 입력칸을 키보드 '바로 위'에 고정해 무엇을 쓰는지 항상 보이게 한다.
         _InputBar(
           controller: _answerController,
+          focusNode: _answerFocus,
           hintText: word.quizInputHint,
           compact: keyboardOpen,
           canPrev: vm.currentIndex > 0,
@@ -300,10 +335,7 @@ class _ExamBodyState extends State<_ExamBody> {
       children: [
         ExamScoreBanner(score: vm.correctCount, total: session.total),
         Expanded(
-          child: ExamReviewList(
-            words: session.words,
-            resolve: vm.answerAt,
-          ),
+          child: ExamReviewList(words: session.words, resolve: vm.answerAt),
         ),
         Container(
           width: double.infinity,
@@ -318,8 +350,10 @@ class _ExamBodyState extends State<_ExamBody> {
               ),
               SizedBox(width: 10.w),
               Flexible(
-                child: Text('언니가 시험을 마치면 홈으로 이동해요',
-                    style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+                child: Text(
+                  '언니가 시험을 마치면 홈으로 이동해요',
+                  style: TextStyle(fontSize: 13.sp, color: AppColors.gray),
+                ),
               ),
             ],
           ),
@@ -334,6 +368,7 @@ class _InputBar extends StatelessWidget {
   const _InputBar({
     required this.controller,
     required this.hintText,
+    required this.focusNode,
     required this.canPrev,
     required this.isLast,
     required this.compact,
@@ -344,6 +379,7 @@ class _InputBar extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final String hintText;
   final bool canPrev;
   final bool isLast;
@@ -366,7 +402,11 @@ class _InputBar extends StatelessWidget {
         top: false,
         child: Padding(
           padding: EdgeInsets.fromLTRB(
-              14.w, compact ? 8.h : 12.h, 14.w, compact ? 10.h : 18.h),
+            14.w,
+            compact ? 8.h : 12.h,
+            14.w,
+            compact ? 10.h : 18.h,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -374,9 +414,11 @@ class _InputBar extends StatelessWidget {
               // 키보드가 올라와도 이 줄은 항상 키보드 바로 위에 남는다.
               TextField(
                 controller: controller,
+                focusNode: focusNode,
                 autofocus: true,
-                textInputAction:
-                    isLast ? TextInputAction.done : TextInputAction.next,
+                textInputAction: isLast
+                    ? TextInputAction.done
+                    : TextInputAction.next,
                 autocorrect: false,
                 enableSuggestions: false,
                 textCapitalization: TextCapitalization.none,
@@ -393,7 +435,8 @@ class _InputBar extends StatelessWidget {
                       onPressed: canPrev ? onPrev : null,
                       style: OutlinedButton.styleFrom(
                         padding: EdgeInsets.symmetric(
-                            vertical: compact ? 9.h : 11.h),
+                          vertical: compact ? 9.h : 11.h,
+                        ),
                         side: BorderSide(color: AppColors.border),
                         foregroundColor: AppColors.grayText,
                       ),
@@ -406,7 +449,8 @@ class _InputBar extends StatelessWidget {
                       onPressed: isLast ? null : onNext,
                       style: FilledButton.styleFrom(
                         padding: EdgeInsets.symmetric(
-                            vertical: compact ? 9.h : 11.h),
+                          vertical: compact ? 9.h : 11.h,
+                        ),
                       ),
                       child: const Text('다음 →'),
                     ),

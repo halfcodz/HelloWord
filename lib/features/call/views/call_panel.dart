@@ -309,6 +309,43 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
               ),
             ),
           ),
+          // 상대 영상이 안 올 때는 연결 상태와 무관하게 다시 붙일 수 있게 한다.
+          if (remote && _connected && !service.hasRemoteVideo)
+            Positioned.fill(
+              child: ColoredBox(
+                color: AppColors.navy.withValues(alpha: 0.72),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.videocam_off_rounded,
+                        size: 22.sp,
+                        color: Colors.white70,
+                      ),
+                      SizedBox(height: 6.h),
+                      Text(
+                        '상대 영상이 안 와요',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11.sp,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      FilledButton(
+                        onPressed: _restarting ? null : _retry,
+                        style: FilledButton.styleFrom(
+                          minimumSize: Size(0, 30.h),
+                          padding: EdgeInsets.symmetric(horizontal: 12.w),
+                          textStyle: TextStyle(fontSize: 11.sp),
+                        ),
+                        child: const Text('다시 연결'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           // 누구 화면인지 작게 표시.
           Positioned(
             left: 6.w,

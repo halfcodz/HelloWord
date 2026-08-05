@@ -411,7 +411,9 @@ class CallService {
 
   // ── 공통 ──────────────────────────────────────
 
-  /// 상대 영상이 실제로 들어오고 있는지.
+  /// 상대 영상이 실제로 들어오고 있는지. 화면에서도 확인할 수 있게 공개한다.
+  bool get hasRemoteVideo => _hasRemoteVideo;
+
   /// 소리만 오고 화면이 검은 경우를 잡아내는 데 쓴다.
   bool get _hasRemoteVideo {
     final stream = remoteRenderer.srcObject;
@@ -434,6 +436,8 @@ class CallService {
           return;
         }
         if (_connected) {
+          // 내 카메라가 끊겨 있으면 먼저 되살린다(상대에게 얼굴이 안 가는 경우).
+          _ensureLocalVideo();
           // 연결은 됐는데 얼굴만 안 보이는 경우(목소리만 들림)도 고쳐 준다.
           if (_hasRemoteVideo) {
             _noVideoTicks = 0;
@@ -476,9 +480,54 @@ class CallService {
     try {
       if (_localStream != null) localRenderer.srcObject = _localStream;
     } catch (_) {}
+    // 앱을 잠깐 벗어난 사이 카메라가 끊겼을 수 있다(소리만 가고 얼굴은 안 감).
+    await _ensureLocalVideo();
     if (_connected) return;
     _recoverCount = 0;
     await _recover();
+  }
+
+  /// 내 카메라가 살아 있는지 확인하고, 끊겼으면 새로 켜서 상대에게 다시 보낸다.
+  ///
+  /// 아이폰 브라우저는 앱을 벗어나거나 다른 앱이 카메라를 쓰면 영상 트랙만
+  /// 끝내 버린다. 이때 소리는 계속 가므로 '목소리는 들리는데 얼굴이 안 보이는'
+  /// 상태가 된다. 트랙이 끝나 있으면 다시 받아 sender에 갈아 끼운다.
+  Future<void> _ensureLocalVideo() async {
+    if (_disposed) return;
+    final pc = _pc;
+    if (pc == null) return;
+    try {
+      final tracks = _localStream?.getVideoTracks() ?? const [];
+      final alive = tracks.isNotEmpty && tracks.first.muted != true;
+      if (alive) return;
+
+      final fresh = await navigator.mediaDevices.getUserMedia({
+        'video': {'facingMode': 'user'},
+        'audio': false,
+      });
+      final newTrack = fresh.getVideoTracks().first;
+
+      // 보내는 쪽 트랙을 갈아 끼운다(연결을 끊지 않고 영상만 되살린다).
+      final senders = await pc.getSenders();
+      for (final sender in senders) {
+        if (sender.track?.kind == 'video') {
+          await sender.replaceTrack(newTrack);
+        }
+      }
+      // 내 화면도 새 트랙으로 바꿔 준다.
+      for (final old in tracks) {
+        try {
+          await old.stop();
+          await _localStream?.removeTrack(old);
+        } catch (_) {}
+      }
+      await _localStream?.addTrack(newTrack);
+      localRenderer.srcObject = null;
+      localRenderer.srcObject = _localStream;
+      onRemoteStream?.call();
+    } catch (e) {
+      // 권한이 없거나 카메라를 못 잡는 경우. 통화 자체는 유지한다.
+    }
   }
 
   void _addCandidate(RTCPeerConnection pc, Map<String, dynamic>? data) {
