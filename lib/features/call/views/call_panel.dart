@@ -175,9 +175,11 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_error!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white, fontSize: 13.sp)),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white, fontSize: 13.sp),
+              ),
               SizedBox(height: 12.h),
               FilledButton.icon(
                 onPressed: _retry,
@@ -195,88 +197,37 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
           mainAxisSize: MainAxisSize.min,
           children: [
             const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation(Colors.white)),
+              valueColor: AlwaysStoppedAnimation(Colors.white),
+            ),
             SizedBox(height: 12.h),
-            Text('영상 연결 중…',
-                style: TextStyle(color: Colors.white70, fontSize: 13.sp)),
+            Text(
+              '영상 연결 중…',
+              style: TextStyle(color: Colors.white70, fontSize: 13.sp),
+            ),
           ],
         ),
       );
     }
 
     final service = _service!;
+    // 페이스타임처럼 두 얼굴을 나란히, 둘 다 잘리지 않게 보여 준다.
+    // (한쪽을 작은 창으로 겹쳐 두면 상대 얼굴을 가리거나 내 얼굴이 너무 작다)
     return Stack(
       children: [
-        // 원격(상대) 영상 - 크게.
-        // 기본은 '전체 보기'(Contain). 잘라서 채우면 세로로 찍힌 상대 영상이
-        // 가로로 긴 패널에 맞춰 크게 잘려 얼굴이 눈만 보이게 된다.
         Positioned.fill(
-          child: RTCVideoView(
-            service.remoteRenderer,
-            objectFit: _fillRemote
-                ? RTCVideoViewObjectFit.RTCVideoViewObjectFitCover
-                : RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
-            placeholderBuilder: (_) => Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation(Colors.white54)),
-                  ),
-                  SizedBox(height: 10.h),
-                  Text(
-                    _reconnecting
-                        ? '다시 연결하는 중…'
-                        : (_remoteActive || _connected
-                            ? '상대 영상 불러오는 중…'
-                            : '상대가 들어오길 기다리는 중…'),
-                    style: TextStyle(color: Colors.white54, fontSize: 12.sp),
-                  ),
-                  if (_reconnecting) ...[
-                    SizedBox(height: 6.h),
-                    TextButton(
-                      onPressed: _restarting ? null : _retry,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      child: Text('다시 연결',
-                          style: TextStyle(fontSize: 12.sp)),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+          child: Row(
+            children: [
+              Expanded(child: _videoTile(service, remote: true)),
+              SizedBox(width: 2.w),
+              Expanded(child: _videoTile(service, remote: false)),
+            ],
           ),
         ),
-        // 내 영상 - 작게(PiP).
-        Positioned(
-          right: 10.w,
-          top: 10.h,
-          child: Container(
-            width: 84.w,
-            height: 112.h,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(color: AppColors.mintEnd, width: 2),
-            ),
-            child: RTCVideoView(
-              service.localRenderer,
-              mirror: true,
-              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-            ),
-          ),
-        ),
-        // 컨트롤(카메라/마이크).
+        // 컨트롤(카메라/마이크/보기 전환).
         Positioned(
           left: 0,
           right: 0,
-          bottom: 8.h,
+          bottom: 6.h,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -287,7 +238,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
                   service.toggleCamera(_camOn);
                 },
               ),
-              SizedBox(width: 16.w),
+              SizedBox(width: 12.w),
               _CircleButton(
                 icon: _micOn ? Icons.mic : Icons.mic_off,
                 onTap: () {
@@ -295,8 +246,8 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
                   service.toggleMic(_micOn);
                 },
               ),
-              SizedBox(width: 16.w),
-              // 상대 영상을 '전체 보기 ↔ 꽉 채우기'로 바꾼다.
+              SizedBox(width: 12.w),
+              // 얼굴을 다 보기 ↔ 꽉 채우기.
               _CircleButton(
                 icon: _fillRemote
                     ? Icons.fullscreen_exit_rounded
@@ -307,6 +258,85 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
           ),
         ),
       ],
+    );
+  }
+
+  /// 영상 한 칸. 왼쪽은 상대, 오른쪽은 나.
+  Widget _videoTile(CallService service, {required bool remote}) {
+    final fit = _fillRemote
+        ? RTCVideoViewObjectFit.RTCVideoViewObjectFitCover
+        : RTCVideoViewObjectFit.RTCVideoViewObjectFitContain;
+    return ColoredBox(
+      color: AppColors.navy,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: RTCVideoView(
+              remote ? service.remoteRenderer : service.localRenderer,
+              mirror: !remote,
+              objectFit: fit,
+              placeholderBuilder: (_) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white54),
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      remote
+                          ? (_reconnecting
+                                ? '다시 연결하는 중…'
+                                : (_remoteActive || _connected
+                                      ? '영상 불러오는 중…'
+                                      : '기다리는 중…'))
+                          : '카메라 준비 중…',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white54, fontSize: 11.sp),
+                    ),
+                    if (remote && _reconnecting) ...[
+                      SizedBox(height: 4.h),
+                      TextButton(
+                        onPressed: _restarting ? null : _retry,
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        child: Text('다시 연결', style: TextStyle(fontSize: 11.sp)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // 누구 화면인지 작게 표시.
+          Positioned(
+            left: 6.w,
+            top: 6.h,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 2.h),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.42),
+                borderRadius: BorderRadius.circular(AppRadius.xs.r),
+              ),
+              child: Text(
+                remote ? '상대' : '나',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

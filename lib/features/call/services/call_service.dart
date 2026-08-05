@@ -144,6 +144,9 @@ class CallService {
 
     pc.onTrack = (event) {
       if (event.streams.isNotEmpty) {
+        // 같은 스트림 객체를 다시 넣으면 화면이 갱신되지 않는 경우가 있다.
+        // (나갔다 들어왔을 때 목소리만 들리고 얼굴이 안 나오던 원인)
+        remoteRenderer.srcObject = null;
         remoteRenderer.srcObject = event.streams.first;
         onRemoteStream?.call();
       }
@@ -408,6 +411,18 @@ class CallService {
 
   // ── 공통 ──────────────────────────────────────
 
+  /// 상대 영상이 실제로 들어오고 있는지.
+  /// 소리만 오고 화면이 검은 경우를 잡아내는 데 쓴다.
+  bool get _hasRemoteVideo {
+    final stream = remoteRenderer.srcObject;
+    if (stream == null) return false;
+    final tracks = stream.getVideoTracks();
+    return tracks.isNotEmpty && tracks.any((t) => t.enabled);
+  }
+
+  /// 연결된 뒤 영상이 없는 상태로 몇 번 지나갔는지.
+  int _noVideoTicks = 0;
+
   /// 몇 초 안에 연결되지 않으면 스스로 다시 시도한다.
   void _startWatchdog() {
     _watchdog?.cancel();
@@ -418,7 +433,18 @@ class CallService {
           timer.cancel();
           return;
         }
-        if (_connected) return;
+        if (_connected) {
+          // 연결은 됐는데 얼굴만 안 보이는 경우(목소리만 들림)도 고쳐 준다.
+          if (_hasRemoteVideo) {
+            _noVideoTicks = 0;
+            return;
+          }
+          // 잠깐 늦게 오는 것일 수도 있으니 두 번은 기다린다.
+          if (++_noVideoTicks < 2) return;
+          _noVideoTicks = 0;
+          if (_recoverCount < 12) _recover();
+          return;
+        }
         // 언니는 동생이 들어온 뒤부터 다시 시도한다(아무도 없으면 의미 없음).
         if (isCaller && _lastCalleeId == null) return;
         if (_recoverCount >= 12) {
