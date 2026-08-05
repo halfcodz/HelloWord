@@ -30,12 +30,13 @@ class ProfileView extends StatelessWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('취소')),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('취소'),
+          ),
           FilledButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(controller.text.trim()),
-              child: const Text('저장')),
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('저장'),
+          ),
         ],
       ),
     );
@@ -64,11 +65,13 @@ class ProfileView extends StatelessWidget {
         title: const Text('로그아웃 할까요?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('취소')),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('로그아웃')),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('로그아웃'),
+          ),
         ],
       ),
     );
@@ -103,13 +106,16 @@ class ProfileView extends StatelessWidget {
                       image: photoBytes != null
                           ? DecorationImage(
                               image: MemoryImage(photoBytes),
-                              fit: BoxFit.cover)
+                              fit: BoxFit.cover,
+                            )
                           : null,
                     ),
                     child: photoBytes != null
                         ? null
-                        : Text(isElder ? '🐰' : '🐥',
-                            style: TextStyle(fontSize: 44.sp)),
+                        : Text(
+                            isElder ? '🐰' : '🐥',
+                            style: TextStyle(fontSize: 44.sp),
+                          ),
                   ),
                   Positioned(
                     right: 0,
@@ -123,19 +129,25 @@ class ProfileView extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: AppColors.softShadow(blur: 6, y: 2),
                       ),
-                      child: Icon(Icons.camera_alt_rounded,
-                          size: 15.sp, color: AppColors.pink),
+                      child: Icon(
+                        Icons.camera_alt_rounded,
+                        size: 15.sp,
+                        color: AppColors.pink,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
             SizedBox(height: 10.h),
-            Text(user.name,
-                style: TextStyle(
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.ink)),
+            Text(
+              user.name,
+              style: TextStyle(
+                fontSize: 20.sp,
+                fontWeight: FontWeight.w800,
+                color: AppColors.ink,
+              ),
+            ),
             SizedBox(height: 6.h),
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
@@ -143,51 +155,64 @@ class ProfileView extends StatelessWidget {
                 color: AppColors.blueSoft,
                 borderRadius: BorderRadius.circular(10.r),
               ),
-              child: Text(isElder ? '언니' : '동생',
-                  style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.pink)),
+              child: Text(
+                isElder ? '언니' : '동생',
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.pink,
+                ),
+              ),
             ),
             SizedBox(height: AppSpace.lg.h),
             Expanded(
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(
-                    AppSpace.gutter.w, 0, AppSpace.gutter.w, AppSpace.lg.h),
+                  AppSpace.gutter.w,
+                  0,
+                  AppSpace.gutter.w,
+                  AppSpace.lg.h,
+                ),
                 children: [
                   const _SectionLabel('계정'),
-                  _SettingCard(children: [
-                    _SettingRow(
-                      icon: Icons.badge_outlined,
-                      label: '이름',
-                      value: user.name,
-                      onTap: () => _editName(context),
-                    ),
-                    _SettingRow(
-                      icon: Icons.mail_outline_rounded,
-                      label: '이메일',
-                      value: user.email,
-                      isLast: true,
-                    ),
-                  ]),
+                  _SettingCard(
+                    children: [
+                      _SettingRow(
+                        icon: Icons.badge_outlined,
+                        label: '이름',
+                        value: user.name,
+                        onTap: () => _editName(context),
+                      ),
+                      _SettingRow(
+                        icon: Icons.mail_outline_rounded,
+                        label: '이메일',
+                        value: user.email,
+                        isLast: true,
+                      ),
+                    ],
+                  ),
                   SizedBox(height: AppSpace.lg.h),
                   const _SectionLabel('앱 설정'),
-                  const _SettingCard(children: [
-                    _ThemeToggleRow(),
-                    _BgmToggleRow(),
-                    _SfxToggleRow(),
-                  ]),
+                  const _SettingCard(
+                    children: [
+                      _ThemeToggleRow(),
+                      _BgmToggleRow(),
+                      _SfxToggleRow(),
+                    ],
+                  ),
                   SizedBox(height: AppSpace.lg.h),
-                  _SettingCard(children: [
-                    _SettingRow(
-                      icon: Icons.logout_rounded,
-                      label: '로그아웃',
-                      danger: true,
-                      isLast: true,
-                      onTap: () => _confirmLogout(context),
-                    ),
-                  ]),
+                  _SettingCard(
+                    children: [
+                      _SettingRow(
+                        icon: Icons.logout_rounded,
+                        label: '로그아웃',
+                        danger: true,
+                        isLast: true,
+                        onTap: () => _confirmLogout(context),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -267,7 +292,9 @@ class _SwitchRow extends StatelessWidget {
         onTap: () => onChanged(!value),
         child: Container(
           padding: EdgeInsets.symmetric(
-              vertical: AppSpace.sm.h, horizontal: AppSpace.md.w),
+            vertical: AppSpace.sm.h,
+            horizontal: AppSpace.md.w,
+          ),
           decoration: BoxDecoration(
             border: isLast
                 ? null
@@ -281,16 +308,23 @@ class _SwitchRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(label,
-                        style: AppTheme.font(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.ink)),
+                    Text(
+                      label,
+                      style: AppTheme.font(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
                     if (description != null) ...[
                       SizedBox(height: 2.h),
-                      Text(description!,
-                          style: AppTheme.font(
-                              fontSize: 12.sp, color: AppColors.gray)),
+                      Text(
+                        description!,
+                        style: AppTheme.font(
+                          fontSize: 12.sp,
+                          color: AppColors.gray,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -335,13 +369,13 @@ class _BgmToggleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final bgm = context.watch<BgmService>();
     return _SwitchRow(
-      icon: bgm.enabled
-          ? Icons.music_note_rounded
-          : Icons.music_off_rounded,
+      icon: bgm.enabled ? Icons.music_note_rounded : Icons.music_off_rounded,
       label: '배경음악',
       description: bgm.isUnavailable
           ? '이 기기에서는 소리를 낼 수 없어요'
-          : '공부할 때 잔잔하게 흘러나와요 (영상통화 중엔 자동으로 꺼져요)',
+          : (bgm.isBlocked
+                ? '화면을 한 번 누르면 재생돼요 (브라우저가 자동 재생을 막아요)'
+                : '공부할 때 잔잔하게 흘러나와요 (영상통화 중엔 자동으로 꺼져요)'),
       value: bgm.enabled,
       onChanged: bgm.setEnabled,
     );
@@ -356,9 +390,7 @@ class _SfxToggleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final sfx = context.watch<SfxService>();
     return _SwitchRow(
-      icon: sfx.enabled
-          ? Icons.touch_app_rounded
-          : Icons.do_not_touch_rounded,
+      icon: sfx.enabled ? Icons.touch_app_rounded : Icons.do_not_touch_rounded,
       label: '버튼 효과음',
       description: '버튼을 누를 때 짧은 소리가 나요',
       value: sfx.enabled,
@@ -392,30 +424,36 @@ class _SettingRow extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.symmetric(
-            vertical: AppSpace.md.h, horizontal: AppSpace.md.w),
+          vertical: AppSpace.md.h,
+          horizontal: AppSpace.md.w,
+        ),
         decoration: BoxDecoration(
           border: isLast
               ? null
-              : Border(
-                  bottom: BorderSide(color: AppColors.border, width: 1)),
+              : Border(bottom: BorderSide(color: AppColors.border, width: 1)),
         ),
         child: Row(
           children: [
             Icon(icon, size: AppIconSize.md.sp, color: color),
             SizedBox(width: AppSpace.sm.w),
-            Text(label,
-                style: AppTheme.font(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w700,
-                    color: danger ? AppColors.danger : AppColors.ink)),
+            Text(
+              label,
+              style: AppTheme.font(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w700,
+                color: danger ? AppColors.danger : AppColors.ink,
+              ),
+            ),
             const Spacer(),
             if (value != null)
               ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: 160.w),
-                child: Text(value!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14.sp, color: AppColors.gray)),
+                child: Text(
+                  value!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 14.sp, color: AppColors.gray),
+                ),
               ),
             if (onTap != null && !danger) ...[
               SizedBox(width: 6.w),

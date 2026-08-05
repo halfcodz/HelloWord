@@ -400,8 +400,7 @@ class _AskMeaningToggle extends StatelessWidget {
               padding: EdgeInsets.all(2.w),
               alignment: on ? Alignment.centerRight : Alignment.centerLeft,
               decoration: BoxDecoration(
-                gradient: on ? AppColors.primaryButton : null,
-                color: on ? null : AppColors.border,
+                color: on ? AppColors.pink : AppColors.border,
                 borderRadius: BorderRadius.circular(999.r),
               ),
               child: Container(

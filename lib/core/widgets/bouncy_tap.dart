@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/bgm_service.dart';
 import '../services/sfx_service.dart';
 import '../theme/app_theme.dart';
 
@@ -42,6 +43,8 @@ class _BouncyTapState extends State<BouncyTap> {
           : () {
               // 누르는 느낌을 소리로도 준다(설정에서 끌 수 있음).
               SfxService.tap();
+              // 브라우저가 자동재생을 막아 배경음악이 안 켜졌다면 지금 켠다.
+              BgmService.notifyUserGesture();
               widget.onTap!();
             },
       child: AnimatedScale(

@@ -403,14 +403,13 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
     final hasEvents = !outside && _eventsFor(day).isNotEmpty;
 
     // 우선순위: 선택일(민트) > 오늘(네이비 링) > 기록 있는 날(연민트) > 일반.
-    Gradient? grad;
     Color? bg;
     Border? border;
     Color fg = outside ? AppColors.hint : AppColors.ink;
     FontWeight weight = FontWeight.w600;
 
     if (selected) {
-      grad = AppColors.primaryButton;
+      bg = AppColors.pink;
       fg = Colors.white;
       weight = FontWeight.w800;
     } else if (today) {
@@ -430,7 +429,6 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
         height: 40.w,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          gradient: grad,
           color: bg,
           border: border,
           shape: BoxShape.circle,
@@ -476,7 +474,7 @@ class HistoryEntryButton extends StatelessWidget {
               height: 44.w,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                gradient: AppColors.primaryButton,
+                color: AppColors.pink,
                 borderRadius: BorderRadius.circular(13.r),
               ),
               child: Icon(

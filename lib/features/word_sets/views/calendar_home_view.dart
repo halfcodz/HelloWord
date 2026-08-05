@@ -244,7 +244,7 @@ class _DayDialog extends StatelessWidget {
                               width: 40.w,
                               height: 40.w,
                               decoration: BoxDecoration(
-                                gradient: AppColors.primaryButton,
+                                color: AppColors.pink,
                                 borderRadius: BorderRadius.circular(12.r),
                               ),
                               child: Icon(

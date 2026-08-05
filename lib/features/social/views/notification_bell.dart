@@ -34,25 +34,33 @@ class NotificationBell extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('알림',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 17.sp, color: AppColors.ink)),
+                  Text(
+                    '알림',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 17.sp, color: AppColors.ink),
+                  ),
                   SizedBox(height: 16.h),
                   if (invites.isEmpty)
                     Padding(
                       padding: EdgeInsets.symmetric(vertical: 24.h),
                       child: Center(
-                        child: Text('새 알림이 없어요',
-                            style: TextStyle(
-                                fontSize: 14.sp, color: AppColors.lavender)),
+                        child: Text(
+                          '새 알림이 없어요',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: AppColors.lavender,
+                          ),
+                        ),
                       ),
                     )
                   else
-                    ...invites.map((invite) => _InviteTile(
-                          invite: invite,
-                          onAccept: () => repository.acceptInvite(invite),
-                          onReject: () => repository.rejectInvite(invite.id),
-                        )),
+                    ...invites.map(
+                      (invite) => _InviteTile(
+                        invite: invite,
+                        onAccept: () => repository.acceptInvite(invite),
+                        onReject: () => repository.rejectInvite(invite.id),
+                      ),
+                    ),
                 ],
               );
             },
@@ -85,12 +93,14 @@ class NotificationBell extends StatelessWidget {
                   width: 16.w,
                   height: 16.w,
                   alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFF4D6D),
+                  decoration: BoxDecoration(
+                    color: AppColors.danger,
                     shape: BoxShape.circle,
                   ),
-                  child: Text('$count',
-                      style: TextStyle(fontSize: 9.sp, color: Colors.white)),
+                  child: Text(
+                    '$count',
+                    style: TextStyle(fontSize: 9.sp, color: Colors.white),
+                  ),
                 ),
               ),
           ],
@@ -124,8 +134,10 @@ class _InviteTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('${invite.fromName}님이 친구 초대를 보냈어요',
-              style: TextStyle(fontSize: 15.sp, color: AppColors.ink)),
+          Text(
+            '${invite.fromName}님이 친구 초대를 보냈어요',
+            style: TextStyle(fontSize: 15.sp, color: AppColors.ink),
+          ),
           SizedBox(height: 12.h),
           Row(
             children: [

@@ -29,12 +29,15 @@ class _MaterialBellState extends State<MaterialBell> {
   /// 열어봐도 사라지지 않고, 하루가 지나면 자동으로 사라진다.
   List<WordSet> _recentMaterials(List<WordSet> sets) {
     final now = DateTime.now();
-    final list = sets.where((s) {
-      final c = s.createdAt;
-      return c != null && now.difference(c) < const Duration(hours: 24);
-    }).toList()
-      ..sort((a, b) => (b.createdAt ?? DateTime(0))
-          .compareTo(a.createdAt ?? DateTime(0)));
+    final list =
+        sets.where((s) {
+          final c = s.createdAt;
+          return c != null && now.difference(c) < const Duration(hours: 24);
+        }).toList()..sort(
+          (a, b) => (b.createdAt ?? DateTime(0)).compareTo(
+            a.createdAt ?? DateTime(0),
+          ),
+        );
     return list;
   }
 
@@ -69,7 +72,7 @@ class _MaterialBellState extends State<MaterialBell> {
                       width: 9.w,
                       height: 9.w,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF4D4D),
+                        color: AppColors.danger,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 1.4),
                       ),
@@ -103,20 +106,27 @@ class _MaterialBellState extends State<MaterialBell> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Center(
-                    child: Text('알림',
-                        style: TextStyle(
-                            fontSize: 17.sp,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.ink)),
+                    child: Text(
+                      '알림',
+                      style: TextStyle(
+                        fontSize: 17.sp,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                      ),
+                    ),
                   ),
                   SizedBox(height: 16.h),
                   if (newMats.isEmpty && invites.isEmpty)
                     Padding(
                       padding: EdgeInsets.symmetric(vertical: 24.h),
                       child: Center(
-                        child: Text('새 알림이 없어요',
-                            style: TextStyle(
-                                fontSize: 14.sp, color: AppColors.gray)),
+                        child: Text(
+                          '새 알림이 없어요',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: AppColors.gray,
+                          ),
+                        ),
                       ),
                     ),
                   if (newMats.isNotEmpty) ...[
@@ -131,10 +141,18 @@ class _MaterialBellState extends State<MaterialBell> {
                         },
                       ),
                     Padding(
-                      padding: EdgeInsets.only(top: 2.h, bottom: 4.h, left: 2.w),
-                      child: Text('자료를 누르면 바로 학습할 수 있어요.',
-                          style: TextStyle(
-                              fontSize: 12.sp, color: AppColors.gray)),
+                      padding: EdgeInsets.only(
+                        top: 2.h,
+                        bottom: 4.h,
+                        left: 2.w,
+                      ),
+                      child: Text(
+                        '자료를 누르면 바로 학습할 수 있어요.',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: AppColors.gray,
+                        ),
+                      ),
                     ),
                   ],
                   if (invites.isNotEmpty) ...[
@@ -163,9 +181,14 @@ class _MaterialBellState extends State<MaterialBell> {
     await openStudyMenu(context, set);
   }
 
-  Widget _sheetLabel(String text) => Text(text,
-      style: TextStyle(
-          fontSize: 14.sp, fontWeight: FontWeight.w800, color: AppColors.ink));
+  Widget _sheetLabel(String text) => Text(
+    text,
+    style: TextStyle(
+      fontSize: 14.sp,
+      fontWeight: FontWeight.w800,
+      color: AppColors.ink,
+    ),
+  );
 }
 
 class _MaterialTile extends StatelessWidget {
@@ -184,9 +207,9 @@ class _MaterialTile extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.all(14.w),
           decoration: BoxDecoration(
-            color: const Color(0xFFEFF5FF),
+            color: AppColors.pinkSoft,
             borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: const Color(0xFFD6E4FF)),
+            border: Border.all(color: AppColors.border),
           ),
           child: Row(
             children: [
@@ -195,32 +218,36 @@ class _MaterialTile extends StatelessWidget {
                 height: 40.w,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF3D7BFF), Color(0xFF00D2FF)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12.r),
+                  color: AppColors.pink,
+                  borderRadius: BorderRadius.circular(AppRadius.sm.r),
                 ),
-                child: Text('📩', style: TextStyle(fontSize: 18.sp)),
+                // 이모지 대신 아이콘(폰트를 내려받기 전에도 보이고 색을 맞출 수 있다).
+                child: Icon(
+                  Icons.mark_email_unread_rounded,
+                  size: AppIconSize.sm.sp,
+                  color: Colors.white,
+                ),
               ),
               SizedBox(width: 12.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(set.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.ink)),
+                    Text(
+                      set.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                      ),
+                    ),
                     SizedBox(height: 2.h),
                     Text(
-                        '${set.wordCount}개 단어${set.createdAt != null ? " · ${formatYmd(set.createdAt!)}" : ""}',
-                        style:
-                            TextStyle(fontSize: 12.sp, color: AppColors.gray)),
+                      '${set.wordCount}개 단어${set.createdAt != null ? " · ${formatYmd(set.createdAt!)}" : ""}',
+                      style: TextStyle(fontSize: 12.sp, color: AppColors.gray),
+                    ),
                   ],
                 ),
               ),
@@ -257,8 +284,10 @@ class _InviteTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('${invite.fromName}님이 친구 초대를 보냈어요',
-              style: TextStyle(fontSize: 15.sp, color: AppColors.ink)),
+          Text(
+            '${invite.fromName}님이 친구 초대를 보냈어요',
+            style: TextStyle(fontSize: 15.sp, color: AppColors.ink),
+          ),
           SizedBox(height: 12.h),
           Row(
             children: [

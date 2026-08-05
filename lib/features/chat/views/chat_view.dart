@@ -190,7 +190,7 @@ class _InputBar extends StatelessWidget {
               width: 48.w,
               height: 48.w,
               decoration: BoxDecoration(
-                gradient: AppColors.primaryButton,
+                color: AppColors.pink,
                 shape: BoxShape.circle,
                 boxShadow: AppColors.softShadow(blur: 8, y: 3),
               ),

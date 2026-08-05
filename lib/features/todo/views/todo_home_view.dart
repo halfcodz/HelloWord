@@ -394,8 +394,7 @@ class _CheckCircle extends StatelessWidget {
       height: 24.w,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        gradient: done ? AppColors.primaryButton : null,
-        color: done ? null : AppColors.cream,
+        color: done ? AppColors.pink : AppColors.cream,
         shape: BoxShape.circle,
         border: Border.all(
           color: done ? Colors.transparent : AppColors.pinkSoft,

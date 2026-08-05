@@ -552,7 +552,7 @@ class _MenuTile extends StatelessWidget {
               width: 44.w,
               height: 44.w,
               decoration: BoxDecoration(
-                gradient: AppColors.primaryButton,
+                color: AppColors.pink,
                 borderRadius: BorderRadius.circular(13.r),
               ),
               child: Icon(icon, color: Colors.white, size: 22.sp),

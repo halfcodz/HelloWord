@@ -34,6 +34,12 @@ class _MainShellState extends State<MainShell> {
   int _index = 0;
   final _presence = PresenceService();
 
+  /// 한 번이라도 열어 본 탭. IndexedStack은 자식을 전부 만들기 때문에
+  /// 그냥 두면 보지도 않는 탭의 Firestore 구독까지 함께 열린다
+  /// (무료 사용량을 그만큼 더 쓴다). 그래서 처음 연 탭만 만들고,
+  /// 한 번 만든 탭은 그대로 두어 스크롤 위치와 상태를 지킨다.
+  final Set<int> _visited = {0};
+
   @override
   void initState() {
     super.initState();
@@ -65,7 +71,10 @@ class _MainShellState extends State<MainShell> {
   Future<void> _restoreTabAfterReload() async {
     final tab = await AppRefresh.consumeRestoreTab();
     if (tab == null || !mounted) return;
-    setState(() => _index = tab);
+    setState(() {
+      _index = tab;
+      _visited.add(tab);
+    });
     _updateStudying();
   }
 
@@ -113,7 +122,10 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _onTab(int i) {
-    setState(() => _index = i);
+    setState(() {
+      _index = i;
+      _visited.add(i);
+    });
     _updateStudying();
     AppRefresh.saveCurrentTab(i); // 새로고침 후 이 탭으로 복원되도록 저장
   }
@@ -135,13 +147,17 @@ class _MainShellState extends State<MainShell> {
     // 같은 탭으로 돌아온다(위 initState의 복원).
     final edgeOffset = MediaQuery.of(context).padding.top + kToolbarHeight;
     final pages = [
-      for (final page in config.pages)
-        RefreshIndicator(
-          edgeOffset: edgeOffset,
-          color: AppColors.pink,
-          onRefresh: AppRefresh.refreshKeepingTab,
-          child: page,
-        ),
+      for (var i = 0; i < config.pages.length; i++)
+        if (_visited.contains(i))
+          RefreshIndicator(
+            edgeOffset: edgeOffset,
+            color: AppColors.pink,
+            onRefresh: AppRefresh.refreshKeepingTab,
+            child: config.pages[i],
+          )
+        else
+          // 아직 안 열어 본 탭은 만들지 않는다(구독도 열리지 않는다).
+          const SizedBox.shrink(),
     ];
     // 시험 초대는 팝업으로 튀어나오지 않고 동생 홈의 '오늘 시험'에 쌓인다.
     final Widget body = IndexedStack(index: _index, children: pages);

@@ -392,8 +392,7 @@ class _RecipientChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 9.h),
         decoration: BoxDecoration(
-          gradient: selected ? AppColors.primaryButton : null,
-          color: selected ? null : AppColors.fieldBg,
+          color: selected ? AppColors.pink : AppColors.fieldBg,
           borderRadius: BorderRadius.circular(999.r),
           border: Border.all(
               color: selected ? Colors.transparent : AppColors.border),
@@ -480,7 +479,7 @@ class _PickPrompt extends StatelessWidget {
               width: 110.w,
               height: 110.w,
               decoration: BoxDecoration(
-                gradient: AppColors.primaryButton,
+                color: AppColors.pink,
                 shape: BoxShape.circle,
                 boxShadow: AppColors.softShadow(),
               ),

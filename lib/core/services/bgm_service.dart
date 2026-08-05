@@ -71,9 +71,20 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
   /// 한 곡을 건너뛰는 것을 막는다.
   final Stopwatch _sinceAdvance = Stopwatch()..start();
 
-  /// 소리를 낼 수 없는 환경(웹 자동재생 차단 등)인지.
-  bool _unavailable = false;
-  bool get isUnavailable => _unavailable;
+  /// 브라우저가 자동재생을 막아 재생이 실패한 상태.
+  /// 아이폰은 크롬이든 사파리든 WebKit이라 '사용자가 화면을 만지기 전에는'
+  /// 소리를 시작할 수 없다. 그래서 실패를 영구 잠금으로 두지 않고,
+  /// 다음 탭에서 다시 시도한다.
+  bool _blocked = false;
+
+  /// 연속 실패 횟수. 음원이 아예 없는 경우까지 무한 재시도하지 않도록 센다.
+  int _failures = 0;
+
+  /// 정말로 소리를 낼 수 없는 상태(여러 번 시도해도 실패).
+  bool get isUnavailable => _failures >= 5;
+
+  /// 브라우저 차단으로 아직 못 틀고 있는 상태(설정 화면 안내용).
+  bool get isBlocked => _blocked;
 
   /// 저장된 설정을 불러와 서비스를 만든다. (앱 시작 시 1회)
   static Future<BgmService> load() async {
@@ -85,6 +96,7 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
       // 저장소 접근 실패 시 기본값.
     }
     final service = BgmService._(enabled);
+    _instance = service;
     WidgetsBinding.instance.addObserver(service);
     return service;
   }
@@ -125,7 +137,20 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  bool get _shouldPlay => _started && _enabled && !isSuspended && !_unavailable;
+  bool get _shouldPlay =>
+      _started && _enabled && !isSuspended && !isUnavailable;
+
+  /// 사용자가 화면을 만졌을 때 호출한다(버튼 탭 등).
+  /// 브라우저 차단으로 못 틀고 있었다면 이때 다시 시도한다.
+  static void notifyUserGesture() {
+    final service = _instance;
+    if (service == null || !service._blocked) return;
+    service._blocked = false;
+    service._sync();
+  }
+
+  /// 앱 어디서나 탭 시점을 알릴 수 있도록 하나만 두고 쓴다.
+  static BgmService? _instance;
 
   Future<void> _sync() async {
     try {
@@ -145,6 +170,9 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
         } else if (_player.state != PlayerState.playing) {
           await _startTrack();
         }
+        // 여기까지 왔으면 재생이 시작된 것.
+        _failures = 0;
+        _blocked = false;
       } else {
         _advanceTimer?.cancel();
         if (_player.state == PlayerState.playing) {
@@ -152,9 +180,10 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
         }
       }
     } catch (e) {
-      // 웹 자동재생 차단·음원 누락 등. 앱 동작에는 영향을 주지 않는다.
+      // 브라우저 자동재생 차단이 대부분이다. 다음 탭에서 다시 시도한다.
       debugPrint('BGM 재생 실패: $e');
-      _unavailable = true;
+      _failures++;
+      _blocked = true;
       notifyListeners();
     }
   }
@@ -223,6 +252,7 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    if (identical(_instance, this)) _instance = null;
     WidgetsBinding.instance.removeObserver(this);
     _completeSub?.cancel();
     _durationSub?.cancel();
