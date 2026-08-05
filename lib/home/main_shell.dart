@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -185,26 +186,36 @@ class _BlingBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     // 학습 앱 표준: 아이콘 + 글자 라벨을 함께 둔 하단 탭바.
     // (아이콘만 있으면 무슨 탭인지 알기 어렵고 스크린리더도 읽어 주지 못한다.)
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cream,
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-          child: Row(
-            children: [
-              for (var i = 0; i < items.length; i++)
-                Expanded(
-                  child: _BarItem(
-                    item: items[i],
-                    selected: index == i,
-                    onTap: () => onTap(i),
-                  ),
-                ),
-            ],
+    //
+    // 배경이 살짝 비치도록 반투명으로 두고 뒤를 흐린다.
+    // 홈 인디케이터 쪽으로 너무 내려가지 않게 아래 여백을 조금 줄이고
+    // 대신 탭 자체를 키워 누르기 편하게 했다.
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.cream.withValues(alpha: 0.82),
+            border: Border(top: BorderSide(color: AppColors.border)),
+          ),
+          child: SafeArea(
+            top: false,
+            minimum: EdgeInsets.only(bottom: 4.h),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(8.w, 8.h, 8.w, 4.h),
+              child: Row(
+                children: [
+                  for (var i = 0; i < items.length; i++)
+                    Expanded(
+                      child: _BarItem(
+                        item: items[i],
+                        selected: index == i,
+                        onTap: () => onTap(i),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -235,7 +246,7 @@ class _BarItem extends StatelessWidget {
         // 최소 터치 영역은 확보하되, 글자 크기 설정을 키워도 잘리지 않도록
         // 고정 높이가 아니라 '최소 높이 + 내용에 맞춤'으로 둔다.
         child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: 52.h),
+          constraints: BoxConstraints(minHeight: 60.h),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -244,18 +255,18 @@ class _BarItem extends StatelessWidget {
               AnimatedContainer(
                 duration: AppMotion.fast,
                 curve: AppMotion.enter,
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 3.h),
+                padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 5.h),
                 decoration: BoxDecoration(
                   color: selected ? AppColors.pinkSoft : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppRadius.pill.r),
                 ),
-                child: Icon(item.icon, size: 22.sp, color: color),
+                child: Icon(item.icon, size: 24.sp, color: color),
               ),
               SizedBox(height: 3.h),
               Text(
                 item.label,
                 style: AppTheme.font(
-                  fontSize: 11.sp,
+                  fontSize: 12.sp,
                   fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                   color: color,
                 ),
