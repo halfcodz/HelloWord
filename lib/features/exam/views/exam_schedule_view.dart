@@ -53,8 +53,7 @@ class ExamScheduleView extends StatelessWidget {
                           ..sort(
                             (a, b) => a.dDay(today).compareTo(b.dDay(today)),
                           );
-                    final next = plans.isEmpty ? null : plans.first;
-
+    
                     return StreamBuilder<List<ExamResult>>(
                       stream: exam.watchResultsForGuest(user.uid),
                       builder: (context, resultSnap) {
@@ -84,7 +83,7 @@ class ExamScheduleView extends StatelessWidget {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _header(context, next, today),
+                            _header(context, invites.isEmpty ? null : invites.first),
                             // 인사 바로 아래에 프로필(나·언니) 줄.
                             FriendBar(me: user),
                             SizedBox(height: AppSpace.sm.h),
@@ -183,19 +182,14 @@ class ExamScheduleView extends StatelessWidget {
     );
   }
 
-  /// 홈 헤더. 인사와 오늘 시험 여부만 담백하게 보여 준다.
-  Widget _header(BuildContext context, ExamPlan? next, DateTime today) {
-    final d = next?.dDay(today);
+  /// 홈 헤더. 인사와 '지금 시험이 왔는지'만 담백하게 보여 준다.
+  Widget _header(BuildContext context, ExamSession? invite) {
     return SafeArea(
       bottom: false,
       child: HeroHeader(
         subtitle: _dateLabel(),
         title: '${user.name}, 안녕! 🐥',
-        badge: next == null
-            ? null
-            : (d == 0
-                  ? '오늘 시험이 있어요 · ${next.title}'
-                  : '${next.title} 시험이 $d일 남았어요'),
+        badge: invite == null ? null : '시험 초대가 왔어요 · ${invite.title}',
         trailing: MaterialBell(user: user),
       ),
     );
