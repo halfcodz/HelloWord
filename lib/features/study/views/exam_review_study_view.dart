@@ -53,7 +53,7 @@ class ExamReviewStudyView extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('🎉', style: TextStyle(fontSize: 48.sp)),
+                        Icon(Icons.celebration_rounded, size: AppIconSize.lg.sp, color: AppColors.green),
                         SizedBox(height: 12.h),
                         Text('이 시험은 틀린 단어가 없어요!',
                             style: TextStyle(

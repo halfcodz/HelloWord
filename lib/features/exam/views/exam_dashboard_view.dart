@@ -199,7 +199,7 @@ class ExamDashboardView extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: ResultNavCard(
-                                    emoji: '📊',
+                                    icon: Icons.insights_rounded,
                                     label: '오늘 시험 결과',
                                     count: todayR.length,
                                     onTap: () => Navigator.of(context).push(
@@ -216,7 +216,7 @@ class ExamDashboardView extends StatelessWidget {
                                 SizedBox(width: AppSpace.sm.w),
                                 Expanded(
                                   child: ResultNavCard(
-                                    emoji: '🗓️',
+                                    icon: Icons.history_rounded,
                                     label: '지난 시험 결과',
                                     count: pastR.length,
                                     dark: true,

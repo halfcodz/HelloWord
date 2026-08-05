@@ -84,7 +84,7 @@ class _ChatFriendTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.cream,
           borderRadius: BorderRadius.circular(20.r),
-          boxShadow: AppColors.softShadow(blur: 12, y: 5),
+          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           children: [
@@ -126,7 +126,7 @@ class _EmptyFriends extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('💬', style: TextStyle(fontSize: 56.sp)),
+            Icon(Icons.forum_rounded, size: AppIconSize.lg.sp, color: AppColors.hint),
             SizedBox(height: 16.h),
             Text('아직 친구가 없어요',
                 style: TextStyle(fontSize: 17.sp, color: AppColors.ink)),

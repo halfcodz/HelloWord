@@ -371,11 +371,9 @@ class _BgmToggleRow extends StatelessWidget {
     return _SwitchRow(
       icon: bgm.enabled ? Icons.music_note_rounded : Icons.music_off_rounded,
       label: '배경음악',
-      description: bgm.isUnavailable
-          ? '이 기기에서는 소리를 낼 수 없어요'
-          : (bgm.isBlocked
-                ? '화면을 한 번 누르면 재생돼요 (브라우저가 자동 재생을 막아요)'
-                : '공부할 때 잔잔하게 흘러나와요 (영상통화 중엔 자동으로 꺼져요)'),
+      description: bgm.isBlocked
+          ? '아무 버튼이나 한 번 누르면 나와요 (브라우저가 자동 재생을 막아요)'
+          : '공부할 때 잔잔하게 흘러나와요 (영상통화 중엔 자동으로 꺼져요)',
       value: bgm.enabled,
       onChanged: bgm.setEnabled,
     );

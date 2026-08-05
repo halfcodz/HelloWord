@@ -80,7 +80,7 @@ class _Empty extends StatelessWidget {
                   color: AppColors.blueSoft,
                   shape: BoxShape.circle,
                 ),
-                child: Text('📩', style: TextStyle(fontSize: 44.sp)),
+                child: Icon(Icons.mark_email_unread_rounded, size: AppIconSize.lg.sp, color: AppColors.pink),
               ),
               SizedBox(height: 20.h),
               Text('아직 시험 초대가 없어요',
@@ -116,7 +116,6 @@ class _InviteCard extends StatelessWidget {
         color: AppColors.cream,
         borderRadius: BorderRadius.circular(20.r),
         border: Border.all(color: AppColors.border),
-        boxShadow: AppColors.softShadow(blur: 12, y: 5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

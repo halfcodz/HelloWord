@@ -12,12 +12,14 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
   <!-- 상태바/테마 색 (앱에서 테마 변경 시 갱신됨) -->
-  <meta name="theme-color" content="#F6F7FB">
+  <meta name="theme-color" content="#F7FAFF">
 
   <!-- iOS 홈화면 추가(PWA) 대응 -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <!-- 화면이 상태바(다이나믹 아일랜드) 아래까지 이어지게 한다.
+       그러지 않으면 위쪽에 배경이 안 깔린 흰 띠가 생긴다. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="HelloWord">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
@@ -31,7 +33,14 @@
   <link rel="manifest" href="manifest.json">
 
   <style>
-    body { margin: 0; background-color: #F6F7FB; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      /* 앱 배경과 같은 색. 상태바 뒤와 스크롤 튕김 영역까지 이 색이 보인다. */
+      background: linear-gradient(180deg, #F7FAFF 0%, #EFF6FF 100%);
+      background-attachment: fixed;
+      overscroll-behavior: none;
+    }
     #loading {
       position: fixed;
       inset: 0;
@@ -39,10 +48,10 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: #F6F7FB;
+      background: linear-gradient(180deg, #F7FAFF 0%, #EFF6FF 100%);
       font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
         "Segoe UI", Roboto, sans-serif;
-      color: #1B2340;
+      color: #0F172A;
     }
     #loading .logo {
       width: 76px;
@@ -52,15 +61,14 @@
       align-items: center;
       justify-content: center;
       font-size: 38px;
-      background: linear-gradient(135deg, #00C48C, #00E0A0);
-      box-shadow: 0 12px 28px rgba(0, 196, 140, 0.35);
+      background: #2563EB;
     }
     #loading .title {
       margin-top: 18px;
       font-size: 26px;
       font-weight: 800;
       letter-spacing: -0.5px;
-      color: #1B2340;
+      color: #0F172A;
     }
     #loading .sub { margin-top: 6px; font-size: 14px; font-weight: 600; color: #5D6580; }
     #loading .spinner {

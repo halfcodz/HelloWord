@@ -206,32 +206,33 @@ class _StudyHome extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(bottom: kBottomInset.h),
           children: [
-            // 오늘 진행 상황을 맨 위에 숫자와 막대로 먼저 보여 준다.
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpace.gutter.w,
-                AppSpace.sm.h,
-                AppSpace.gutter.w,
-                0,
-              ),
-              child: AppCard(
-                color: AppColors.cream.withValues(alpha: 0.78),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            total == 0 ? '오늘 받은 단어가 없어요' : '오늘 외운 단어',
-                            style: AppTheme.font(
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.gray,
+            // 오늘 받은 단어가 있을 때만 진행 상황을 보여 준다.
+            // (없을 때 빈 막대만 뜨면 무슨 뜻인지 알 수 없다)
+            if (total > 0)
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpace.gutter.w,
+                  AppSpace.sm.h,
+                  AppSpace.gutter.w,
+                  0,
+                ),
+                child: AppCard(
+                  color: AppColors.cream.withValues(alpha: 0.78),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '오늘 외운 단어',
+                              style: AppTheme.font(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.gray,
+                              ),
                             ),
                           ),
-                        ),
-                        if (total > 0)
                           Text(
                             '$memorized / $total',
                             style: AppTheme.tabularNumber(
@@ -239,14 +240,14 @@ class _StudyHome extends StatelessWidget {
                               color: AppColors.ink,
                             ),
                           ),
-                      ],
-                    ),
-                    SizedBox(height: AppSpace.xs.h),
-                    ProgressBar(value: ratio),
-                  ],
+                        ],
+                      ),
+                      SizedBox(height: AppSpace.xs.h),
+                      ProgressBar(value: ratio),
+                    ],
+                  ),
                 ),
               ),
-            ),
             SectionHeader(
               icon: Icons.menu_book_rounded,
               label: '오늘의 단어',
@@ -305,13 +306,63 @@ class _StudyHome extends StatelessWidget {
               )
             else
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpace.gutter.w),
-                child: Text(
-                  '지난 단어와 시험 ${pastItems.length}건이 있어요. "전체 보기"에서 날짜별로 볼 수 있어요.',
-                  style: AppTheme.font(
-                    fontSize: 13.sp,
-                    height: 1.5,
-                    color: AppColors.gray,
+                padding: EdgeInsets.symmetric(horizontal: AppSpace.md.w),
+                child: AppCard(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => HistoryCalendarView(
+                        title: '지난 기록',
+                        items: pastItems,
+                        emptyText: '이 날은 받은 단어나 시험이 없어요.',
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 46.w,
+                        height: 46.w,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.purpleSoft,
+                          borderRadius: BorderRadius.circular(AppRadius.sm.r),
+                        ),
+                        child: Icon(
+                          Icons.history_rounded,
+                          size: AppIconSize.md.sp,
+                          color: AppColors.purple,
+                        ),
+                      ),
+                      SizedBox(width: AppSpace.sm.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '지난 단어와 시험 ${pastItems.length}건',
+                              style: AppTheme.display(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                            SizedBox(height: AppSpace.xxs.h),
+                            Text(
+                              '날짜별로 모아 볼 수 있어요',
+                              style: AppTheme.font(
+                                fontSize: 12.sp,
+                                color: AppColors.gray,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppColors.hint,
+                        size: AppIconSize.md.sp,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -428,7 +479,7 @@ class _EmptySets extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text('📚', style: TextStyle(fontSize: 40.sp)),
+          Icon(Icons.menu_book_rounded, size: AppIconSize.lg.sp, color: AppColors.pink),
           SizedBox(height: 10.h),
           Text(
             '받은 단어가 아직 없어요',

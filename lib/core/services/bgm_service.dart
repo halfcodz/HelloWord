@@ -77,11 +77,10 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
   /// 다음 탭에서 다시 시도한다.
   bool _blocked = false;
 
-  /// 연속 실패 횟수. 음원이 아예 없는 경우까지 무한 재시도하지 않도록 센다.
-  int _failures = 0;
-
-  /// 정말로 소리를 낼 수 없는 상태(여러 번 시도해도 실패).
-  bool get isUnavailable => _failures >= 5;
+  /// 소리를 낼 수 없는 기기로 단정하지 않는다.
+  /// 브라우저는 '사용자가 만진 직후'에만 소리를 허용하므로, 몇 번 실패했다고
+  /// 잠가 버리면 정작 눌렀을 때 영영 안 나온다. 실패하면 계속 다시 시도한다.
+  bool get isUnavailable => false;
 
   /// 브라우저 차단으로 아직 못 틀고 있는 상태(설정 화면 안내용).
   bool get isBlocked => _blocked;
@@ -145,8 +144,34 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
   static void notifyUserGesture() {
     final service = _instance;
     if (service == null || !service._blocked) return;
+    if (!service._started || !service._enabled || service.isSuspended) return;
     service._blocked = false;
-    service._sync();
+    // 브라우저는 '탭 처리 도중에 바로 시작한 소리'만 허용한다.
+    // 볼륨 설정 같은 걸 await로 먼저 하면 그 사이에 제스처 자격이 풀려
+    // 재생이 거부된다. 그래서 여기서는 play를 가장 먼저 부른다.
+    service._playImmediately();
+  }
+
+  /// 제스처 안에서 곧바로 재생을 시작한다.
+  Future<void> _playImmediately() async {
+    try {
+      _playToken++;
+      await _player.play(AssetSource(_playlist[_track]), volume: _volume);
+      _blocked = false;
+      // 재생이 시작된 뒤에 나머지 설정을 붙인다.
+      await _player.setReleaseMode(ReleaseMode.stop);
+      _completeSub ??= _player.onPlayerComplete.listen((_) => _playNext());
+      _durationSub ??= _player.onDurationChanged.listen((d) {
+        _duration = d;
+        _scheduleAdvance();
+      });
+      await _scheduleAdvance(force: true);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('BGM 제스처 재생 실패: $e');
+      _blocked = true;
+      notifyListeners();
+    }
   }
 
   /// 앱 어디서나 탭 시점을 알릴 수 있도록 하나만 두고 쓴다.
@@ -171,7 +196,6 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
           await _startTrack();
         }
         // 여기까지 왔으면 재생이 시작된 것.
-        _failures = 0;
         _blocked = false;
       } else {
         _advanceTimer?.cancel();
@@ -182,7 +206,6 @@ class BgmService extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       // 브라우저 자동재생 차단이 대부분이다. 다음 탭에서 다시 시도한다.
       debugPrint('BGM 재생 실패: $e');
-      _failures++;
       _blocked = true;
       notifyListeners();
     }

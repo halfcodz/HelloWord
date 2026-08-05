@@ -133,7 +133,7 @@ class _SelfQuizViewState extends State<SelfQuizView> {
                       decoration: BoxDecoration(
                         color: AppColors.cream,
                         borderRadius: BorderRadius.circular(18.r),
-                        boxShadow: AppColors.softShadow(),
+                        border: Border.all(color: AppColors.border),
                       ),
                       child: Column(
                         children: [
@@ -244,7 +244,7 @@ class _ResultScaffold extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('🎉', style: TextStyle(fontSize: 72.sp)),
+                Icon(Icons.celebration_rounded, size: 56.sp, color: AppColors.green),
                 SizedBox(height: 16.h),
                 Text('연습 완료!',
                     style: TextStyle(fontSize: 24.sp, color: AppColors.ink)),
@@ -255,7 +255,7 @@ class _ResultScaffold extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.pink,
                     borderRadius: BorderRadius.circular(16.r),
-                    boxShadow: AppColors.softShadow(),
+                    border: Border.all(color: AppColors.border),
                   ),
                   child: Text('$score / $total 개 맞았어요',
                       style: TextStyle(fontSize: 22.sp, color: Colors.white)),

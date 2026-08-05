@@ -9,14 +9,14 @@ import 'exam_result_detail_view.dart';
 class ResultNavCard extends StatelessWidget {
   const ResultNavCard({
     super.key,
-    required this.emoji,
+    required this.icon,
     required this.label,
     required this.count,
     required this.onTap,
     this.dark = false,
   });
 
-  final String emoji;
+  final IconData icon;
   final String label;
   final int count;
   final VoidCallback onTap;
@@ -53,7 +53,11 @@ class ResultNavCard extends StatelessWidget {
                       color: dark ? AppColors.navy : AppColors.pink,
                       borderRadius: BorderRadius.circular(12.r),
                     ),
-                    child: Text(emoji, style: TextStyle(fontSize: 18.sp)),
+                    child: Icon(
+                      icon,
+                      size: AppIconSize.sm.sp,
+                      color: Colors.white,
+                    ),
                   ),
                   const Spacer(),
                   Container(

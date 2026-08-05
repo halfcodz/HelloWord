@@ -161,7 +161,7 @@ class _WaitingView extends StatelessWidget {
               color: AppColors.blueSoft,
               shape: BoxShape.circle,
             ),
-            child: Text('📨', style: TextStyle(fontSize: 44.sp)),
+            child: Icon(Icons.outgoing_mail, size: AppIconSize.lg.sp, color: AppColors.pink),
           )
               .animate(onPlay: (c) => c.repeat(reverse: true))
               .scale(
@@ -217,7 +217,7 @@ class _DeclinedView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text('😢', style: TextStyle(fontSize: 52.sp)),
+            Icon(Icons.sentiment_dissatisfied_rounded, size: AppIconSize.lg.sp, color: AppColors.gray),
             SizedBox(height: 16.h),
             Text('$name이(가) 초대를 거절했어요',
                 textAlign: TextAlign.center,

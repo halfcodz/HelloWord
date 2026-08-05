@@ -164,7 +164,7 @@ class _TodoHomeViewState extends State<TodoHomeView> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text('🍀', style: TextStyle(fontSize: 40.sp)),
+                              Icon(Icons.check_circle_outline_rounded, size: AppIconSize.lg.sp, color: AppColors.hint),
                               SizedBox(height: 8.h),
                               Text(
                                 '할 일을 추가해 보세요!',
@@ -355,7 +355,7 @@ class _TodoTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.cream,
             borderRadius: BorderRadius.circular(16.r),
-            boxShadow: AppColors.softShadow(blur: 8, y: 3),
+            border: Border.all(color: AppColors.border),
           ),
           child: Row(
             children: [
