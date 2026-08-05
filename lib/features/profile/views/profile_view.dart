@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../auth/auth_service.dart';
-import '../../../core/services/bgm_service.dart';
 import '../../../core/services/sfx_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_controller.dart';
@@ -194,10 +193,9 @@ class ProfileView extends StatelessWidget {
                   ),
                   SizedBox(height: AppSpace.lg.h),
                   const _SectionLabel('앱 설정'),
-                  const _SettingCard(
+                  _SettingCard(
                     children: [
                       _ThemeToggleRow(),
-                      _BgmToggleRow(),
                       _SfxToggleRow(),
                     ],
                   ),
@@ -357,25 +355,6 @@ class _ThemeToggleRow extends StatelessWidget {
       description: dark ? '어두운 화면으로 보고 있어요' : '밝은 화면으로 보고 있어요',
       value: dark,
       onChanged: controller.setDark,
-    );
-  }
-}
-
-/// 배경음악 토글 행.
-class _BgmToggleRow extends StatelessWidget {
-  const _BgmToggleRow();
-
-  @override
-  Widget build(BuildContext context) {
-    final bgm = context.watch<BgmService>();
-    return _SwitchRow(
-      icon: bgm.enabled ? Icons.music_note_rounded : Icons.music_off_rounded,
-      label: '배경음악',
-      description: bgm.isBlocked
-          ? '아무 버튼이나 한 번 누르면 나와요 (브라우저가 자동 재생을 막아요)'
-          : '공부할 때 잔잔하게 흘러나와요 (영상통화 중엔 자동으로 꺼져요)',
-      value: bgm.enabled,
-      onChanged: bgm.setEnabled,
     );
   }
 }

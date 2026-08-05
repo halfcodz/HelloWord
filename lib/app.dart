@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import 'auth/auth_gate.dart';
-import 'core/services/bgm_service.dart';
 import 'core/services/sfx_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
@@ -18,12 +17,10 @@ class HelloWordApp extends StatelessWidget {
   const HelloWordApp({
     super.key,
     required this.themeController,
-    required this.bgm,
     required this.sfx,
   });
 
   final ThemeController themeController;
-  final BgmService bgm;
   final SfxService sfx;
 
   /// 콘텐츠 최대 폭. 모바일 사파리에서는 화면 전체, 데스크톱 브라우저에서는
@@ -43,7 +40,6 @@ class HelloWordApp extends StatelessWidget {
         Provider<ChatRepository>(create: (_) => ChatRepository()),
         Provider<TodoRepository>(create: (_) => TodoRepository()),
         ChangeNotifierProvider<ThemeController>.value(value: themeController),
-        ChangeNotifierProvider<BgmService>.value(value: bgm),
         ChangeNotifierProvider<SfxService>.value(value: sfx),
       ],
       // 팔레트가 바뀌면 테마를 다시 계산해 앱 전체에 반영한다.

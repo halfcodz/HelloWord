@@ -1,3 +1,8 @@
+// 이 파일의 위젯은 색을 AppColors에서 읽으므로 const로 만들면 안 된다.
+// const 인스턴스는 테마가 바뀌어도 같은 객체라 하위 트리를 다시 그리지 않아
+// 다크 모드에서 흰 카드가 그대로 남는다.
+// ignore_for_file: prefer_const_constructors_in_immutables
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -10,6 +15,10 @@ import 'bouncy_tap.dart';
 
 /// 화면을 짜는 데 쓰는 공용 조각들.
 /// 화면마다 카드·제목·빈 상태를 따로 만들지 않고 여기 것만 가져다 쓴다.
+///
+/// 여기 위젯들은 일부러 `const` 생성자를 두지 않는다.
+/// 색을 [AppColors]에서 읽는데, const로 만들면 다크 모드로 바꿔도
+/// 같은 인스턴스라 하위 트리를 다시 그리지 않아 예전 색이 그대로 남는다.
 
 /// 스크롤 화면이 하단 탭바·떠 있는 버튼에 가리지 않도록 두는 아래 여백.
 /// 모든 스크롤 화면이 같은 값을 써서 화면마다 끝이 달라 보이지 않게 한다.
@@ -19,7 +28,7 @@ double get kBottomInset => 96.0;
 /// 뒤에서 움직이는 배경이 그대로 비치도록 색을 채우지 않고,
 /// 숫자 칸만 반투명 카드로 띄운다.
 class HeroHeader extends StatelessWidget {
-  const HeroHeader({
+  HeroHeader({
     super.key,
     required this.title,
     required this.subtitle,
@@ -131,7 +140,7 @@ class HeroHeader extends StatelessWidget {
 /// [HeroHeader] 안에 들어가는 숫자 한 칸.
 /// 배경이 살짝 비치는 반투명 카드.
 class HeroStat extends StatelessWidget {
-  const HeroStat({
+  HeroStat({
     super.key,
     required this.value,
     required this.label,
@@ -204,7 +213,7 @@ class HeroStat extends StatelessWidget {
 
 /// 30분마다 바뀌는 동기부여 명언 카드(영어 원문 + 한글 뜻).
 class QuoteCard extends StatefulWidget {
-  const QuoteCard({super.key});
+  QuoteCard({super.key});
 
   @override
   State<QuoteCard> createState() => _QuoteCardState();
@@ -326,7 +335,7 @@ class _QuoteCardState extends State<QuoteCard> {
 
 /// 섹션 제목. 오른쪽에 '더보기' 같은 동작을 붙일 수 있다.
 class SectionHeader extends StatelessWidget {
-  const SectionHeader({
+  SectionHeader({
     super.key,
     required this.label,
     this.icon,
@@ -381,7 +390,7 @@ class SectionHeader extends StatelessWidget {
 
 /// 앱 전체에서 쓰는 기본 카드. 테두리로 구분하고 그림자는 쓰지 않는다.
 class AppCard extends StatelessWidget {
-  const AppCard({
+  AppCard({
     super.key,
     required this.child,
     this.onTap,
@@ -417,7 +426,7 @@ class AppCard extends StatelessWidget {
 
 /// 내용이 없을 때 보여 주는 안내. 아이콘 + 설명 + (선택) 버튼.
 class EmptyState extends StatelessWidget {
-  const EmptyState({
+  EmptyState({
     super.key,
     required this.icon,
     required this.text,
@@ -491,7 +500,7 @@ class EmptyState extends StatelessWidget {
 
 /// 진행률 막대(공부한 단어 수 등).
 class ProgressBar extends StatelessWidget {
-  const ProgressBar({
+  ProgressBar({
     super.key,
     required this.value,
     this.color,
@@ -519,7 +528,7 @@ class ProgressBar extends StatelessWidget {
 
 /// 작은 상태 표시 칩(D-DAY, 개수, 완료 등).
 class StatusChip extends StatelessWidget {
-  const StatusChip({
+  StatusChip({
     super.key,
     required this.label,
     this.color,

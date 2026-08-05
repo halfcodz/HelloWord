@@ -1,9 +1,10 @@
-"""assets/audio/ 안의 배경음악·효과음을 만드는 스크립트.
+"""assets/audio/tap.mp3(버튼 효과음)을 만드는 스크립트.
 
-저작권 있는 음원(게임 BGM 등)을 가져다 쓰지 않고 전부 직접 합성한다.
-- bgm_1.mp3 ~ bgm_4.mp3 : 잔잔한 마림바/비브라폰 + 포근한 패드.
-  마을 같은 분위기로 서로 다른 조성·진행을 써서 이어 들어도 지루하지 않다.
-- tap.mp3 : 버튼을 눌렀을 때 나는 소리. 조약돌이 가볍게 부딪히는 느낌.
+조약돌이 가볍게 부딪히는 느낌의 아주 짧은 소리를 직접 합성한다.
+
+배경음악은 아이폰에서 재생될 때마다 다이나믹 아일랜드에 음악 재생 표시가
+켜졌다 꺼지기를 반복해 방해가 되어 걷어냈다. 다시 넣고 싶다면 이 파일의
+git 기록(v2.1.0 이전)에 작곡 코드가 남아 있다.
 
 사용법:
     python3 tool/generate_bgm.py
@@ -205,16 +206,8 @@ def write_mp3(name, samples, bitrate="96k"):
 
 
 def main():
-    for name, spec in TRACKS.items():
-        write_mp3(name, build_track(**spec))
     # 효과음은 아주 짧으니 음질을 조금 더 준다.
     write_mp3("tap", tap_sound(), bitrate="128k")
-
-    # 예전 단일 파일은 더 이상 쓰지 않는다.
-    old = os.path.join(OUT_DIR, "bgm.mp3")
-    if os.path.exists(old):
-        os.remove(old)
-        print("removed old bgm.mp3")
 
 
 if __name__ == "__main__":

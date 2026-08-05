@@ -89,7 +89,7 @@ class ExamScheduleView extends StatelessWidget {
                             FriendBar(me: user),
                             SizedBox(height: AppSpace.sm.h),
                             // 숫자 통계 대신 오늘의 한 문장.
-                            const QuoteCard(),
+                            QuoteCard(),
                             SectionHeader(
                               icon: Icons.event_available_rounded,
                               label: '오늘 시험',
@@ -102,7 +102,7 @@ class ExamScheduleView extends StatelessWidget {
                                     showExamInvite(context, invite, user),
                               ),
                             if (plans.isEmpty && invites.isEmpty)
-                              const EmptyState(
+                              EmptyState(
                                 icon: Icons.event_note_rounded,
                                 text: '아직 시험이 없어요.\n언니가 시험을 내면 여기에 바로 표시돼요.',
                               )
@@ -252,7 +252,7 @@ class _InviteCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const StatusChip(label: '새 초대'),
+                      StatusChip(label: '새 초대'),
                       SizedBox(width: AppSpace.xxs.w + 2),
                       Expanded(
                         child: Text(

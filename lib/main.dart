@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'app.dart';
-import 'core/services/bgm_service.dart';
 import 'core/services/sfx_service.dart';
 import 'core/theme/theme_controller.dart';
 import 'features/study/services/memorized_store.dart';
@@ -33,13 +32,10 @@ Future<void> main() async {
   // 저장된 테마 팔레트를 적용한 컨트롤러를 준비한다.
   final themeController = await ThemeController.load();
 
-  // 배경음악 설정(켬/끔)을 불러온다. 실제 재생은 로그인 후 시작한다.
-  final bgm = await BgmService.load();
-
   // 버튼 효과음 설정.
   final sfx = await SfxService.load();
 
   runApp(
-    HelloWordApp(themeController: themeController, bgm: bgm, sfx: sfx),
+    HelloWordApp(themeController: themeController, sfx: sfx),
   );
 }

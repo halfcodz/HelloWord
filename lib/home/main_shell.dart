@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
-import '../core/services/bgm_service.dart';
 import '../core/services/presence_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/theme_controller.dart';
@@ -47,7 +46,6 @@ class _MainShellState extends State<MainShell> {
     _updateStudying();
     _restoreTabAfterReload();
     _reconnectIfNeeded();
-    _startBgm();
   }
 
   /// 앱 시작(재접속) 시 진행 중인 시험이 있으면 자동으로 다시 들어간다.
@@ -128,14 +126,6 @@ class _MainShellState extends State<MainShell> {
     });
     _updateStudying();
     AppRefresh.saveCurrentTab(i); // 새로고침 후 이 탭으로 복원되도록 저장
-  }
-
-  /// 로그인 후 첫 화면에 들어왔을 때 배경음악을 시작한다.
-  /// (설정에서 꺼 뒀으면 서비스가 알아서 아무것도 하지 않는다.)
-  void _startBgm() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<BgmService>().start();
-    });
   }
 
   @override

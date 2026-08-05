@@ -264,7 +264,7 @@ class _StudyHome extends StatelessWidget {
                     ),
             ),
             if (todaySets.isEmpty)
-              const EmptyState(
+              EmptyState(
                 icon: Icons.menu_book_rounded,
                 text: '오늘 받은 단어가 없어요.\n언니가 자료를 올리면 여기에 바로 나와요.',
               )
@@ -300,7 +300,7 @@ class _StudyHome extends StatelessWidget {
                     ),
             ),
             if (pastItems.isEmpty)
-              const EmptyState(
+              EmptyState(
                 icon: Icons.history_rounded,
                 text: '아직 지난 기록이 없어요.',
               )

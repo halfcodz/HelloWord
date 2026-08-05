@@ -159,7 +159,7 @@ class ExamDashboardView extends StatelessWidget {
                         FriendBar(me: user),
                         SizedBox(height: AppSpace.sm.h),
                         // 숫자 통계 대신 오늘의 한 문장.
-                        const QuoteCard(),
+                        QuoteCard(),
                         SectionHeader(
                           icon: Icons.event_available_rounded,
                           label: '오늘 시험',
