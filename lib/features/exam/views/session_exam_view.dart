@@ -202,19 +202,39 @@ class _ExamBodyState extends State<_ExamBody> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // 답을 쓰는 동안에는 영상을 작게 줄여 문제·입력칸 자리를 내주되,
-    // 언니 얼굴이 계속 보이도록 완전히 감추지는 않는다.
     final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
-    final callHeight = (!vm.isFinished && keyboardOpen) ? 84.h : 260.h;
+
+    // 통화 패널의 '실제 크기'는 절대 바꾸지 않는다.
+    //
+    // 예전에는 키보드가 열리면 높이를 0으로 접었는데, 웹에서 영상은 실제
+    // video 요소로 그려지기 때문에 크기가 0이 되면 요소가 떨어져 나가
+    // 소리만 남고 얼굴이 사라졌다. 시험 중에는 문제마다 키보드가 오르내리니
+    // 그때마다 영상이 깨졌다.
+    //
+    // 그래서 크기는 180으로 고정해 두고, 키보드가 열리면 '차지하는 자리'만
+    // 줄여서 위쪽(얼굴 부분)만 보이게 한다. 영상은 계속 살아 있다.
+    const callHeight = 180.0;
+    final callSlot = (!vm.isFinished && keyboardOpen) ? 96.0 : callHeight;
 
     return Column(
       children: [
         // 영상통화는 응시 중·완료 후 모두 같은 위치에 유지해 끊기지 않게 한다.
-        CallPanel(
-          key: const ValueKey('exam-call'),
-          sessionId: session.id,
-          isCaller: false,
-          height: callHeight,
+        // 자리는 줄되 안의 영상 크기는 그대로 유지된다.
+        ClipRect(
+          child: SizedBox(
+            height: callSlot.h,
+            child: OverflowBox(
+              alignment: Alignment.topCenter,
+              minHeight: callHeight.h,
+              maxHeight: callHeight.h,
+              child: CallPanel(
+                key: const ValueKey('exam-call'),
+                sessionId: session.id,
+                isCaller: false,
+                height: callHeight.h,
+              ),
+            ),
+          ),
         ),
         Expanded(
           child: vm.isFinished

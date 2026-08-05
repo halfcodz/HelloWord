@@ -37,10 +37,6 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
   bool _micOn = true;
   bool _restarting = false;
 
-  /// 상대 영상을 꽉 채워(잘라서) 볼지 여부.
-  /// 기본은 false(전체 보기) — 잘라서 보면 세로 영상이 눈만 보이게 잘린다.
-  bool _fillRemote = false;
-
   /// 한 번이라도 연결된 적이 있는지(앱 복귀 후 완전 재연결 판단에 사용).
   bool _everConnected = false;
 
@@ -52,7 +48,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // 통화 중에는 효과음을 멈춘다(마이크로 흘러 들어가지 않게).
+    // 통화 중에는 버튼 효과음을 멈춘다(마이크로 흘러 들어가지 않게).
     SfxService.instance?.suspend();
     _init();
   }
@@ -141,16 +137,11 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // 높이 0이면(키보드가 열려 접힌 상태) 여백까지 없애 화면을 완전히 비워 준다.
-    final height = widget.height ?? 200.h;
-    final collapsed = height <= 0;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
-      height: height,
-      margin: collapsed
-          ? EdgeInsets.zero
-          : EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+      height: widget.height ?? 200.h,
+      margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.navy,
@@ -169,11 +160,9 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 13.sp),
-              ),
+              Text(_error!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 13.sp)),
               SizedBox(height: 12.h),
               FilledButton.icon(
                 onPressed: _retry,
@@ -191,37 +180,86 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
           mainAxisSize: MainAxisSize.min,
           children: [
             const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation(Colors.white),
-            ),
+                valueColor: AlwaysStoppedAnimation(Colors.white)),
             SizedBox(height: 12.h),
-            Text(
-              '영상 연결 중…',
-              style: TextStyle(color: Colors.white70, fontSize: 13.sp),
-            ),
+            Text('영상 연결 중…',
+                style: TextStyle(color: Colors.white70, fontSize: 13.sp)),
           ],
         ),
       );
     }
 
     final service = _service!;
-    // 페이스타임처럼 두 얼굴을 나란히, 둘 다 잘리지 않게 보여 준다.
-    // (한쪽을 작은 창으로 겹쳐 두면 상대 얼굴을 가리거나 내 얼굴이 너무 작다)
     return Stack(
       children: [
+        // 원격(상대) 영상 - 크게.
         Positioned.fill(
-          child: Row(
-            children: [
-              Expanded(child: _videoTile(service, remote: true)),
-              SizedBox(width: 2.w),
-              Expanded(child: _videoTile(service, remote: false)),
-            ],
+          child: RTCVideoView(
+            service.remoteRenderer,
+            // 세로로 찍힌 얼굴이 잘리지 않도록 전체 보기.
+            // (그리기 방식만 바꾸는 것이라 연결에는 영향을 주지 않는다)
+            objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
+            placeholderBuilder: (_) => Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white54)),
+                  ),
+                  SizedBox(height: 10.h),
+                  Text(
+                    _reconnecting
+                        ? '다시 연결하는 중…'
+                        : (_remoteActive || _connected
+                            ? '상대 영상 불러오는 중…'
+                            : '상대가 들어오길 기다리는 중…'),
+                    style: TextStyle(color: Colors.white54, fontSize: 12.sp),
+                  ),
+                  if (_reconnecting) ...[
+                    SizedBox(height: 6.h),
+                    TextButton(
+                      onPressed: _restarting ? null : _retry,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: Text('다시 연결',
+                          style: TextStyle(fontSize: 12.sp)),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
-        // 컨트롤(카메라/마이크/보기 전환).
+        // 내 영상 - 작게(PiP).
+        Positioned(
+          right: 10.w,
+          top: 10.h,
+          child: Container(
+            width: 84.w,
+            height: 112.h,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(color: AppColors.mintEnd, width: 2),
+            ),
+            child: RTCVideoView(
+              service.localRenderer,
+              mirror: true,
+              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+            ),
+          ),
+        ),
+        // 컨트롤(카메라/마이크).
         Positioned(
           left: 0,
           right: 0,
-          bottom: 6.h,
+          bottom: 8.h,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -232,7 +270,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
                   service.toggleCamera(_camOn);
                 },
               ),
-              SizedBox(width: 12.w),
+              SizedBox(width: 16.w),
               _CircleButton(
                 icon: _micOn ? Icons.mic : Icons.mic_off,
                 onTap: () {
@@ -240,168 +278,10 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
                   service.toggleMic(_micOn);
                 },
               ),
-              SizedBox(width: 12.w),
-              // 얼굴을 다 보기 ↔ 꽉 채우기.
-              _CircleButton(
-                icon: _fillRemote
-                    ? Icons.fullscreen_exit_rounded
-                    : Icons.fullscreen_rounded,
-                onTap: () => setState(() => _fillRemote = !_fillRemote),
-              ),
-              SizedBox(width: 12.w),
-              // 내 얼굴이 상대에게 안 갈 때 카메라만 다시 켠다(통화는 유지).
-              _CircleButton(
-                icon: Icons.flip_camera_ios_rounded,
-                onTap: () async {
-                  await service.restartCamera();
-                  if (mounted) setState(() {});
-                },
-              ),
             ],
           ),
         ),
       ],
-    );
-  }
-
-  /// 영상 한 칸. 왼쪽은 상대, 오른쪽은 나.
-  Widget _videoTile(CallService service, {required bool remote}) {
-    final fit = _fillRemote
-        ? RTCVideoViewObjectFit.RTCVideoViewObjectFitCover
-        : RTCVideoViewObjectFit.RTCVideoViewObjectFitContain;
-    return ColoredBox(
-      color: AppColors.navy,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: RTCVideoView(
-              remote ? service.remoteRenderer : service.localRenderer,
-              mirror: !remote,
-              objectFit: fit,
-              placeholderBuilder: (_) => Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation(Colors.white54),
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      remote
-                          ? (_reconnecting
-                                ? '다시 연결하는 중…'
-                                : (_remoteActive || _connected
-                                      ? '영상 불러오는 중…'
-                                      : '기다리는 중…'))
-                          : '카메라 준비 중…',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white54, fontSize: 11.sp),
-                    ),
-                    if (remote && _reconnecting) ...[
-                      SizedBox(height: 4.h),
-                      TextButton(
-                        onPressed: _restarting ? null : _retry,
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        child: Text('다시 연결', style: TextStyle(fontSize: 11.sp)),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // 상대 영상이 안 올 때는 연결 상태와 무관하게 다시 붙일 수 있게 한다.
-          if (remote && _connected && !service.hasRemoteVideo)
-            Positioned.fill(
-              child: ColoredBox(
-                color: AppColors.navy.withValues(alpha: 0.9),
-                child: Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(AppSpace.xs.w),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.videocam_off_rounded,
-                          size: 24.sp,
-                          color: Colors.white,
-                        ),
-                        SizedBox(height: AppSpace.xs.h),
-                        Text(
-                          '상대 영상이 안 와요',
-                          textAlign: TextAlign.center,
-                          style: AppTheme.font(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(height: AppSpace.xs.h),
-                        // 어두운 바탕에서도 확실히 보이도록 흰 버튼으로.
-                        SizedBox(
-                          height: 34.h,
-                          child: FilledButton.icon(
-                            onPressed: _restarting ? null : _retry,
-                            icon: Icon(Icons.refresh_rounded, size: 15.sp),
-                            label: Text(
-                              _restarting ? '연결 중…' : '다시 연결',
-                              style: AppTheme.font(
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: AppColors.navy,
-                              disabledBackgroundColor: Colors.white54,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: AppSpace.sm.w,
-                              ),
-                              minimumSize: Size(0, 34.h),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.pill.r,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          // 누구 화면인지 작게 표시.
-          Positioned(
-            left: 6.w,
-            top: 6.h,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 2.h),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.42),
-                borderRadius: BorderRadius.circular(AppRadius.xs.r),
-              ),
-              child: Text(
-                remote ? '상대' : '나',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
