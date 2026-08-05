@@ -253,7 +253,7 @@ class _ResultScaffold extends StatelessWidget {
                   padding:
                       EdgeInsets.symmetric(horizontal: 28.w, vertical: 14.h),
                   decoration: BoxDecoration(
-                    gradient: AppColors.primaryButton,
+                    color: AppColors.pink,
                     borderRadius: BorderRadius.circular(16.r),
                     boxShadow: AppColors.softShadow(),
                   ),

@@ -30,67 +30,75 @@ class FriendAvatar extends StatelessWidget {
     final studying = user.studying && user.online;
     final photo = AvatarService.decode(user.photoBase64);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: size.w,
-            height: size.w,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: size.w,
-                  height: size.w,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: _bg,
-                    shape: BoxShape.circle,
-                    image: photo != null
-                        ? DecorationImage(
-                            image: MemoryImage(photo), fit: BoxFit.cover)
-                        : null,
-                    border: studying
-                        ? Border.all(color: AppColors.pink, width: 2)
-                        : null,
+    return Semantics(
+      button: onTap != null,
+      label: '${isMe ? "나" : user.name} 프로필',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: size.w,
+              height: size.w,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: size.w,
+                    height: size.w,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: _bg,
+                      shape: BoxShape.circle,
+                      image: photo != null
+                          ? DecorationImage(
+                              image: MemoryImage(photo),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                      border: studying
+                          ? Border.all(color: AppColors.pink, width: 2)
+                          : null,
+                    ),
+                    child: photo != null
+                        ? null
+                        : Text(
+                            _mascot,
+                            style: TextStyle(fontSize: (size / 2).sp),
+                          ),
                   ),
-                  child: photo != null
-                      ? null
-                      : Text(_mascot,
-                          style: TextStyle(fontSize: (size / 2).sp)),
-                ),
-                if (user.online)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 13.w,
-                      height: 13.w,
-                      decoration: BoxDecoration(
-                        color: AppColors.green,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                  if (user.online)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 13.w,
+                        height: 13.w,
+                        decoration: BoxDecoration(
+                          color: AppColors.green,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            isMe ? '나' : (studying ? '${user.name} · 공부중' : user.name),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11.sp,
-              fontWeight: studying ? FontWeight.w700 : FontWeight.w600,
-              color: studying ? AppColors.pink : AppColors.gray,
+            SizedBox(height: 4.h),
+            Text(
+              isMe ? '나' : (studying ? '${user.name} · 공부중' : user.name),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11.sp,
+                fontWeight: studying ? FontWeight.w700 : FontWeight.w600,
+                color: studying ? AppColors.pink : AppColors.gray,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

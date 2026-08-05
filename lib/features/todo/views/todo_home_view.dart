@@ -46,11 +46,14 @@ class _TodoHomeViewState extends State<TodoHomeView> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text('${_selectedDay.month}월 ${_selectedDay.day}일 할 일',
-              style: TextStyle(
-                  fontSize: 17.sp,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.ink)),
+          title: Text(
+            '${_selectedDay.month}월 ${_selectedDay.day}일 할 일',
+            style: TextStyle(
+              fontSize: 17.sp,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
+            ),
+          ),
           content: TextField(
             controller: _addController,
             autofocus: true,
@@ -84,10 +87,12 @@ class _TodoHomeViewState extends State<TodoHomeView> {
       if (mounted) {
         ScaffoldMessenger.of(context)
           ..clearSnackBars()
-          ..showSnackBar(const SnackBar(
-            content: Text('할 일 저장에 실패했어요. (Firestore 규칙 확인 필요)'),
-            duration: Duration(seconds: 3),
-          ));
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('할 일 저장에 실패했어요. (Firestore 규칙 확인 필요)'),
+              duration: Duration(seconds: 3),
+            ),
+          );
       }
     }
   }
@@ -107,6 +112,7 @@ class _TodoHomeViewState extends State<TodoHomeView> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'fab-todo-add',
         onPressed: _openAddDialog,
         child: const Icon(Icons.add),
       ),
@@ -117,13 +123,11 @@ class _TodoHomeViewState extends State<TodoHomeView> {
             final todos = snapshot.data ?? const <Todo>[];
             final countByDay = <DateTime, int>{};
             for (final t in todos) {
-              countByDay.update(_key(t.date), (v) => v + 1,
-                  ifAbsent: () => 1);
+              countByDay.update(_key(t.date), (v) => v + 1, ifAbsent: () => 1);
             }
-            final dayTodos = todos
-                .where((t) => _key(t.date) == _key(_selectedDay))
-                .toList()
-              ..sort((a, b) => a.done == b.done ? 0 : (a.done ? 1 : -1));
+            final dayTodos =
+                todos.where((t) => _key(t.date) == _key(_selectedDay)).toList()
+                  ..sort((a, b) => a.done == b.done ? 0 : (a.done ? 1 : -1));
 
             return Column(
               children: [
@@ -136,19 +140,22 @@ class _TodoHomeViewState extends State<TodoHomeView> {
                   eventCount: (day) => countByDay[_key(day)] ?? 0,
                   onDayTap: (day) => setState(() => _selectedDay = day),
                   onPrev: () => setState(
-                      () => _month = DateTime(_month.year, _month.month - 1)),
+                    () => _month = DateTime(_month.year, _month.month - 1),
+                  ),
                   onNext: () => setState(
-                      () => _month = DateTime(_month.year, _month.month + 1)),
+                    () => _month = DateTime(_month.year, _month.month + 1),
+                  ),
                   onToday: () => setState(() {
                     _month = DateTime(_now.year, _now.month);
                     _selectedDay = DateTime(_now.year, _now.month, _now.day);
                   }),
                 ),
                 Divider(
-                    height: 16.h,
-                    thickness: 1,
-                    indent: 20.w,
-                    endIndent: 20.w),
+                  height: 16.h,
+                  thickness: 1,
+                  indent: 20.w,
+                  endIndent: 20.w,
+                ),
                 _DayHeader(day: _selectedDay, count: dayTodos.length),
                 SizedBox(height: 4.h),
                 Expanded(
@@ -159,10 +166,13 @@ class _TodoHomeViewState extends State<TodoHomeView> {
                             children: [
                               Text('🍀', style: TextStyle(fontSize: 40.sp)),
                               SizedBox(height: 8.h),
-                              Text('할 일을 추가해 보세요!',
-                                  style: TextStyle(
-                                      fontSize: 14.sp,
-                                      color: AppColors.lavender)),
+                              Text(
+                                '할 일을 추가해 보세요!',
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: AppColors.lavender,
+                                ),
+                              ),
                             ],
                           ),
                         )
@@ -180,7 +190,9 @@ class _TodoHomeViewState extends State<TodoHomeView> {
                                 done: !todo.done,
                               ),
                               onDelete: () => _repo.delete(
-                                  uid: widget.user.uid, id: todo.id),
+                                uid: widget.user.uid,
+                                id: todo.id,
+                              ),
                             );
                           },
                         ),
@@ -231,30 +243,39 @@ class _UpcomingExamBanner extends StatelessWidget {
                   color: AppColors.pink,
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: Text(label,
-                    style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white)),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
               ),
               SizedBox(width: 12.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('다가오는 시험 📣',
-                        style: TextStyle(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.grayText)),
+                    Text(
+                      '다가오는 시험 📣',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.grayText,
+                      ),
+                    ),
                     SizedBox(height: 2.h),
-                    Text('${plan.title} · ${formatYmd(plan.scheduledDate)}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.ink)),
+                    Text(
+                      '${plan.title} · ${formatYmd(plan.scheduledDate)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -278,8 +299,10 @@ class _DayHeader extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 20.w),
       child: Row(
         children: [
-          Text('${day.month}월 ${day.day}일 할 일',
-              style: TextStyle(fontSize: 15.sp, color: AppColors.ink)),
+          Text(
+            '${day.month}월 ${day.day}일 할 일',
+            style: TextStyle(fontSize: 15.sp, color: AppColors.ink),
+          ),
           SizedBox(width: 8.w),
           if (count > 0)
             Container(
@@ -288,8 +311,10 @@ class _DayHeader extends StatelessWidget {
                 color: AppColors.pinkSoft.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(20.r),
               ),
-              child: Text('$count',
-                  style: TextStyle(fontSize: 12.sp, color: AppColors.pink)),
+              child: Text(
+                '$count',
+                style: TextStyle(fontSize: 12.sp, color: AppColors.pink),
+              ),
             ),
         ],
       ),
@@ -344,8 +369,7 @@ class _TodoTile extends StatelessWidget {
                     color: todo.done
                         ? AppColors.ink.withValues(alpha: 0.4)
                         : AppColors.ink,
-                    decoration:
-                        todo.done ? TextDecoration.lineThrough : null,
+                    decoration: todo.done ? TextDecoration.lineThrough : null,
                   ),
                 ),
               ),
@@ -370,17 +394,14 @@ class _CheckCircle extends StatelessWidget {
       height: 24.w,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        gradient: done ? AppColors.primaryButton : null,
-        color: done ? null : AppColors.cream,
+        color: done ? AppColors.pink : AppColors.cream,
         shape: BoxShape.circle,
         border: Border.all(
           color: done ? Colors.transparent : AppColors.pinkSoft,
           width: 2,
         ),
       ),
-      child: done
-          ? Icon(Icons.check, size: 15.sp, color: Colors.white)
-          : null,
+      child: done ? Icon(Icons.check, size: 15.sp, color: Colors.white) : null,
     );
   }
 }

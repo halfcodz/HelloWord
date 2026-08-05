@@ -64,10 +64,9 @@ class _CalendarBodyState extends State<_CalendarBody> {
   void _nextMonth() =>
       setState(() => _month = DateTime(_month.year, _month.month + 1));
   void _today() => setState(() {
-        _month = DateTime(_now.year, _now.month);
-        _selectedDay = DateTime(_now.year, _now.month, _now.day);
-      });
-
+    _month = DateTime(_now.year, _now.month);
+    _selectedDay = DateTime(_now.year, _now.month, _now.day);
+  });
 
   void _openDay(DateTime day, Map<DateTime, List<WordSet>> events) {
     setState(() => _selectedDay = day);
@@ -115,6 +114,7 @@ class _CalendarBodyState extends State<_CalendarBody> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab-calendar-add',
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => WordSetUploadView(user: widget.user),
@@ -133,18 +133,18 @@ class _CalendarBodyState extends State<_CalendarBody> {
                 month: _month,
                 selectedDay: _selectedDay,
                 today: DateTime(_now.year, _now.month, _now.day),
-                eventCount: (day) =>
-                    (events[_dayKey(day)] ?? const []).length,
+                eventCount: (day) => (events[_dayKey(day)] ?? const []).length,
                 onDayTap: (day) => _openDay(day, events),
                 onPrev: _prevMonth,
                 onNext: _nextMonth,
                 onToday: _today,
               ),
               SizedBox(height: 10.h),
-              Text('날짜를 누르면 그날의 단어가 나와요',
-                  textAlign: TextAlign.center,
-                  style:
-                      TextStyle(fontSize: 12.sp, color: AppColors.lavender)),
+              Text(
+                '날짜를 누르면 그날의 단어가 나와요',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12.sp, color: AppColors.lavender),
+              ),
             ],
           ),
         ),
@@ -171,9 +171,7 @@ class _DayDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: AppColors.cream,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18.r),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.r)),
       child: Padding(
         padding: EdgeInsets.all(20.w),
         child: Column(
@@ -182,13 +180,19 @@ class _DayDialog extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text('${day.month}월 ${day.day}일',
-                    style: TextStyle(fontSize: 18.sp, color: AppColors.ink)),
+                Text(
+                  '${day.month}월 ${day.day}일',
+                  style: TextStyle(fontSize: 18.sp, color: AppColors.ink),
+                ),
                 const Spacer(),
                 IconButton(
                   visualDensity: VisualDensity.compact,
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: Icon(Icons.close, size: 20.sp, color: AppColors.lavender),
+                  icon: Icon(
+                    Icons.close,
+                    size: 20.sp,
+                    color: AppColors.lavender,
+                  ),
                 ),
               ],
             ),
@@ -200,9 +204,13 @@ class _DayDialog extends StatelessWidget {
                   children: [
                     Text('🌷', style: TextStyle(fontSize: 34.sp)),
                     SizedBox(height: 8.h),
-                    Text('이 날은 등록된 단어가 없어요',
-                        style: TextStyle(
-                            fontSize: 13.sp, color: AppColors.lavender)),
+                    Text(
+                      '이 날은 등록된 단어가 없어요',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: AppColors.lavender,
+                      ),
+                    ),
                     SizedBox(height: 16.h),
                     FilledButton.icon(
                       onPressed: onAdd,
@@ -236,27 +244,36 @@ class _DayDialog extends StatelessWidget {
                               width: 40.w,
                               height: 40.w,
                               decoration: BoxDecoration(
-                                gradient: AppColors.primaryButton,
+                                color: AppColors.pink,
                                 borderRadius: BorderRadius.circular(12.r),
                               ),
-                              child: Icon(Icons.menu_book_rounded,
-                                  color: Colors.white, size: 20.sp),
+                              child: Icon(
+                                Icons.menu_book_rounded,
+                                color: Colors.white,
+                                size: 20.sp,
+                              ),
                             ),
                             SizedBox(width: 12.w),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(set.title,
-                                      style: TextStyle(
-                                          fontSize: 15.sp,
-                                          color: AppColors.ink),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis),
-                                  Text('${set.wordCount}개 단어',
-                                      style: TextStyle(
-                                          fontSize: 12.sp,
-                                          color: AppColors.lavender)),
+                                  Text(
+                                    set.title,
+                                    style: TextStyle(
+                                      fontSize: 15.sp,
+                                      color: AppColors.ink,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${set.wordCount}개 단어',
+                                    style: TextStyle(
+                                      fontSize: 12.sp,
+                                      color: AppColors.lavender,
+                                    ),
+                                  ),
                                   if (set.examAssigned) ...[
                                     SizedBox(height: 4.h),
                                     ExamAssignedBadge.of(set),
@@ -264,8 +281,11 @@ class _DayDialog extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            Icon(Icons.chevron_right,
-                                color: AppColors.lavender, size: 20.sp),
+                            Icon(
+                              Icons.chevron_right,
+                              color: AppColors.lavender,
+                              size: 20.sp,
+                            ),
                           ],
                         ),
                       ),

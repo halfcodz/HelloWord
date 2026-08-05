@@ -179,9 +179,12 @@ class ExamRepository {
   /// 시험을 완료 처리한다. 답안에서 점수를 직접 계산하므로,
   /// 동생이 이전 문제로 돌아가 답을 고쳐도 최종 점수에 반영된다.
   Future<void> finish({required String sessionId}) async {
-    // 세션과 답안을 모아 영구 결과(examResults)로 기록한 뒤 세션 상태를 갱신한다.
-    // 세션이 나중에 삭제돼도 결과는 남아 언니·동생이 확인할 수 있다.
+    // 세션과 답안을 모아 점수를 계산하고, 세션 상태를 먼저 '완료'로 바꿔
+    // 언니·동생 화면이 곧바로 결과 화면으로 넘어가게 한다.
+    // 영구 결과(examResults) 기록은 그 뒤에 이어서 남긴다.
+    // (세션이 나중에 삭제돼도 결과는 남아 언니·동생이 확인할 수 있다.)
     var score = 0;
+    Map<String, dynamic>? resultData;
     final sessionDoc = await _sessions.doc(sessionId).get();
     if (sessionDoc.exists) {
       final session = ExamSession.fromDoc(sessionDoc);
@@ -217,7 +220,7 @@ class ExamRepository {
         score: score,
         items: items,
       );
-      await _results.add(result.toMap());
+      resultData = result.toMap();
     }
 
     await _sessions.doc(sessionId).update({
@@ -225,6 +228,10 @@ class ExamRepository {
       'score': score,
       'finishedAt': FieldValue.serverTimestamp(),
     });
+
+    if (resultData != null) {
+      await _results.add(resultData);
+    }
   }
 
   // ── 예정된 시험(examPlans) ─────────────────────────
@@ -287,11 +294,15 @@ class ExamRepository {
   }
 
   /// 세션과 하위 답안을 삭제한다(언니가 취소할 때).
+  /// 하나씩 지우면 지워지는 동안 상대 화면의 점수·개수 숫자가 줄어드는 게 보이므로
+  /// 배치로 한 번에 커밋해 세션과 답안이 동시에 사라지게 한다.
   Future<void> deleteSession(String sessionId) async {
     final answers = await _answers(sessionId).get();
+    final batch = _firestore.batch();
     for (final doc in answers.docs) {
-      await doc.reference.delete();
+      batch.delete(doc.reference);
     }
-    await _sessions.doc(sessionId).delete();
+    batch.delete(_sessions.doc(sessionId));
+    await batch.commit();
   }
 }

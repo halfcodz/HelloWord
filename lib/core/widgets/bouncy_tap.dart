@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../services/bgm_service.dart';
+import '../services/sfx_service.dart';
+import '../theme/app_theme.dart';
+
 /// 누르면 살짝 작아졌다 통통 돌아오는 탭 애니메이션 래퍼.
 class BouncyTap extends StatefulWidget {
   const BouncyTap({
     super.key,
     required this.child,
     this.onTap,
-    this.scale = 0.94,
+    // 0.96보다 작게 누르면 과장돼 보인다.
+    this.scale = 0.96,
   });
 
   final Widget child;
@@ -33,11 +38,19 @@ class _BouncyTapState extends State<BouncyTap> {
       onTapDown: (_) => _setPressed(true),
       onTapUp: (_) => _setPressed(false),
       onTapCancel: () => _setPressed(false),
-      onTap: widget.onTap,
+      onTap: widget.onTap == null
+          ? null
+          : () {
+              // 누르는 느낌을 소리로도 준다(설정에서 끌 수 있음).
+              SfxService.tap();
+              // 브라우저가 자동재생을 막아 배경음악이 안 켜졌다면 지금 켠다.
+              BgmService.notifyUserGesture();
+              widget.onTap!();
+            },
       child: AnimatedScale(
         scale: _pressed ? widget.scale : 1.0,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
+        duration: AppMotion.fast,
+        curve: AppMotion.enter,
         child: widget.child,
       ),
     );

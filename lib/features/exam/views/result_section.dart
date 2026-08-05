@@ -24,69 +24,95 @@ class ResultNavCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20.r),
-      child: Container(
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: AppColors.cream,
-          borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(color: AppColors.border),
-          boxShadow: AppColors.softShadow(blur: 12, y: 4),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 38.w,
-                  height: 38.w,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: dark ? AppColors.navy : null,
-                    gradient: dark ? null : AppColors.primaryButton,
-                    borderRadius: BorderRadius.circular(12.r),
+    return Semantics(
+      button: true,
+      label: '$label $count건 보기',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20.r),
+        child: Container(
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: AppColors.cream.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(20.r),
+            border: Border.all(color: AppColors.border),
+          ),
+          // 두 카드 높이를 맞추느라 세로가 딱 맞게 잡히므로,
+          // 글자 크기가 커져도 넘치지 않게 각 줄을 줄일 수 있게 둔다.
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 38.w,
+                    height: 38.w,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: dark ? AppColors.navy : AppColors.pink,
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    child: Text(emoji, style: TextStyle(fontSize: 18.sp)),
                   ),
-                  child: Text(emoji, style: TextStyle(fontSize: 18.sp)),
-                ),
-                const Spacer(),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 9.w, vertical: 3.h),
-                  decoration: BoxDecoration(
-                    color: AppColors.blueSoft,
-                    borderRadius: BorderRadius.circular(999.r),
-                  ),
-                  child: Text('$count건',
+                  const Spacer(),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 9.w,
+                      vertical: 3.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.blueSoft,
+                      borderRadius: BorderRadius.circular(999.r),
+                    ),
+                    child: Text(
+                      '$count건',
                       style: TextStyle(
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.mintDeep)),
-                ),
-              ],
-            ),
-            SizedBox(height: 12.h),
-            Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.ink)),
-            SizedBox(height: 3.h),
-            Row(
-              children: [
-                Text('결과 보기',
-                    style: TextStyle(
                         fontSize: 11.sp,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.mintDeep,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10.h),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTheme.font(
+                    fontSize: 14.sp,
+                    height: 1.2,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
+                  ),
+                ),
+              ),
+              SizedBox(height: 2.h),
+              Flexible(
+                child: Row(
+                  children: [
+                    Text(
+                      '결과 보기',
+                      style: AppTheme.font(
+                        fontSize: 11.sp,
+                        height: 1.2,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.gray)),
-                Icon(Icons.chevron_right, size: 15.sp, color: AppColors.hint),
-              ],
-            ),
-          ],
+                        color: AppColors.gray,
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 15.sp,
+                      color: AppColors.hint,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -117,9 +143,11 @@ class TodayResultsView extends StatelessWidget {
               children: [
                 Text('📊', style: TextStyle(fontSize: 40.sp)),
                 SizedBox(height: 10.h),
-                Text(emptyText,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14.sp, color: AppColors.gray)),
+                Text(
+                  emptyText,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14.sp, color: AppColors.gray),
+                ),
               ],
             ),
           ),
@@ -131,24 +159,29 @@ class TodayResultsView extends StatelessWidget {
     final children = <Widget>[];
     for (var i = 0; i < results.length; i++) {
       if (results.length > 1) {
-        children.add(Padding(
-          padding: EdgeInsets.fromLTRB(18.w, i == 0 ? 6.h : 20.h, 16.w, 4.h),
-          child: Row(
-            children: [
-              Text('📄', style: TextStyle(fontSize: 15.sp)),
-              SizedBox(width: 6.w),
-              Expanded(
-                child: Text(results[i].title,
+        children.add(
+          Padding(
+            padding: EdgeInsets.fromLTRB(18.w, i == 0 ? 6.h : 20.h, 16.w, 4.h),
+            child: Row(
+              children: [
+                Text('📄', style: TextStyle(fontSize: 15.sp)),
+                SizedBox(width: 6.w),
+                Expanded(
+                  child: Text(
+                    results[i].title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink)),
-              ),
-            ],
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ));
+        );
       }
       children.addAll(ExamResultDetailView.buildResultContent(results[i]));
     }

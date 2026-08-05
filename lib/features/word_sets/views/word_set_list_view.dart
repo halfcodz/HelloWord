@@ -4,8 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
-import '../../../core/widgets/bouncy_tap.dart';
-import '../../../core/widgets/history_calendar_view.dart';
+import '../../../core/widgets/app_components.dart';
 import '../../../core/widgets/x_mark.dart';
 import '../../../models/app_user.dart';
 import '../models/word_set.dart';
@@ -49,9 +48,9 @@ bool _isTodaySet(DateTime d) {
 }
 
 Future<void> _openUpload(BuildContext context, AppUser user) async {
-  await Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => WordSetUploadView(user: user)),
-  );
+  await Navigator.of(
+    context,
+  ).push(MaterialPageRoute(builder: (_) => WordSetUploadView(user: user)));
 }
 
 /// 세트 삭제 확인 후 삭제 실행.
@@ -67,11 +66,13 @@ Future<void> _confirmDeleteSet(
       content: Text('"${set.title}" 세트를 삭제합니다.'),
       actions: [
         TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소')),
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('취소'),
+        ),
         FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('삭제')),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('삭제'),
+        ),
       ],
     ),
   );
@@ -106,6 +107,7 @@ class _WordSetListBody extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       floatingActionButton: showFab
           ? FloatingActionButton.extended(
+              heroTag: 'fab-wordset-add',
               onPressed: () => _openUpload(context, user),
               icon: const Icon(Icons.add),
               label: const Text('단어 추가'),
@@ -122,249 +124,171 @@ class _WordSetListBody extends StatelessWidget {
     if (viewModel.error != null) {
       return Center(child: Text(viewModel.error!));
     }
+    return _MaterialsBrowser(
+      user: user,
+      sets: viewModel.sets,
+      onDelete: (set) =>
+          _confirmDeleteSet(context, set, () => viewModel.delete(set.id)),
+    );
+  }
+}
 
-    final today = viewModel.sets.where((s) => _isTodaySet(s.date)).toList();
-    final past = viewModel.sets.where((s) => !_isTodaySet(s.date)).toList();
+/// 자료를 '오늘 / 지난 / 전체'로 걸러 바로 볼 수 있는 목록.
+/// 예전에는 큰 카드를 눌러 화면을 한 번 더 들어가야 자료가 보였는데,
+/// 목록을 처음부터 펼쳐 두고 위 버튼으로 기간만 좁히도록 바꿨다.
+class _MaterialsBrowser extends StatefulWidget {
+  const _MaterialsBrowser({
+    required this.user,
+    required this.sets,
+    required this.onDelete,
+  });
 
-    return ListView(
+  final AppUser user;
+  final List<WordSet> sets;
+  final void Function(WordSet set) onDelete;
+
+  @override
+  State<_MaterialsBrowser> createState() => _MaterialsBrowserState();
+}
+
+enum _MaterialFilter { today, past, all }
+
+class _MaterialsBrowserState extends State<_MaterialsBrowser> {
+  _MaterialFilter _filter = _MaterialFilter.today;
+
+  String _label(_MaterialFilter f) => switch (f) {
+    _MaterialFilter.today => '오늘',
+    _MaterialFilter.past => '지난 자료',
+    _MaterialFilter.all => '전체',
+  };
+
+  List<WordSet> _filtered() {
+    return switch (_filter) {
+      _MaterialFilter.today =>
+        widget.sets.where((s) => _isTodaySet(s.date)).toList(),
+      _MaterialFilter.past =>
+        widget.sets.where((s) => !_isTodaySet(s.date)).toList(),
+      _MaterialFilter.all => widget.sets,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final today = widget.sets.where((s) => _isTodaySet(s.date)).length;
+    final past = widget.sets.length - today;
+    final items = _filtered();
+
+    return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 100.h),
-      children: [
-        Text('자료를 관리해 볼까요?',
-            style: TextStyle(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.w800,
-                color: AppColors.ink)),
-        SizedBox(height: 4.h),
-        Text('오늘 올린 자료를 확인하거나, 지난 자료를 달력에서 찾아봐요.',
-            style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
-        SizedBox(height: 18.h),
-        _BigChoiceCard(
-          emoji: '📦',
-          badge: 'TODAY',
-          title: '오늘 올린 자료',
-          subtitle: today.isEmpty
-              ? '오늘 올린 자료가 없어요'
-              : '단어 세트 ${today.length}개',
-          action: '자료 보기',
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => _MaterialsTodayView(user: user, enableAdd: enableAdd),
-          )),
-        ),
-        SizedBox(height: 14.h),
-        _BigChoiceCard(
-          emoji: '🗓️',
-          badge: 'HISTORY',
-          title: '지난 자료',
-          subtitle: past.isEmpty
-              ? '아직 지난 자료가 없어요'
-              : '달력에서 지난 자료 ${past.length}개 찾기',
-          action: '달력으로 보기',
-          dark: true,
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => HistoryCalendarView(
-              title: '지난 자료',
-              emptyText: '이 날 올린 자료가 없어요.',
-              items: [
-                for (final set in past)
-                  DatedItem(
-                    date: set.date,
-                    child: _MaterialCoverCard(
-                      set: set,
-                      onTap: () => _openDetail(context, set, user),
-                      onDelete: () => _confirmDeleteSet(
-                          context, set, () => viewModel.delete(set.id)),
-                    ),
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpace.gutter.w,
+              AppSpace.xs.h,
+              AppSpace.gutter.w,
+              0,
+            ),
+            child: Row(
+              children: [
+                for (final f in _MaterialFilter.values) ...[
+                  _FilterChip(
+                    label: _label(f),
+                    count: switch (f) {
+                      _MaterialFilter.today => today,
+                      _MaterialFilter.past => past,
+                      _MaterialFilter.all => widget.sets.length,
+                    },
+                    selected: _filter == f,
+                    onTap: () => setState(() => _filter = f),
                   ),
+                  SizedBox(width: AppSpace.xs.w),
+                ],
               ],
             ),
-          )),
+          ),
         ),
+        if (items.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Padding(
+              padding: EdgeInsets.only(top: AppSpace.xl.h),
+              // 추가 버튼은 화면 아래 '단어 추가' 하나로만 둔다(중복 방지).
+              child: EmptyState(
+                icon: Icons.folder_open_rounded,
+                text: _filter == _MaterialFilter.today
+                    ? '오늘 올린 자료가 없어요.\n아래 "단어 추가"로 새 자료를 만들어요.'
+                    : '아직 자료가 없어요.',
+              ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpace.md.w,
+              AppSpace.sm.h,
+              AppSpace.md.w,
+              kBottomInset.h,
+            ),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, i) => _MaterialCoverCard(
+                  set: items[i],
+                  onTap: () => _openDetail(context, items[i], widget.user),
+                  onDelete: () => widget.onDelete(items[i]),
+                ),
+                childCount: items.length,
+              ),
+            ),
+          ),
       ],
     );
   }
 }
 
-/// 오늘 올린 자료 목록(실시간). 커버 카드 + 추가/삭제.
-class _MaterialsTodayView extends StatelessWidget {
-  const _MaterialsTodayView({required this.user, required this.enableAdd});
-
-  final AppUser user;
-  final bool enableAdd;
-
-  @override
-  Widget build(BuildContext context) {
-    final repo = context.read<WordSetRepository>();
-    return Scaffold(
-      appBar: AppBar(title: const Text('오늘 올린 자료')),
-      floatingActionButton: enableAdd
-          ? FloatingActionButton.extended(
-              onPressed: () => _openUpload(context, user),
-              icon: const Icon(Icons.add),
-              label: const Text('단어 추가'),
-            )
-          : null,
-      body: SafeArea(
-        child: StreamBuilder<List<WordSet>>(
-          stream: repo.watchByCreator(user.uid),
-          builder: (context, snap) {
-            if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final today =
-                snap.data!.where((s) => _isTodaySet(s.date)).toList();
-            if (today.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('📦', style: TextStyle(fontSize: 44.sp)),
-                    SizedBox(height: 12.h),
-                    Text('오늘 올린 자료가 없어요',
-                        style:
-                            TextStyle(fontSize: 15.sp, color: AppColors.ink)),
-                    SizedBox(height: 6.h),
-                    Text('아래 "단어 추가"로 새 자료를 만들어요!',
-                        textAlign: TextAlign.center,
-                        style:
-                            TextStyle(fontSize: 12.sp, color: AppColors.gray)),
-                  ],
-                ),
-              );
-            }
-            return ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 90.h),
-              children: [
-                for (final set in today)
-                  _MaterialCoverCard(
-                    set: set,
-                    onTap: () => _openDetail(context, set, user),
-                    onDelete: () => _confirmDeleteSet(
-                        context, set, () => repo.delete(set.id)),
-                  ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-/// '오늘/지난'을 고르는 큰 선택 카드(동생 공부탭과 동일 디자인).
-class _BigChoiceCard extends StatelessWidget {
-  const _BigChoiceCard({
-    required this.emoji,
-    required this.badge,
-    required this.title,
-    required this.subtitle,
-    required this.action,
+/// 목록 위 기간 필터 버튼.
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.count,
+    required this.selected,
     required this.onTap,
-    this.dark = false,
   });
 
-  final String emoji;
-  final String badge;
-  final String title;
-  final String subtitle;
-  final String action;
+  final String label;
+  final int count;
+  final bool selected;
   final VoidCallback onTap;
-  final bool dark;
 
   @override
   Widget build(BuildContext context) {
-    final sub = Colors.white.withValues(alpha: 0.85);
-    return BouncyTap(
+    return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.all(22.w),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: dark ? AppColors.navy : null,
-          gradient: dark ? null : AppColors.primaryButton,
-          borderRadius: BorderRadius.circular(26.r),
-          boxShadow: [
-            BoxShadow(
-              color: (dark ? AppColors.navy : AppColors.mint)
-                  .withValues(alpha: dark ? 0.28 : 0.3),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
-            ),
-          ],
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpace.sm.w,
+          vertical: AppSpace.xs.h,
         ),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -10.w,
-              bottom: -22.h,
-              child: Text(emoji,
-                  style: TextStyle(
-                      fontSize: 96.sp,
-                      color: Colors.white.withValues(alpha: 0.16))),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(999.r),
-                  ),
-                  child: Text(badge,
-                      style: TextStyle(
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.5,
-                          color: Colors.white)),
-                ),
-                SizedBox(height: 14.h),
-                Text(title,
-                    style: TextStyle(
-                        fontSize: 23.sp,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white)),
-                SizedBox(height: 4.h),
-                Text(subtitle,
-                    style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600,
-                        color: sub)),
-                SizedBox(height: 16.h),
-                Row(
-                  children: [
-                    Text(action,
-                        style: TextStyle(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white)),
-                    SizedBox(width: 6.w),
-                    Container(
-                      width: 26.w,
-                      height: 26.w,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.arrow_forward_rounded,
-                          size: 16.sp, color: Colors.white),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
+        decoration: BoxDecoration(
+          color: selected ? AppColors.pink : AppColors.cream,
+          borderRadius: BorderRadius.circular(AppRadius.pill.r),
+          border: Border.all(
+            color: selected ? AppColors.pink : AppColors.border,
+          ),
+        ),
+        child: Text(
+          '$label $count',
+          style: AppTheme.font(
+            fontSize: 13.sp,
+            fontWeight: FontWeight.w800,
+            color: selected ? Colors.white : AppColors.grayText,
+          ),
         ),
       ),
     );
   }
 }
 
-/// 단어 세트 커버 카드(공부탭과 동일한 민트 그라디언트 디자인).
-/// 언니용: 진행률 대신 단어 수를 보여주고, 우측 상단 X로 세트를 삭제한다.
 class _MaterialCoverCard extends StatelessWidget {
   const _MaterialCoverCard({
     required this.set,
@@ -379,106 +303,91 @@ class _MaterialCoverCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 12.h),
-      child: BouncyTap(
+      padding: EdgeInsets.only(bottom: AppSpace.sm.h),
+      child: AppCard(
         onTap: onTap,
-        child: Container(
-          padding: EdgeInsets.all(20.w),
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryButton,
-            borderRadius: BorderRadius.circular(26.r),
-            boxShadow: [
-              BoxShadow(
-                  color: AppColors.mint.withValues(alpha: 0.3),
-                  blurRadius: 22,
-                  offset: const Offset(0, 10)),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                right: -12.w,
-                bottom: -18.h,
-                child: Text('📚',
-                    style: TextStyle(
-                        fontSize: 82.sp,
-                        color: Colors.white.withValues(alpha: 0.22))),
+        padding: EdgeInsets.all(AppSpace.md.w),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 자료를 한눈에 알아보는 표지. 단어 수를 크게 보여 준다.
+            Container(
+              width: 54.w,
+              height: 54.w,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.pinkSoft,
+                borderRadius: BorderRadius.circular(AppRadius.sm.r),
               ),
-              Positioned(
-                right: 0,
-                top: 0,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onDelete,
-                  child: Container(
-                    width: 30.w,
-                    height: 30.w,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: XMark(color: AppColors.danger, size: 16.w),
-                  ),
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Padding(
-                    padding: EdgeInsets.only(right: 36.w),
-                    child: Row(
-                      children: [
-                        Text('WORDS',
-                            style: TextStyle(
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 2,
-                                color: Colors.white.withValues(alpha: 0.85))),
-                        if (set.examAssigned) ...[
-                          SizedBox(width: 8.w),
-                          Flexible(
-                            child: ExamAssignedBadge.of(set, onColor: true),
-                          ),
-                        ],
-                      ],
+                  Text(
+                    '${set.wordCount}',
+                    style: AppTheme.tabularNumber(
+                      fontSize: 18.sp,
+                      color: AppColors.mintDeep,
                     ),
                   ),
-                  SizedBox(height: 4.h),
-                  Padding(
-                    padding: EdgeInsets.only(right: 36.w),
-                    child: Text(set.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 19.sp,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white)),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text('${set.wordCount}단어 · ${formatYmd(set.date)}',
-                      style: TextStyle(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white.withValues(alpha: 0.85))),
-                  SizedBox(height: 14.h),
-                  Row(
-                    children: [
-                      Text('탭해서 단어 확인·시험 배정',
-                          style: TextStyle(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white.withValues(alpha: 0.9))),
-                      SizedBox(width: 6.w),
-                      Icon(Icons.arrow_forward_rounded,
-                          size: 15.sp, color: Colors.white),
-                    ],
+                  Text(
+                    '단어',
+                    style: AppTheme.font(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.mintDeep,
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+            SizedBox(width: AppSpace.sm.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    set.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTheme.display(
+                      fontSize: 17.sp,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                  SizedBox(height: AppSpace.xxs.h),
+                  Text(
+                    formatYmd(set.date),
+                    style: AppTheme.font(
+                      fontSize: 12.sp,
+                      color: AppColors.gray,
+                    ),
+                  ),
+                  if (set.examAssigned) ...[
+                    SizedBox(height: AppSpace.xs.h),
+                    ExamAssignedBadge.of(set),
+                  ],
+                ],
+              ),
+            ),
+            SizedBox(width: AppSpace.xs.w),
+            // 삭제는 눌러야 보이지 않도록 오른쪽에 작게 두되 44pt 영역을 준다.
+            Semantics(
+              button: true,
+              label: '자료 삭제',
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onDelete,
+                child: SizedBox(
+                  width: 44.w,
+                  height: 44.w,
+                  child: Center(
+                    child: XMark(color: AppColors.hint, size: 15.w),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
