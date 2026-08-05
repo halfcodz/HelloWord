@@ -319,20 +319,11 @@ class _StudyHome extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 46.w,
-                        height: 46.w,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: AppColors.purpleSoft,
-                          borderRadius: BorderRadius.circular(AppRadius.sm.r),
-                        ),
-                        child: Icon(
+                      Icon(
                           Icons.history_rounded,
                           size: AppIconSize.md.sp,
                           color: AppColors.purple,
                         ),
-                      ),
                       SizedBox(width: AppSpace.sm.w),
                       Expanded(
                         child: Column(
@@ -663,22 +654,13 @@ class _StudyCard extends StatelessWidget {
             Row(
               children: [
                 // 진행 상태를 아이콘 하나로 먼저 알린다.
-                Container(
-                  width: 46.w,
-                  height: 46.w,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: complete ? AppColors.greenSoft : AppColors.pinkSoft,
-                    borderRadius: BorderRadius.circular(AppRadius.sm.r),
-                  ),
-                  child: Icon(
+                Icon(
                     complete
                         ? Icons.check_circle_rounded
                         : Icons.menu_book_rounded,
                     size: AppIconSize.md.sp,
                     color: complete ? AppColors.green : AppColors.pink,
                   ),
-                ),
                 SizedBox(width: AppSpace.sm.w),
                 Expanded(
                   child: Column(

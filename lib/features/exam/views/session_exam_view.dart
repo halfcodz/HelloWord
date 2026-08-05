@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/services/sfx_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/app_user.dart';
 import '../../call/views/call_panel.dart';
@@ -47,6 +48,14 @@ class _ExamBody extends StatefulWidget {
 class _ExamBodyState extends State<_ExamBody> {
   final _answerController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    // 마이크를 쓰는 화면이라 효과음 플레이어를 미리 놓아 준다.
+    // (오디오 세션을 잡고 있으면 통화 마이크가 안 잡히는 일이 있다)
+    SfxService.instance?.suspend();
+  }
+
   /// 입력칸 포커스. 문제를 넘겨도 키보드가 내려가지 않도록 직접 들고 있는다.
   final _answerFocus = FocusNode();
   int _shownIndex = -1;
@@ -56,6 +65,7 @@ class _ExamBodyState extends State<_ExamBody> {
   void dispose() {
     _answerController.dispose();
     _answerFocus.dispose();
+    SfxService.instance?.resume();
     super.dispose();
   }
 
@@ -204,37 +214,19 @@ class _ExamBodyState extends State<_ExamBody> {
 
     final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
-    // 통화 패널의 '실제 크기'는 절대 바꾸지 않는다.
-    //
-    // 예전에는 키보드가 열리면 높이를 0으로 접었는데, 웹에서 영상은 실제
-    // video 요소로 그려지기 때문에 크기가 0이 되면 요소가 떨어져 나가
-    // 소리만 남고 얼굴이 사라졌다. 시험 중에는 문제마다 키보드가 오르내리니
-    // 그때마다 영상이 깨졌다.
-    //
-    // 그래서 크기는 180으로 고정해 두고, 키보드가 열리면 '차지하는 자리'만
-    // 줄여서 위쪽(얼굴 부분)만 보이게 한다. 영상은 계속 살아 있다.
-    const callHeight = 180.0;
-    final callSlot = (!vm.isFinished && keyboardOpen) ? 96.0 : callHeight;
+    // v1에서 잘 되던 방식 그대로: 키보드가 열리면 높이만 줄인다.
+    // 0으로 접으면 웹에서 video 요소가 떨어져 나가 소리만 남는다.
+    // 전체 보기(Contain)라 높이가 줄어도 얼굴이 잘리지 않고 작아질 뿐이다.
+    final callHeight = (!vm.isFinished && keyboardOpen) ? 96.h : 190.h;
 
     return Column(
       children: [
         // 영상통화는 응시 중·완료 후 모두 같은 위치에 유지해 끊기지 않게 한다.
-        // 자리는 줄되 안의 영상 크기는 그대로 유지된다.
-        ClipRect(
-          child: SizedBox(
-            height: callSlot.h,
-            child: OverflowBox(
-              alignment: Alignment.topCenter,
-              minHeight: callHeight.h,
-              maxHeight: callHeight.h,
-              child: CallPanel(
-                key: const ValueKey('exam-call'),
-                sessionId: session.id,
-                isCaller: false,
-                height: callHeight.h,
-              ),
-            ),
-          ),
+        CallPanel(
+          key: const ValueKey('exam-call'),
+          sessionId: session.id,
+          isCaller: false,
+          height: callHeight,
         ),
         Expanded(
           child: vm.isFinished

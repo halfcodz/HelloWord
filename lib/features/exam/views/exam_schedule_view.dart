@@ -9,7 +9,6 @@ import '../../../core/widgets/app_components.dart';
 import '../../../models/app_user.dart';
 import '../../social/views/friend_bar.dart';
 import '../../social/views/material_bell.dart';
-import '../models/exam_plan.dart';
 import '../models/exam_session.dart';
 import '../models/exam_result.dart';
 import '../repositories/exam_repository.dart';
@@ -43,134 +42,121 @@ class ExamScheduleView extends StatelessWidget {
               stream: exam.watchInvitesForGuest(user.uid),
               builder: (context, inviteSnap) {
                 final invites = inviteSnap.data ?? const <ExamSession>[];
-                return StreamBuilder<List<ExamPlan>>(
-                  stream: exam.watchPlansForGuest(user.uid),
-                  builder: (context, planSnap) {
-                    final plans =
-                        (planSnap.data ?? const <ExamPlan>[])
-                            .where((p) => !p.done && p.dDay(today) >= 0)
-                            .toList()
-                          ..sort(
-                            (a, b) => a.dDay(today).compareTo(b.dDay(today)),
-                          );
-    
-                    return StreamBuilder<List<ExamResult>>(
-                      stream: exam.watchResultsForGuest(user.uid),
-                      builder: (context, resultSnap) {
-                        final results = resultSnap.data ?? const <ExamResult>[];
-                        bool isToday(DateTime? d) {
-                          if (d == null) return false;
-                          return d.year == today.year &&
-                              d.month == today.month &&
-                              d.day == today.day;
-                        }
+                return StreamBuilder<List<ExamResult>>(
+                  stream: exam.watchResultsForGuest(user.uid),
+                  builder: (context, resultSnap) {
+                    final results = resultSnap.data ?? const <ExamResult>[];
+                    bool isToday(DateTime? d) {
+                      if (d == null) return false;
+                      return d.year == today.year &&
+                          d.month == today.month &&
+                          d.day == today.day;
+                    }
 
-                        final todayR = results
-                            .where((r) => isToday(r.createdAt))
-                            .toList();
-                        final pastR = results
-                            .where((r) => !isToday(r.createdAt))
-                            .toList();
-                        _ResultCard resultTile(ExamResult r) => _ResultCard(
-                          result: r,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => ExamResultDetailView(result: r),
+                    final todayR = results
+                        .where((r) => isToday(r.createdAt))
+                        .toList();
+                    final pastR = results
+                        .where((r) => !isToday(r.createdAt))
+                        .toList();
+                    _ResultCard resultTile(ExamResult r) => _ResultCard(
+                      result: r,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ExamResultDetailView(result: r),
+                        ),
+                      ),
+                    );
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _header(
+                          context,
+                          invites.isEmpty ? null : invites.first,
+                        ),
+                        // 인사 바로 아래에 프로필(나·언니) 줄.
+                        FriendBar(me: user),
+                        SizedBox(height: AppSpace.sm.h),
+                        // 숫자 통계 대신 오늘의 한 문장.
+                        QuoteCard(),
+                        SectionHeader(
+                          icon: Icons.event_available_rounded,
+                          label: '오늘 시험',
+                        ),
+                        // 도착한 초대를 맨 위에 눈에 띄게 둔다.
+                        for (final invite in invites)
+                          _InviteCard(
+                            session: invite,
+                            onTap: () => showExamInvite(context, invite, user),
+                          ),
+                        // 배정된 자료는 여기에 띄우지 않는다.
+                        // 언니가 실제로 시험을 시작해 초대가 와야 보인다.
+                        if (invites.isEmpty)
+                          EmptyState(
+                            icon: Icons.event_note_rounded,
+                            text: '아직 시험이 없어요.\n언니가 시험을 시작하면 여기에 바로 표시돼요.',
+                          ),
+                        SectionHeader(
+                          icon: Icons.fact_check_rounded,
+                          label: '내 시험 결과',
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpace.gutter.w,
+                          ),
+                          // 두 카드의 높이를 맞추려고 stretch를 쓰는데, 스크롤 안에서는
+                          // 높이가 무한이라 stretch가 그대로 터진다(화면이 안 그려짐).
+                          // IntrinsicHeight로 '가장 큰 카드 높이'를 정해 준 뒤 늘린다.
+                          child: IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: ResultNavCard(
+                                    icon: Icons.insights_rounded,
+                                    label: '오늘 시험 결과',
+                                    count: todayR.length,
+                                    onTap: () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => TodayResultsView(
+                                          results: todayR,
+                                          emptyText:
+                                              '오늘 본 시험이 없어요.\n시험을 마치면 여기에 나와요.',
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: AppSpace.sm.w),
+                                Expanded(
+                                  child: ResultNavCard(
+                                    icon: Icons.history_rounded,
+                                    label: '지난 시험 결과',
+                                    count: pastR.length,
+                                    dark: true,
+                                    onTap: () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => HistoryCalendarView(
+                                          title: '지난 시험 결과',
+                                          items: [
+                                            for (final r in pastR)
+                                              DatedItem(
+                                                date: r.createdAt ?? today,
+                                                child: resultTile(r),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        );
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _header(context, invites.isEmpty ? null : invites.first),
-                            // 인사 바로 아래에 프로필(나·언니) 줄.
-                            FriendBar(me: user),
-                            SizedBox(height: AppSpace.sm.h),
-                            // 숫자 통계 대신 오늘의 한 문장.
-                            QuoteCard(),
-                            SectionHeader(
-                              icon: Icons.event_available_rounded,
-                              label: '오늘 시험',
-                            ),
-                            // 도착한 초대를 맨 위에 눈에 띄게 둔다.
-                            for (final invite in invites)
-                              _InviteCard(
-                                session: invite,
-                                onTap: () =>
-                                    showExamInvite(context, invite, user),
-                              ),
-                            if (plans.isEmpty && invites.isEmpty)
-                              EmptyState(
-                                icon: Icons.event_note_rounded,
-                                text: '아직 시험이 없어요.\n언니가 시험을 내면 여기에 바로 표시돼요.',
-                              )
-                            else
-                              for (final plan in plans)
-                                _PlanCard(plan: plan, today: today),
-                            SectionHeader(
-                              icon: Icons.fact_check_rounded,
-                              label: '내 시험 결과',
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: AppSpace.gutter.w,
-                              ),
-                              // 두 카드의 높이를 맞추려고 stretch를 쓰는데, 스크롤 안에서는
-                              // 높이가 무한이라 stretch가 그대로 터진다(화면이 안 그려짐).
-                              // IntrinsicHeight로 '가장 큰 카드 높이'를 정해 준 뒤 늘린다.
-                              child: IntrinsicHeight(
-                                child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    Expanded(
-                                      child: ResultNavCard(
-                                        icon: Icons.insights_rounded,
-                                        label: '오늘 시험 결과',
-                                        count: todayR.length,
-                                        onTap: () => Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) => TodayResultsView(
-                                              results: todayR,
-                                              emptyText:
-                                                  '오늘 본 시험이 없어요.\n시험을 마치면 여기에 나와요.',
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: AppSpace.sm.w),
-                                    Expanded(
-                                      child: ResultNavCard(
-                                        icon: Icons.history_rounded,
-                                        label: '지난 시험 결과',
-                                        count: pastR.length,
-                                        dark: true,
-                                        onTap: () => Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) => HistoryCalendarView(
-                                              title: '지난 시험 결과',
-                                              items: [
-                                                for (final r in pastR)
-                                                  DatedItem(
-                                                    date: r.createdAt ?? today,
-                                                    child: resultTile(r),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: kBottomInset.h),
-                          ],
-                        );
-                      },
+                        ),
+                        SizedBox(height: kBottomInset.h),
+                      ],
                     );
                   },
                 );
@@ -225,20 +211,11 @@ class _InviteCard extends StatelessWidget {
         borderColor: AppColors.pink,
         child: Row(
           children: [
-            Container(
-              width: 46.w,
-              height: 46.w,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.pink,
-                borderRadius: BorderRadius.circular(AppRadius.sm.r),
-              ),
-              child: Icon(
+            Icon(
                 Icons.mark_email_unread_rounded,
                 size: AppIconSize.md.sp,
                 color: Colors.white,
               ),
-            ),
             SizedBox(width: AppSpace.sm.w),
             Expanded(
               child: Column(
@@ -279,80 +256,6 @@ class _InviteCard extends StatelessWidget {
               Icons.chevron_right_rounded,
               color: AppColors.hint,
               size: AppIconSize.md.sp,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PlanCard extends StatelessWidget {
-  const _PlanCard({required this.plan, required this.today});
-
-  final ExamPlan plan;
-  final DateTime today;
-
-  @override
-  Widget build(BuildContext context) {
-    final d = plan.dDay(today);
-    final label = d == 0 ? 'D-DAY' : 'D-$d';
-    final urgent = d <= 1;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpace.gutter.w,
-        AppSpace.xxs.h,
-        AppSpace.gutter.w,
-        AppSpace.xs.h,
-      ),
-      child: AppCard(
-        child: Row(
-          children: [
-            Container(
-              width: 46.w,
-              height: 46.w,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: urgent ? AppColors.gold : AppColors.goldSoft,
-                borderRadius: BorderRadius.circular(AppRadius.sm.r),
-              ),
-              child: Icon(
-                Icons.alarm_rounded,
-                size: AppIconSize.md.sp,
-                color: urgent ? Colors.white : AppColors.gold,
-              ),
-            ),
-            SizedBox(width: AppSpace.sm.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    plan.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTheme.display(
-                      fontSize: 17.sp,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.ink,
-                    ),
-                  ),
-                  SizedBox(height: AppSpace.xxs.h),
-                  Text(
-                    '${formatYmd(plan.scheduledDate)} · ${plan.wordCount}단어',
-                    style: AppTheme.font(
-                      fontSize: 12.sp,
-                      color: AppColors.gray,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(width: AppSpace.xs.w),
-            StatusChip(
-              label: label,
-              color: urgent ? Colors.white : AppColors.gold,
-              background: urgent ? AppColors.gold : AppColors.goldSoft,
             ),
           ],
         ),

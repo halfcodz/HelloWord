@@ -328,21 +328,13 @@ class _PlanCard extends StatelessWidget {
               ),
               child: Row(
                 children: [
+                  // 색 네모 대신 얇은 세로 띠로 오늘 것임을 알린다.
                   Container(
-                    width: 46.w,
-                    height: 46.w,
-                    alignment: Alignment.center,
+                    width: 3.w,
+                    height: 34.h,
                     decoration: BoxDecoration(
-                      color: urgent ? AppColors.pink : AppColors.pinkSoft,
-                      borderRadius: BorderRadius.circular(AppRadius.sm.r),
-                    ),
-                    child: Text(
-                      label,
-                      style: AppTheme.font(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w800,
-                        color: urgent ? Colors.white : AppColors.mintDeep,
-                      ),
+                      color: urgent ? AppColors.pink : AppColors.border,
+                      borderRadius: BorderRadius.circular(AppRadius.pill.r),
                     ),
                   ),
                   SizedBox(width: AppSpace.sm.w),
@@ -380,6 +372,12 @@ class _PlanCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  StatusChip(
+                    label: label,
+                    color: urgent ? AppColors.pink : AppColors.gray,
+                    background: urgent ? AppColors.pinkSoft : AppColors.rowBg,
+                  ),
+                  SizedBox(width: AppSpace.xxs.w),
                   Icon(
                     Icons.more_vert,
                     color: AppColors.hint,

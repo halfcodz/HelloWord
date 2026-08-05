@@ -310,37 +310,28 @@ class _MaterialCoverCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 자료를 한눈에 알아보는 표지. 단어 수를 크게 보여 준다.
-            Container(
-              width: 54.w,
-              height: 54.w,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.pinkSoft,
-                borderRadius: BorderRadius.circular(AppRadius.sm.r),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '${set.wordCount}',
-                    style: AppTheme.tabularNumber(
-                      fontSize: 18.sp,
-                      color: AppColors.mintDeep,
-                    ),
+            // 색 네모 없이 단어 수만 또렷하게.
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${set.wordCount}',
+                  style: AppTheme.tabularNumber(
+                    fontSize: 22.sp,
+                    color: AppColors.pink,
                   ),
-                  Text(
-                    '단어',
-                    style: AppTheme.font(
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.mintDeep,
-                    ),
+                ),
+                Text(
+                  '단어',
+                  style: AppTheme.font(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.gray,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            SizedBox(width: AppSpace.sm.w),
+            SizedBox(width: AppSpace.md.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

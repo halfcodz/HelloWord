@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/services/tts_service.dart';
+import '../../../core/services/sfx_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/word_tile.dart' show englishLead;
 import '../../call/views/call_panel.dart';
@@ -34,8 +35,26 @@ class SessionMonitorView extends StatelessWidget {
   }
 }
 
-class _MonitorBody extends StatelessWidget {
+class _MonitorBody extends StatefulWidget {
   const _MonitorBody();
+
+  @override
+  State<_MonitorBody> createState() => _MonitorBodyState();
+}
+
+class _MonitorBodyState extends State<_MonitorBody> {
+  @override
+  void initState() {
+    super.initState();
+    // 마이크를 쓰는 화면이라 효과음 플레이어를 미리 놓아 준다.
+    SfxService.instance?.suspend();
+  }
+
+  @override
+  void dispose() {
+    SfxService.instance?.resume();
+    super.dispose();
+  }
 
   Future<void> _confirmClose(
     BuildContext context,
@@ -154,15 +173,19 @@ class _WaitingView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 96.w,
-            height: 96.w,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.blueSoft,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.outgoing_mail, size: AppIconSize.lg.sp, color: AppColors.pink),
-          )
+                width: 96.w,
+                height: 96.w,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.blueSoft,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.outgoing_mail,
+                  size: AppIconSize.lg.sp,
+                  color: AppColors.pink,
+                ),
+              )
               .animate(onPlay: (c) => c.repeat(reverse: true))
               .scale(
                 begin: const Offset(1, 1),
@@ -171,11 +194,14 @@ class _WaitingView extends StatelessWidget {
                 curve: Curves.easeInOut,
               ),
           SizedBox(height: 24.h),
-          Text('$invitedName에게 시험 초대를 보냈어요',
-              style: TextStyle(
-                  fontSize: 17.sp,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.ink)),
+          Text(
+            '$invitedName에게 시험 초대를 보냈어요',
+            style: TextStyle(
+              fontSize: 17.sp,
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
+          ),
           SizedBox(height: 20.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -217,18 +243,27 @@ class _DeclinedView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.sentiment_dissatisfied_rounded, size: AppIconSize.lg.sp, color: AppColors.gray),
+            Icon(
+              Icons.sentiment_dissatisfied_rounded,
+              size: AppIconSize.lg.sp,
+              color: AppColors.gray,
+            ),
             SizedBox(height: 16.h),
-            Text('$name이(가) 초대를 거절했어요',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 17.sp,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.ink)),
+            Text(
+              '$name이(가) 초대를 거절했어요',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 17.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.ink,
+              ),
+            ),
             SizedBox(height: 8.h),
-            Text('나중에 다시 시험을 내볼 수 있어요.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+            Text(
+              '나중에 다시 시험을 내볼 수 있어요.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13.sp, color: AppColors.gray),
+            ),
             SizedBox(height: 32.h),
             SizedBox(
               width: 200.w,
@@ -308,12 +343,19 @@ class _LiveMonitor extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('${session.guestName ?? "동생"} 응시 중',
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold)),
-                Text('${viewModel.submittedCount} / ${session.total}',
-                    style: AppTheme.tabularNumber(
-                        fontSize: 16.sp, color: AppColors.grayText)),
+                Text(
+                  '${session.guestName ?? "동생"} 응시 중',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '${viewModel.submittedCount} / ${session.total}',
+                  style: AppTheme.tabularNumber(
+                    fontSize: 16.sp,
+                    color: AppColors.grayText,
+                  ),
+                ),
               ],
             ),
           ),
@@ -386,9 +428,10 @@ class _AnswerRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.green),
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.green,
+                    ),
                   )
                 // 틀렸으면 어긋난 스펠링만 빨간색으로.
                 : SpellDiffText(
@@ -442,9 +485,7 @@ class _AnswerRow extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      word.askMeaning
-                          ? '${word.english} (뜻)'
-                          : word.korean,
+                      word.askMeaning ? '${word.english} (뜻)' : word.korean,
                       style: theme.textTheme.bodyLarge,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -452,16 +493,19 @@ class _AnswerRow extends StatelessWidget {
                   ),
                   if (hasExtra) ...[
                     SizedBox(width: 6.w),
-                    Icon(Icons.menu_book_rounded,
-                        size: 15.sp, color: AppColors.pink),
+                    Icon(
+                      Icons.menu_book_rounded,
+                      size: 15.sp,
+                      color: AppColors.pink,
+                    ),
                   ],
                 ],
               ),
             ),
             SizedBox(width: 8.w),
             Flexible(
-                child:
-                    Align(alignment: Alignment.centerRight, child: trailing)),
+              child: Align(alignment: Alignment.centerRight, child: trailing),
+            ),
           ],
         ),
       ),
@@ -476,14 +520,19 @@ class _AnswerRow extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Text('$number. ',
-                style: TextStyle(fontSize: 16.sp, color: AppColors.gray)),
+            Text(
+              '$number. ',
+              style: TextStyle(fontSize: 16.sp, color: AppColors.gray),
+            ),
             Expanded(
-              child: Text(word.english,
-                  style: TextStyle(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.ink)),
+              child: Text(
+                word.english,
+                style: TextStyle(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink,
+                ),
+              ),
             ),
             IconButton(
               tooltip: '발음 듣기',
@@ -496,20 +545,27 @@ class _AnswerRow extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('뜻  ${word.korean}',
-                style: TextStyle(fontSize: 15.sp, color: AppColors.ink)),
+            Text(
+              '뜻  ${word.korean}',
+              style: TextStyle(fontSize: 15.sp, color: AppColors.ink),
+            ),
             if (word.pronunciation.isNotEmpty) ...[
               SizedBox(height: 8.h),
-              Text('발음  [${word.pronunciation}]',
-                  style: TextStyle(fontSize: 14.sp, color: AppColors.grayText)),
+              Text(
+                '발음  [${word.pronunciation}]',
+                style: TextStyle(fontSize: 14.sp, color: AppColors.grayText),
+              ),
             ],
             if (word.example.isNotEmpty) ...[
               SizedBox(height: 14.h),
-              Text('예문',
-                  style: TextStyle(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.pink)),
+              Text(
+                '예문',
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.pink,
+                ),
+              ),
               SizedBox(height: 4.h),
               Container(
                 width: double.infinity,
@@ -522,17 +578,23 @@ class _AnswerRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Text(word.example,
-                          style: TextStyle(
-                              fontSize: 14.sp,
-                              height: 1.4,
-                              color: AppColors.grayText)),
+                      child: Text(
+                        word.example,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          height: 1.4,
+                          color: AppColors.grayText,
+                        ),
+                      ),
                     ),
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       tooltip: '예문 발음',
-                      icon: Icon(Icons.volume_up_rounded,
-                          size: 20.sp, color: AppColors.pink),
+                      icon: Icon(
+                        Icons.volume_up_rounded,
+                        size: 20.sp,
+                        color: AppColors.pink,
+                      ),
                       onPressed: () =>
                           TtsService.speak(englishLead(word.example)),
                     ),
@@ -541,8 +603,10 @@ class _AnswerRow extends StatelessWidget {
               ),
             ],
             if (word.example.isEmpty && word.pronunciation.isEmpty)
-              Text('이 단어에는 등록된 예문·발음이 없어요.',
-                  style: TextStyle(fontSize: 13.sp, color: AppColors.gray)),
+              Text(
+                '이 단어에는 등록된 예문·발음이 없어요.',
+                style: TextStyle(fontSize: 13.sp, color: AppColors.gray),
+              ),
           ],
         ),
         actions: [
