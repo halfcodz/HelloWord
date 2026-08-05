@@ -13,6 +13,7 @@ import '../../exam/repositories/exam_repository.dart';
 import '../../exam/views/session_monitor_view.dart';
 import '../../social/repositories/friend_repository.dart';
 import '../models/word_pair.dart';
+import 'word_edit_sheet.dart';
 import '../models/word_set.dart';
 import '../repositories/word_set_repository.dart';
 import 'exam_assigned_badge.dart';
@@ -57,19 +58,117 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
   bool _saving = false;
 
   /// 시험에 낼 단어 목록(선택한 단어는 뜻 적기로).
-  List<WordPair> get _examWords =>
-      [for (final w in _words) w.copyWith(askMeaning: _ask.contains(w))];
+  List<WordPair> get _examWords => [
+    for (final w in _words) w.copyWith(askMeaning: _ask.contains(w)),
+  ];
 
   Future<void> _persist() async {
     setState(() => _saving = true);
     try {
-      await context
-          .read<WordSetRepository>()
-          .updateWords(widget.set.id, _words);
+      await context.read<WordSetRepository>().updateWords(
+        widget.set.id,
+        _words,
+      );
     } catch (_) {
-      if (mounted) showToast(context, '삭제를 저장하지 못했어요. 다시 시도해 주세요.', isError: true);
+      if (mounted) {
+        showToast(context, '저장하지 못했어요. 다시 시도해 주세요.', isError: true);
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// 단어 하나를 고친다(저장한 뒤에도 언제든).
+  Future<void> _editOne(WordPair word) async {
+    final edited = await showWordEditSheet(context, word: word);
+    if (edited == null || !mounted) return;
+    final index = _words.indexOf(word);
+    if (index < 0) return;
+    setState(() {
+      final wasAsked = _ask.remove(word);
+      _words[index] = edited;
+      if (wasAsked) _ask.add(edited);
+    });
+    await _persist();
+    if (mounted) showToast(context, '단어를 고쳤어요.');
+  }
+
+  /// 이미 있는 단어(영어+뜻이 같은 것)는 빼고 새 단어만 더한다.
+  Future<void> _appendWords(List<WordPair> incoming) async {
+    if (incoming.isEmpty) return;
+    String key(WordPair w) =>
+        '${w.english.toLowerCase().trim()}|${w.korean.trim()}';
+    final existing = {for (final w in _words) key(w)};
+    final fresh = [
+      for (final w in incoming)
+        if (existing.add(key(w))) w,
+    ];
+    if (fresh.isEmpty) {
+      if (mounted) showToast(context, '이미 있는 단어뿐이에요.');
+      return;
+    }
+    setState(() => _words.addAll(fresh));
+    await _persist();
+    if (!mounted) return;
+    final skipped = incoming.length - fresh.length;
+    showToast(
+      context,
+      skipped == 0
+          ? '${fresh.length}개를 더했어요.'
+          : '${fresh.length}개를 더했어요. (중복 $skipped개는 건너뜀)',
+    );
+  }
+
+  /// 단어를 더하는 방법을 고른다: 직접 입력 / 표 붙여넣기 / 파일.
+  Future<void> _addWords() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(height: AppSpace.xs.h),
+            ListTile(
+              leading: Icon(Icons.edit_rounded, color: AppColors.pink),
+              title: const Text('직접 입력'),
+              subtitle: const Text('단어를 하나씩 써서 넣어요'),
+              onTap: () => Navigator.of(sheet).pop('one'),
+            ),
+            ListTile(
+              leading: Icon(Icons.table_chart_rounded, color: AppColors.pink),
+              title: const Text('표 붙여넣기'),
+              subtitle: const Text('엑셀·표를 그대로 붙여넣어요'),
+              onTap: () => Navigator.of(sheet).pop('paste'),
+            ),
+            ListTile(
+              leading: Icon(Icons.upload_file_rounded, color: AppColors.pink),
+              title: const Text('파일에서 가져오기'),
+              subtitle: const Text('엑셀·CSV·txt 파일을 골라요'),
+              onTap: () => Navigator.of(sheet).pop('file'),
+            ),
+            SizedBox(height: AppSpace.xs.h),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !mounted) return;
+
+    try {
+      switch (choice) {
+        case 'one':
+          final word = await showWordEditSheet(context);
+          if (word != null) await _appendWords([word]);
+        case 'paste':
+          final words = await showPasteWordsSheet(context);
+          if (words != null) await _appendWords(words);
+        case 'file':
+          final words = await pickWordsFromFile();
+          if (words != null) await _appendWords(words);
+      }
+    } catch (e) {
+      if (mounted) {
+        showToast(context, '파일을 읽지 못했어요. 형식을 확인해 주세요.', isError: true);
+      }
     }
   }
 
@@ -81,11 +180,13 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
         content: Text('"${word.english}" 단어를 이 세트에서 지웁니다.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('취소')),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('삭제')),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('삭제'),
+          ),
         ],
       ),
     );
@@ -108,11 +209,13 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
         content: const Text('선택한 단어들을 이 세트에서 지웁니다.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('취소')),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('삭제')),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('삭제'),
+          ),
         ],
       ),
     );
@@ -134,6 +237,12 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
       appBar: AppBar(
         title: Text(_selectMode ? '${_selected.length}개 선택' : set.title),
         actions: [
+          if (!_selectMode)
+            IconButton(
+              tooltip: '단어 추가',
+              icon: const Icon(Icons.add_rounded),
+              onPressed: _saving ? null : _addWords,
+            ),
           if (!_selectMode)
             TextButton(
               onPressed: _words.isEmpty
@@ -186,11 +295,17 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
                   children: [
                     Icon(Icons.calendar_today_outlined, size: 14.sp),
                     SizedBox(width: 4.w),
-                    Text(formatYmd(set.date), style: theme.textTheme.bodyMedium),
+                    Text(
+                      formatYmd(set.date),
+                      style: theme.textTheme.bodyMedium,
+                    ),
                     SizedBox(width: 12.w),
                     Icon(Icons.style_outlined, size: 14.sp),
                     SizedBox(width: 4.w),
-                    Text('${_words.length}개', style: theme.textTheme.bodyMedium),
+                    Text(
+                      '${_words.length}개',
+                      style: theme.textTheme.bodyMedium,
+                    ),
                   ],
                 ),
                 if (_examAssigned) ...[
@@ -204,9 +319,13 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
                       ),
                       SizedBox(width: 8.w),
                       Expanded(
-                        child: Text('시험에 배정한 자료예요.',
-                            style: TextStyle(
-                                fontSize: 12.sp, color: AppColors.mintDeep)),
+                        child: Text(
+                          '시험에 배정한 자료예요.',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: AppColors.mintDeep,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -218,7 +337,11 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
                 SizedBox(height: 12.h),
                 Row(
                   children: [
-                    Icon(Icons.info_outline, size: 14.sp, color: AppColors.pink),
+                    Icon(
+                      Icons.info_outline,
+                      size: 14.sp,
+                      color: AppColors.pink,
+                    ),
                     SizedBox(width: 6.w),
                     Expanded(
                       child: Text(
@@ -226,7 +349,10 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
                             ? '삭제할 단어를 눌러 선택한 뒤, 아래에서 한 번에 지워요.'
                             : '"뜻 적기"를 켜면 그 문제는 영어를 보여주고 뜻을 적게 해요. · X로 단어를 지울 수 있어요.',
                         style: TextStyle(
-                            fontSize: 12.sp, color: AppColors.grayText)),
+                          fontSize: 12.sp,
+                          color: AppColors.grayText,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -236,13 +362,16 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
           Expanded(
             child: _words.isEmpty
                 ? Center(
-                    child: Text('단어가 없어요.',
-                        style:
-                            TextStyle(fontSize: 14.sp, color: AppColors.gray)),
+                    child: Text(
+                      '단어가 없어요.',
+                      style: TextStyle(fontSize: 14.sp, color: AppColors.gray),
+                    ),
                   )
                 : ListView.separated(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 8.h,
+                    ),
                     itemCount: _words.length,
                     separatorBuilder: (_, _) => SizedBox(height: 8.h),
                     itemBuilder: (context, index) {
@@ -274,11 +403,19 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
                                     }),
                                   ),
                                   _DeleteWordButton(
-                                      onTap: () => _deleteOne(word)),
+                                    onTap: () => _deleteOne(word),
+                                  ),
                                 ],
                               ),
                       );
-                      if (!_selectMode) return tile;
+                      if (!_selectMode) {
+                        // 저장한 뒤에도 눌러서 고칠 수 있다.
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _editOne(word),
+                          child: tile,
+                        );
+                      }
                       return GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: () => setState(() {
@@ -344,10 +481,11 @@ class _DeleteBar extends StatelessWidget {
                 foregroundColor: AppColors.grayText,
               ),
               icon: Icon(
-                  allSelected
-                      ? Icons.check_box_rounded
-                      : Icons.check_box_outline_blank_rounded,
-                  size: 18.sp),
+                allSelected
+                    ? Icons.check_box_rounded
+                    : Icons.check_box_outline_blank_rounded,
+                size: 18.sp,
+              ),
               label: Text(allSelected ? '선택 해제' : '전체 선택'),
             ),
             SizedBox(width: 10.w),
@@ -386,11 +524,14 @@ class _AskMeaningToggle extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('뜻 적기',
-                style: TextStyle(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w700,
-                    color: on ? AppColors.mintDeep : AppColors.gray)),
+            Text(
+              '뜻 적기',
+              style: TextStyle(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w700,
+                color: on ? AppColors.mintDeep : AppColors.gray,
+              ),
+            ),
             SizedBox(height: 3.h),
             AnimatedContainer(
               duration: const Duration(milliseconds: 160),
@@ -451,8 +592,10 @@ class _StartExamButtonState extends State<_StartExamButton> {
 
   Future<void> _start() async {
     // 시험 볼 동생을 고른다.
-    final friends =
-        await context.read<FriendRepository>().watchFriends(widget.user.uid).first;
+    final friends = await context
+        .read<FriendRepository>()
+        .watchFriends(widget.user.uid)
+        .first;
     if (!mounted) return;
     if (friends.isEmpty) {
       showToast(context, '먼저 내 정보에서 동생을 초대해 친구를 맺어주세요.', isError: true);
@@ -483,18 +626,20 @@ class _StartExamButtonState extends State<_StartExamButton> {
     final wordSetRepo = context.read<WordSetRepository>();
     try {
       final session = await context.read<ExamRepository>().createSession(
-            wordSet: widget.set,
-            words: widget.words,
-            hostUid: widget.user.uid,
-            hostName: widget.user.name,
-            invitedUid: target.uid,
-            invitedName: target.name,
-          );
+        wordSet: widget.set,
+        words: widget.words,
+        hostUid: widget.user.uid,
+        hostName: widget.user.name,
+        invitedUid: target.uid,
+        invitedName: target.name,
+      );
       // 이 자료로 시험을 냈다는 표시를 자료에 남긴다.
       final now = DateTime.now();
       try {
         await wordSetRepo.markExamAssigned(
-            id: widget.set.id, scheduledDate: now);
+          id: widget.set.id,
+          scheduledDate: now,
+        );
         if (mounted) widget.onAssigned(now);
       } catch (_) {
         // 표시 저장에 실패해도 시험 진행은 막지 않는다.

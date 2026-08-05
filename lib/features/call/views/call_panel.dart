@@ -248,6 +248,15 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
                     : Icons.fullscreen_rounded,
                 onTap: () => setState(() => _fillRemote = !_fillRemote),
               ),
+              SizedBox(width: 12.w),
+              // 내 얼굴이 상대에게 안 갈 때 카메라만 다시 켠다(통화는 유지).
+              _CircleButton(
+                icon: Icons.flip_camera_ios_rounded,
+                onTap: () async {
+                  await service.restartCamera();
+                  if (mounted) setState(() {});
+                },
+              ),
             ],
           ),
         ),
@@ -313,35 +322,60 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
           if (remote && _connected && !service.hasRemoteVideo)
             Positioned.fill(
               child: ColoredBox(
-                color: AppColors.navy.withValues(alpha: 0.72),
+                color: AppColors.navy.withValues(alpha: 0.9),
                 child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.videocam_off_rounded,
-                        size: 22.sp,
-                        color: Colors.white70,
-                      ),
-                      SizedBox(height: 6.h),
-                      Text(
-                        '상대 영상이 안 와요',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11.sp,
+                  child: Padding(
+                    padding: EdgeInsets.all(AppSpace.xs.w),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.videocam_off_rounded,
+                          size: 24.sp,
+                          color: Colors.white,
                         ),
-                      ),
-                      SizedBox(height: 4.h),
-                      FilledButton(
-                        onPressed: _restarting ? null : _retry,
-                        style: FilledButton.styleFrom(
-                          minimumSize: Size(0, 30.h),
-                          padding: EdgeInsets.symmetric(horizontal: 12.w),
-                          textStyle: TextStyle(fontSize: 11.sp),
+                        SizedBox(height: AppSpace.xs.h),
+                        Text(
+                          '상대 영상이 안 와요',
+                          textAlign: TextAlign.center,
+                          style: AppTheme.font(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
                         ),
-                        child: const Text('다시 연결'),
-                      ),
-                    ],
+                        SizedBox(height: AppSpace.xs.h),
+                        // 어두운 바탕에서도 확실히 보이도록 흰 버튼으로.
+                        SizedBox(
+                          height: 34.h,
+                          child: FilledButton.icon(
+                            onPressed: _restarting ? null : _retry,
+                            icon: Icon(Icons.refresh_rounded, size: 15.sp),
+                            label: Text(
+                              _restarting ? '연결 중…' : '다시 연결',
+                              style: AppTheme.font(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: AppColors.navy,
+                              disabledBackgroundColor: Colors.white54,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSpace.sm.w,
+                              ),
+                              minimumSize: Size(0, 34.h),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.pill.r,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

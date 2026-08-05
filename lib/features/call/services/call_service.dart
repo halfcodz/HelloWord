@@ -225,6 +225,8 @@ class CallService {
   // ── 언니(caller) ───────────────────────────────
 
   Future<void> _runCaller(RTCPeerConnection pc) async {
+    // 죽은 카메라로 협상하면 상대 화면이 검은 채로 굳는다. 먼저 살려 둔다.
+    await _ensureLocalVideo();
     // 지난 통화 흔적을 먼저 지운다(낡은 offer/answer/후보 때문에 연결이 안 되는 것 방지).
     await _resetCallDoc();
     await _sendOffer(pc, iceRestart: false);
@@ -315,6 +317,8 @@ class CallService {
   /// 간격이 안 됐으면 버리지 않고 남은 시간만큼 미뤄서 한 번 실행한다.
   Future<void> _renegotiate(RTCPeerConnection pc) async {
     if (_disposed || _renegotiating) return;
+    // 다시 협상할 때도 카메라부터 확인한다.
+    await _ensureLocalVideo();
     final last = _lastOfferAt;
     final wait = last == null
         ? Duration.zero
@@ -348,6 +352,8 @@ class CallService {
   // ── 동생(callee) ───────────────────────────────
 
   Future<void> _runCallee(RTCPeerConnection pc) async {
+    // 죽은 카메라로 협상하면 상대 화면이 검은 채로 굳는다. 먼저 살려 둔다.
+    await _ensureLocalVideo();
     // 언니에게 "나 들어왔어"라고 알린다 → 언니가 새 offer를 보낸다.
     await _announce();
 
@@ -487,19 +493,25 @@ class CallService {
     await _recover();
   }
 
+  /// 내 카메라를 다시 켠다(화면의 '카메라 다시 켜기' 버튼용).
+  Future<void> restartCamera() => _ensureLocalVideo(force: true);
+
   /// 내 카메라가 살아 있는지 확인하고, 끊겼으면 새로 켜서 상대에게 다시 보낸다.
   ///
   /// 아이폰 브라우저는 앱을 벗어나거나 다른 앱이 카메라를 쓰면 영상 트랙만
   /// 끝내 버린다. 이때 소리는 계속 가므로 '목소리는 들리는데 얼굴이 안 보이는'
   /// 상태가 된다. 트랙이 끝나 있으면 다시 받아 sender에 갈아 끼운다.
-  Future<void> _ensureLocalVideo() async {
+  Future<void> _ensureLocalVideo({bool force = false}) async {
     if (_disposed) return;
     final pc = _pc;
     if (pc == null) return;
     try {
       final tracks = _localStream?.getVideoTracks() ?? const [];
-      final alive = tracks.isNotEmpty && tracks.first.muted != true;
-      if (alive) return;
+      // 트랙이 없거나(오디오만 잡힘) 꺼져 있으면 다시 받는다.
+      final alive = tracks.isNotEmpty &&
+          tracks.first.muted != true &&
+          tracks.first.enabled;
+      if (alive && !force) return;
 
       final fresh = await navigator.mediaDevices.getUserMedia({
         'video': {'facingMode': 'user'},
@@ -509,9 +521,20 @@ class CallService {
 
       // 보내는 쪽 트랙을 갈아 끼운다(연결을 끊지 않고 영상만 되살린다).
       final senders = await pc.getSenders();
+      var replaced = false;
       for (final sender in senders) {
         if (sender.track?.kind == 'video') {
           await sender.replaceTrack(newTrack);
+          replaced = true;
+        }
+      }
+      if (!replaced) {
+        // 보내는 자리 자체가 없으면 새로 넣고 다시 협상해야 상대에게 간다.
+        await pc.addTrack(newTrack, _localStream ?? fresh);
+        if (isCaller) {
+          unawaited(_renegotiate(pc));
+        } else {
+          unawaited(_announce());
         }
       }
       // 내 화면도 새 트랙으로 바꿔 준다.
