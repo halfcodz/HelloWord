@@ -38,5 +38,27 @@
 ## 확인 · 배포
 
 - 코드를 고친 뒤에는 `flutter analyze`(경고 0)와 `flutter test`를 돌린다.
-- 웹 배포: `flutter build web && firebase deploy --only hosting`
-  → https://helloword-6da23.web.app
+- 웹 배포: `./tool/deploy.sh`  → https://helloword-6da23.web.app
+  (안에서 `flutter build web --release && firebase deploy --only hosting`을 한다)
+
+### 버전과 되돌리기
+
+배포한 버전마다 태그를 남긴다. 태그 이름은 `vX.Y.Z`(semver)로 쓴다.
+
+| 태그 | 내용 |
+|---|---|
+| `v1.0.0` | 리디자인 이전. 민트 계열, 아이콘만 있는 하단바, 달력 기록 |
+| `v2.0.0` | UI 전면 재구성. 퀴즈 블루, 명언 카드, 배경음악·효과음, 타임라인 기록 |
+
+**예전 버전으로 되돌리기** — 태그만 넘기면 된다. 코드는 그대로 두고
+그 버전을 잠시 꺼내 배포한 뒤 원래 브랜치로 돌아온다.
+
+```bash
+./tool/deploy.sh v1.0.0   # 되돌리기
+./tool/deploy.sh v2.0.0   # 다시 새 버전으로
+```
+
+Firebase 콘솔(Hosting > 릴리스 기록)에서 이전 릴리스로 롤백하는 방법도 있다.
+빌드 없이 즉시 되돌아가므로 급할 때는 이쪽이 빠르다.
+
+새 버전을 배포할 때는 `pubspec.yaml`의 `version`을 올리고 태그를 남긴다.
