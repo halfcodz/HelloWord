@@ -37,7 +37,11 @@ flutter pub get >/dev/null
 echo "→ 웹 빌드"
 # --no-tree-shake-icons: 아이콘 글리프가 빌드에서 빠져
 # 화면에 빈 네모로 보이는 것을 막는다.
-flutter build web --release --no-tree-shake-icons
+#
+# --no-web-resources-cdn: 그리기 엔진(CanvasKit)을 구글 CDN에서 받아오지 않고
+# 우리 서버에 같이 올린다. 홈 화면에 추가해 쓰면 서비스워커가 함께 캐시해
+# 두 번째부터는 네트워크 없이 바로 뜬다.
+flutter build web --release --no-tree-shake-icons --no-web-resources-cdn
 
 echo "→ 배포"
 firebase deploy --only hosting

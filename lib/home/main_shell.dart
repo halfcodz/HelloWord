@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -134,18 +133,16 @@ class _MainShellState extends State<MainShell> {
     // 다크 모드 토글 시 하단바·현재 탭이 즉시 다시 그려지도록 테마를 구독한다.
     context.watch<ThemeController>();
     final config = _config();
-    // 각 탭을 당겨서 새로고침으로 감싼다. 새로고침 시 캐시를 비우고 리로드하되
-    // 같은 탭으로 돌아온다(위 initState의 복원).
-    final edgeOffset = MediaQuery.of(context).padding.top + kToolbarHeight;
+    // 예전에는 각 탭을 '당겨서 새로고침'으로 감쌌는데, 그 동작이 서비스워커를
+    // 해제하고 캐시를 통째로 비운 뒤 페이지를 리로드하는 것이었다. 목록 맨
+    // 위에서 살짝만 아래로 끌어도 앱 전체가 다시 받아지느라 몇 초 동안 아무
+    // 것도 눌리지 않았다(홈 화면에 추가해 쓰면 특히 심하다).
+    // 화면 내용은 어차피 Firestore 스트림이라 실시간으로 갱신되므로 당겨서
+    // 새로고침은 걷어내고, 최신 버전 받기는 '내 정보'의 버튼으로 옮겼다.
     final pages = [
       for (var i = 0; i < config.pages.length; i++)
         if (_visited.contains(i))
-          RefreshIndicator(
-            edgeOffset: edgeOffset,
-            color: AppColors.pink,
-            onRefresh: AppRefresh.refreshKeepingTab,
-            child: config.pages[i],
-          )
+          config.pages[i]
         else
           // 아직 안 열어 본 탭은 만들지 않는다(구독도 열리지 않는다).
           const SizedBox.shrink(),
@@ -187,35 +184,34 @@ class _BlingBottomBar extends StatelessWidget {
     // 학습 앱 표준: 아이콘 + 글자 라벨을 함께 둔 하단 탭바.
     // (아이콘만 있으면 무슨 탭인지 알기 어렵고 스크린리더도 읽어 주지 못한다.)
     //
-    // 배경이 살짝 비치도록 반투명으로 두고 뒤를 흐린다.
+    // 배경은 불투명하게 채운다. 예전에는 반투명 + 뒤 흐리기(BackdropFilter)를
+    // 썼는데, 탭바가 모든 화면에 항상 떠 있는 데다 뒤에서 배경이 움직이므로
+    // 매 프레임 화면 아래쪽을 통째로 다시 흐려야 했다. 아이폰 사파리에서는
+    // 이 비용이 커서 화면이 버벅이고 터치까지 씹혔다.
+    //
     // 홈 인디케이터 쪽으로 너무 내려가지 않게 아래 여백을 조금 줄이고
     // 대신 탭 자체를 키워 누르기 편하게 했다.
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.cream.withValues(alpha: 0.82),
-            border: Border(top: BorderSide(color: AppColors.border)),
-          ),
-          child: SafeArea(
-            top: false,
-            minimum: EdgeInsets.only(bottom: 4.h),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(8.w, 8.h, 8.w, 4.h),
-              child: Row(
-                children: [
-                  for (var i = 0; i < items.length; i++)
-                    Expanded(
-                      child: _BarItem(
-                        item: items[i],
-                        selected: index == i,
-                        onTap: () => onTap(i),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.cream,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        minimum: EdgeInsets.only(bottom: 4.h),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(8.w, 8.h, 8.w, 4.h),
+          child: Row(
+            children: [
+              for (var i = 0; i < items.length; i++)
+                Expanded(
+                  child: _BarItem(
+                    item: items[i],
+                    selected: index == i,
+                    onTap: () => onTap(i),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
