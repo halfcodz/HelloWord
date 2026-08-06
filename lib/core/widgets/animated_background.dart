@@ -7,9 +7,17 @@ import '../theme/app_theme.dart';
 /// 앱 전체 뒤에 깔리는, 천천히 움직이는 배경.
 ///
 /// 단어 앱답게 알파벳 조각과 동글동글한 방울이 아주 느리게 떠다닌다.
-/// 읽기를 방해하지 않도록 투명도를 낮게 유지하고, 프레임마다 다시 그리는
-/// 범위는 [RepaintBoundary]로 배경에만 가둔다.
+/// 읽기를 방해하지 않도록 투명도를 낮게 유지하고, 다시 그리는 범위는
+/// [RepaintBoundary]로 배경에만 가둔다.
 /// 시스템의 '동작 줄이기'가 켜져 있으면 움직임 없이 한 장면만 그린다.
+///
+/// 폰(특히 아이폰 사파리)에서 버벅이지 않도록 그리는 비용을 낮게 유지한다.
+/// - 한 바퀴가 180초인 아주 느린 움직임이라 매 프레임 다시 그릴 이유가 없다.
+///   초당 [_fps]번만 다시 그린다(눈으로는 차이가 없다).
+/// - 큰 방울은 흐리기 필터(MaskFilter.blur) 대신 방사형 그라데이션으로 그린다.
+///   흐리기는 화면 밖 버퍼를 한 번 더 만들기 때문에 훨씬 비싸다.
+/// - 알파벳은 색을 미리 입혀 두고 그대로 찍는다. 예전에는 흰 글자를 그린 뒤
+///   saveLayer로 색을 덮었는데, saveLayer도 매번 버퍼를 만드는 비싼 작업이다.
 class AnimatedBackground extends StatefulWidget {
   const AnimatedBackground({super.key, this.child});
 
@@ -18,6 +26,12 @@ class AnimatedBackground extends StatefulWidget {
   @override
   State<AnimatedBackground> createState() => _AnimatedBackgroundState();
 }
+
+/// 배경을 1초에 몇 번 다시 그릴지. 한 바퀴가 180초라 이 정도면 충분하다.
+const int _fps = 10;
+
+/// 한 바퀴(180초)를 이 개수로 쪼개 그 눈금에서만 다시 그린다.
+const int _steps = 180 * _fps;
 
 class _AnimatedBackgroundState extends State<AnimatedBackground>
     with SingleTickerProviderStateMixin {
@@ -29,14 +43,25 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
     duration: const Duration(seconds: 180),
   );
 
-  /// 글자는 한 번만 레이아웃해 두고 매 프레임 위치만 옮긴다.
+  /// 눈금으로 끊은 진행도. 값이 실제로 바뀔 때만 배경을 다시 그린다.
+  /// (컨트롤러를 그대로 구독하면 초당 60번 다시 그리게 된다.)
+  final ValueNotifier<double> _step = ValueNotifier(0);
+
+  /// 글자는 한 번만 레이아웃해 두고 위치만 옮긴다.
   final List<TextPainter> _glyphs = [];
   bool _glyphsBuilt = false;
+  bool _builtDark = false;
 
   @override
   void initState() {
     super.initState();
+    _controller.addListener(_onTick);
     _controller.repeat();
+  }
+
+  void _onTick() {
+    final value = (_controller.value * _steps).floor() / _steps;
+    if (value != _step.value) _step.value = value;
   }
 
   @override
@@ -49,22 +74,24 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
     } else if (!reduceMotion && !_controller.isAnimating) {
       _controller.repeat();
     }
-    _buildGlyphs();
+    _buildGlyphs(AppColors.isDark);
   }
 
-  void _buildGlyphs() {
-    // 색이 모드에 따라 바뀌므로 다크/라이트 전환 때 다시 만든다.
-    if (_glyphsBuilt && _glyphs.isNotEmpty) return;
+  /// 글자에 색까지 미리 입혀 둔다. 그리는 쪽에서는 그대로 찍기만 하면 된다.
+  /// 색이 모드에 따라 바뀌므로 다크/라이트가 바뀌면 다시 만든다.
+  void _buildGlyphs(bool dark) {
+    if (_glyphsBuilt && _builtDark == dark && _glyphs.isNotEmpty) return;
     _glyphs.clear();
     const letters = ['A', 'B', 'C', 'W', 'o', 'r', 'd', '?'];
-    for (var i = 0; i < letters.length; i++) {
+    for (var i = 0; i < _letters.length; i++) {
       final painter = TextPainter(
         text: TextSpan(
-          text: letters[i],
+          text: letters[i % letters.length],
           style: AppTheme.display(
             fontSize: 26 + (i % 3) * 6,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: _toneOf(_letters[i].tone)
+                .withValues(alpha: dark ? 0.24 : 0.17),
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -72,11 +99,14 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
       _glyphs.add(painter);
     }
     _glyphsBuilt = true;
+    _builtDark = dark;
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onTick);
     _controller.dispose();
+    _step.dispose();
     super.dispose();
   }
 
@@ -88,17 +118,17 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
     //  무한인 자리에 놓이면 그대로 터진다. CustomPaint는 예전 DecoratedBox처럼
     //  자식 크기에 맞춰지므로 어디에 놓아도 안전하다.)
     // painter는 자식보다 뒤에 그려지고, 자식은 RepaintBoundary로 감싸 두어
-    // 배경이 매 프레임 다시 그려져도 화면 내용은 다시 그리지 않는다.
+    // 배경이 다시 그려져도 화면 내용은 다시 그리지 않는다.
     return DecoratedBox(
       decoration: BoxDecoration(gradient: AppColors.background),
       child: AnimatedBuilder(
-        animation: _controller,
+        animation: _step,
         child: RepaintBoundary(
           child: widget.child ?? const SizedBox.shrink(),
         ),
         builder: (context, child) => CustomPaint(
           painter: _BackgroundPainter(
-            t: _controller.value,
+            t: _step.value,
             dark: dark,
             primary: AppColors.pink,
             secondary: AppColors.purple,
@@ -111,6 +141,12 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
     );
   }
 }
+
+Color _toneOf(int tone) => switch (tone) {
+      1 => AppColors.purple,
+      2 => AppColors.gold,
+      _ => AppColors.pink,
+    };
 
 /// 배경에 떠다니는 요소 하나의 궤도 정보.
 class _Floater {
@@ -206,12 +242,17 @@ class _BackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // 1) 큰 방울: 아주 흐릿하게 깔아 배경에 색감만 남긴다.
+    // 가장자리로 갈수록 투명해지는 방사형 그라데이션으로 흐린 느낌을 낸다.
+    // (흐리기 필터는 그릴 때마다 화면 밖 버퍼를 만들어 폰에서 특히 비싸다.)
     for (final f in _blobs) {
       final center = _positionOf(f, size);
+      // 다크에서는 색이 탁해 보이므로 라이트보다 더 옅게 깐다.
+      final color = _tone(f.tone).withValues(alpha: dark ? 0.09 : 0.10);
       final paint = Paint()
-        // 다크에서는 색이 탁해 보이므로 라이트보다 더 옅게 깐다.
-        ..color = _tone(f.tone).withValues(alpha: dark ? 0.09 : 0.10)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 40);
+        ..shader = RadialGradient(
+          colors: [color, color.withValues(alpha: 0)],
+          stops: const [0.35, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: f.size));
       canvas.drawCircle(center, f.size, paint);
     }
 
@@ -227,32 +268,18 @@ class _BackgroundPainter extends CustomPainter {
     }
 
     // 3) 알파벳 조각: 단어 앱다운 장식. 살짝 기울여 떠다닌다.
+    // 색은 글자를 만들 때 이미 입혀 두었으므로 그대로 찍기만 한다.
     if (glyphs.isEmpty) return;
-    for (var i = 0; i < _letters.length; i++) {
+    for (var i = 0; i < _letters.length && i < glyphs.length; i++) {
       final f = _letters[i];
-      final glyph = glyphs[i % glyphs.length];
+      final glyph = glyphs[i];
       final center = _positionOf(f, size);
-      final fade = math.sin((center.dy / size.height) * math.pi).clamp(0.0, 1.0);
       final angle = math.sin((t + f.phase) * 2 * math.pi) * 0.2;
 
       canvas.save();
       canvas.translate(center.dx, center.dy);
       canvas.rotate(angle);
-      // 글자는 흰색으로 그려 두고 여기서 색·투명도를 입힌다.
-      canvas.saveLayer(
-        Rect.fromCenter(
-          center: Offset.zero,
-          width: glyph.width * 2,
-          height: glyph.height * 2,
-        ),
-        Paint(),
-      );
       glyph.paint(canvas, Offset(-glyph.width / 2, -glyph.height / 2));
-      canvas.drawColor(
-        _tone(f.tone).withValues(alpha: (dark ? 0.28 : 0.2) * fade),
-        BlendMode.srcIn,
-      );
-      canvas.restore();
       canvas.restore();
     }
   }

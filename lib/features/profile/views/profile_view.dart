@@ -6,6 +6,7 @@ import '../../../auth/auth_service.dart';
 import '../../../core/services/sfx_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../../core/utils/app_reload.dart';
 import '../../../core/utils/toast.dart';
 import '../../../models/app_user.dart';
 import '../services/avatar_service.dart';
@@ -75,6 +76,29 @@ class ProfileView extends StatelessWidget {
       ),
     );
     if (confirmed == true) await AuthService().signOut();
+  }
+
+  /// 새로 배포된 버전을 받아 온다. 캐시를 비우고 앱을 다시 불러오므로
+  /// 잠깐 로딩 화면이 보인다. 실수로 눌리지 않도록 한 번 확인한다.
+  Future<void> _confirmReload(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('앱을 다시 불러올까요?'),
+        content: const Text('저장해 둔 것을 비우고 최신 버전을 받아와요.\n잠깐 로딩 화면이 보여요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('다시 불러오기'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) reloadApp();
   }
 
   @override
@@ -197,6 +221,13 @@ class ProfileView extends StatelessWidget {
                     children: [
                       _ThemeToggleRow(),
                       _SfxToggleRow(),
+                      _SettingRow(
+                        icon: Icons.refresh_rounded,
+                        label: '최신 버전 받기',
+                        value: '앱 다시 불러오기',
+                        isLast: true,
+                        onTap: () => _confirmReload(context),
+                      ),
                     ],
                   ),
                   SizedBox(height: AppSpace.lg.h),
