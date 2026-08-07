@@ -17,9 +17,15 @@
   <!-- iOS 홈화면 추가(PWA) 대응 -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <!-- 화면이 상태바(다이나믹 아일랜드) 아래까지 이어지게 한다.
-       그러지 않으면 위쪽에 배경이 안 깔린 흰 띠가 생긴다. -->
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- black-translucent 는 쓰지 않는다.
+       그걸 쓰면 화면이 상태바 아래까지 이어지는데, 홈 화면에 추가해서 쓸 때
+       "그리는 원점"과 "터치를 받는 원점"이 상태바 높이만큼 어긋난다.
+       그래서 버튼보다 그만큼 위를 눌러야 반응했다(사파리로 열면 상태바를
+       브라우저가 차지하므로 이 문제가 안 생긴다).
+       default 로 두면 웹뷰가 상태바 아래에서 시작해 둘이 항상 같아진다.
+       상태바 색은 아래 theme-color 를 따라가고, 그 값은 앱이 테마에 맞춰
+       갱신하므로(web_theme_web.dart) 흰 띠도 생기지 않는다. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="HelloWord">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
@@ -35,11 +41,25 @@
   <style>
     html, body {
       margin: 0;
+      width: 100%;
       height: 100%;
-      /* 앱 배경과 같은 색. 상태바 뒤와 스크롤 튕김 영역까지 이 색이 보인다. */
+      /* 앱 배경과 같은 색. 스크롤 튕김 영역까지 이 색이 보인다. */
       background: linear-gradient(180deg, #F7FAFF 0%, #EFF6FF 100%);
       background-attachment: fixed;
       overscroll-behavior: none;
+      /* 문서 자체는 절대 스크롤되지 않게 못 박는다.
+         문서가 1픽셀이라도 밀리면 Flutter가 계산하는 터치 위치가 그만큼
+         어긋나서, 버튼을 눌러도 엉뚱한 곳이 눌린다. */
+      overflow: hidden;
+    }
+    body {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      /* 가로로 눕혔다 세울 때 글자 크기가 제멋대로 커지는 것을 막는다. */
+      -webkit-text-size-adjust: 100%;
     }
     #loading {
       position: fixed;
@@ -97,6 +117,19 @@
       var el = document.getElementById('loading');
       if (el) el.remove();
     });
+
+    // 아이폰은 viewport의 user-scalable=no 를 무시한다. 두 손가락으로 화면이
+    // 한 번 확대되면 그 상태가 남아, 보이는 위치와 터치가 먹히는 위치가
+    // 어긋난다. 이 앱은 확대할 일이 없으므로 확대 자체를 막는다.
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (name) {
+      document.addEventListener(name, function (e) { e.preventDefault(); },
+        { passive: false });
+    });
+
+    // 문서가 밀리면 터치 위치가 그만큼 어긋난다. 혹시라도 밀렸으면 되돌린다.
+    window.addEventListener('scroll', function () {
+      if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0);
+    }, { passive: true });
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
