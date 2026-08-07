@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 /// 시험 중 1:1 영상통화(WebRTC)를 관리한다.
@@ -23,6 +24,7 @@ class CallService {
     required this.isCaller,
     this.onRemoteStream,
     this.onConnectionState,
+    this.onLocalStreamChanged,
     FirebaseFirestore? firestore,
   }) : _firestore = firestore ?? FirebaseFirestore.instance;
 
@@ -33,12 +35,30 @@ class CallService {
   final void Function()? onRemoteStream;
   final void Function(String state)? onConnectionState;
 
+  /// 내 카메라·마이크가 바뀌었을 때(다시 열렸을 때) 알린다.
+  final void Function()? onLocalStreamChanged;
+
   final RTCVideoRenderer localRenderer = RTCVideoRenderer();
   final RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
 
   RTCPeerConnection? _pc;
   MediaStream? _localStream;
+
+  /// 상대 영상·소리. onTrack이 스트림 없이 트랙만 줄 때 직접 만들어 담는다.
+  MediaStream? _remoteStream;
   final List<StreamSubscription> _subs = [];
+
+  /// 카메라를 못 열어 소리만으로 연결된 상태인지.
+  bool _audioOnly = false;
+
+  /// 카메라·마이크를 다시 여는 중인지(중복 실행 방지).
+  bool _reopening = false;
+
+  /// 오래 연결이 안 될 때 재시도 간격을 늘리기 위한 눈금.
+  int _slowTicks = 0;
+
+  /// 카메라 없이 소리만 연결된 상태인지. 화면에 안내를 띄우는 데 쓴다.
+  bool get isAudioOnly => _audioOnly;
 
   /// 원격 설명(offer/answer)을 적용하기 전에 도착한 ICE 후보를 협상 번호와 함께 담아 둔다.
   final List<({String? id, RTCIceCandidate cand})> _pendingCandidates = [];
@@ -128,27 +148,38 @@ class CallService {
   Future<void> start() async {
     await localRenderer.initialize();
     await remoteRenderer.initialize();
+    if (_disposed) return;
 
-    _localStream = await navigator.mediaDevices.getUserMedia({
-      'video': {'facingMode': 'user'},
-      'audio': true,
-    });
-    localRenderer.srcObject = _localStream;
+    final stream = await _openLocalStream();
+    // 카메라를 여는 사이에 화면을 떠났을 수 있다. 그대로 두면 카메라가 켜진 채
+    // 남으므로 반드시 여기서 끈다.
+    if (_disposed) {
+      await _stopStream(stream);
+      return;
+    }
+    _localStream = stream;
+    localRenderer.srcObject = stream;
+    _watchLocalTracks();
 
     final pc = await createPeerConnection(_config);
+    if (_disposed) {
+      try {
+        await pc.close();
+      } catch (_) {}
+      await _stopStream(stream);
+      _localStream = null;
+      return;
+    }
     _pc = pc;
 
-    for (final track in _localStream!.getTracks()) {
-      await pc.addTrack(track, _localStream!);
+    for (final track in stream.getTracks()) {
+      await pc.addTrack(track, stream);
     }
 
-    pc.onTrack = (event) {
-      if (event.streams.isNotEmpty) {
-        remoteRenderer.srcObject = event.streams.first;
-        onRemoteStream?.call();
-      }
-    };
+    pc.onTrack = (event) => unawaited(_attachRemoteTrack(event));
     pc.onAddStream = (stream) {
+      if (_disposed) return;
+      _remoteStream = stream;
       remoteRenderer.srcObject = stream;
       onRemoteStream?.call();
     };
@@ -160,7 +191,8 @@ class CallService {
     final myCandidates = isCaller ? _callerCandidates : _calleeCandidates;
     pc.onIceCandidate = (candidate) {
       if (_disposed) return;
-      myCandidates.add({...candidate.toMap(), 'offerId': _negotiationId});
+      // 네트워크가 잠깐 끊기면 쓰기가 실패할 수 있다. 통화를 죽이지는 않는다.
+      unawaited(_sendCandidate(myCandidates, candidate));
     };
 
     if (isCaller) {
@@ -169,6 +201,159 @@ class CallService {
       await _runCallee(pc);
     }
     _startWatchdog();
+  }
+
+  Future<void> _sendCandidate(
+    CollectionReference<Map<String, dynamic>> col,
+    RTCIceCandidate candidate,
+  ) async {
+    try {
+      await col.add({...candidate.toMap(), 'offerId': _negotiationId});
+    } catch (e) {
+      debugPrint('ICE 후보를 보내지 못했습니다: $e');
+    }
+  }
+
+  /// 카메라·마이크를 여는 순서. 앞에서부터 되는 것을 쓴다.
+  /// 마지막은 소리만 — 카메라를 못 쓰는 상황에서도 목소리는 들리게 한다.
+  static const List<({bool video, Map<String, dynamic> constraints})>
+  _mediaAttempts = [
+    (
+      video: true,
+      constraints: {
+        'video': {
+          'facingMode': 'user',
+          'width': {'ideal': 640},
+          'height': {'ideal': 480},
+          'frameRate': {'ideal': 24, 'max': 30},
+        },
+        'audio': {
+          'echoCancellation': true,
+          'noiseSuppression': true,
+          'autoGainControl': true,
+        },
+      },
+    ),
+    // 위 조건을 못 맞추는 카메라(OverconstrainedError)를 위한 기본값.
+    (video: true, constraints: {'video': true, 'audio': true}),
+    // 카메라가 아예 안 되면 소리만이라도.
+    (video: false, constraints: {'video': false, 'audio': true}),
+  ];
+
+  /// 카메라·마이크를 연다. 조건을 낮춰 가며 될 때까지 시도하고,
+  /// 카메라가 끝내 안 되면 소리만으로 연결한다.
+  Future<MediaStream> _openLocalStream() async {
+    Object? firstError;
+    for (final attempt in _mediaAttempts) {
+      try {
+        final stream = await navigator.mediaDevices.getUserMedia(
+          attempt.constraints,
+        );
+        // 영상을 요청했는데 실제로 영상 트랙이 없으면 다음 방법으로 넘어간다.
+        if (attempt.video && stream.getVideoTracks().isEmpty) {
+          await _stopStream(stream);
+          continue;
+        }
+        _audioOnly = !attempt.video || stream.getVideoTracks().isEmpty;
+        if (_audioOnly) debugPrint('카메라 없이 소리만으로 통화를 시작합니다.');
+        return stream;
+      } catch (e) {
+        firstError ??= e;
+        debugPrint('카메라·마이크 열기 실패(다음 방법 시도): $e');
+      }
+    }
+    throw firstError ?? StateError('카메라·마이크를 열 수 없습니다.');
+  }
+
+  /// onTrack으로 받은 상대 트랙을 화면에 붙인다.
+  /// 브라우저에 따라 스트림 없이 트랙만 오는 경우가 있어 직접 담아 준다.
+  Future<void> _attachRemoteTrack(RTCTrackEvent event) async {
+    if (_disposed) return;
+    if (event.streams.isNotEmpty) {
+      _remoteStream = event.streams.first;
+      remoteRenderer.srcObject = _remoteStream;
+      onRemoteStream?.call();
+      return;
+    }
+    try {
+      final stream = _remoteStream ??= await createLocalMediaStream('remote');
+      if (_disposed) return;
+      await stream.addTrack(event.track);
+      remoteRenderer.srcObject = stream;
+      onRemoteStream?.call();
+    } catch (e) {
+      debugPrint('상대 영상을 붙이지 못했습니다: $e');
+    }
+  }
+
+  /// 내 카메라·마이크가 죽으면 다시 연다.
+  /// 전화가 오거나 다른 앱이 카메라를 가져가면 트랙이 그대로 끝나 버리는데,
+  /// 두면 상대에게 검은 화면만 계속 나간다.
+  void _watchLocalTracks() {
+    for (final track in _localStream?.getTracks() ?? const <MediaStreamTrack>[]) {
+      track.onEnded = () {
+        if (_disposed) return;
+        debugPrint('내 ${track.kind} 트랙이 끊겼습니다. 다시 엽니다.');
+        unawaited(_reopenLocalStream());
+      };
+    }
+  }
+
+  /// 카메라·마이크를 다시 열어 지금 통화에 갈아 끼운다.
+  /// 연결은 그대로 두고 트랙만 바꾸므로 통화가 끊기지 않는다.
+  Future<void> _reopenLocalStream() async {
+    if (_disposed || _reopening) return;
+    _reopening = true;
+    try {
+      final fresh = await _openLocalStream();
+      if (_disposed) {
+        await _stopStream(fresh);
+        return;
+      }
+      final old = _localStream;
+      _localStream = fresh;
+      localRenderer.srcObject = fresh;
+      _watchLocalTracks();
+
+      final pc = _pc;
+      if (pc != null) {
+        for (final sender in await pc.getSenders()) {
+          final kind = sender.track?.kind;
+          final replacement = kind == 'audio'
+              ? _firstOrNull(fresh.getAudioTracks())
+              : _firstOrNull(fresh.getVideoTracks());
+          if (replacement == null) continue;
+          try {
+            await sender.replaceTrack(replacement);
+          } catch (e) {
+            debugPrint('트랙 교체 실패($kind): $e');
+          }
+        }
+      }
+      await _stopStream(old);
+      onLocalStreamChanged?.call();
+    } catch (e) {
+      debugPrint('카메라·마이크를 다시 열지 못했습니다: $e');
+    } finally {
+      _reopening = false;
+    }
+  }
+
+  static T? _firstOrNull<T>(List<T> list) => list.isEmpty ? null : list.first;
+
+  /// 스트림의 트랙을 확실히 멈춘다(웹에서는 stop()을 불러야 카메라가 꺼진다).
+  static Future<void> _stopStream(MediaStream? stream) async {
+    if (stream == null) return;
+    try {
+      for (final t in stream.getTracks()) {
+        try {
+          await t.stop();
+        } catch (_) {}
+      }
+    } catch (_) {}
+    try {
+      await stream.dispose();
+    } catch (_) {}
   }
 
   void _onIceState(RTCIceConnectionState state) {
@@ -226,14 +411,24 @@ class CallService {
     await _resetCallDoc();
     await _sendOffer(pc, iceRestart: false);
 
-    _subs.add(_callDoc.snapshots().listen((snap) => _onCallerDoc(pc, snap)));
-    _subs.add(_calleeCandidates.snapshots().listen((snap) {
-      for (final change in snap.docChanges) {
-        if (change.type == DocumentChangeType.added) {
-          _addCandidate(pc, change.doc.data());
-        }
-      }
-    }));
+    _subs.add(
+      _callDoc.snapshots().listen(
+        (snap) => _onCallerDoc(pc, snap),
+        onError: (Object e) => debugPrint('통화 문서 구독 오류: $e'),
+      ),
+    );
+    _subs.add(
+      _calleeCandidates.snapshots().listen(
+        (snap) {
+          for (final change in snap.docChanges) {
+            if (change.type == DocumentChangeType.added) {
+              _addCandidate(pc, change.doc.data());
+            }
+          }
+        },
+        onError: (Object e) => debugPrint('동생 ICE 후보 구독 오류: $e'),
+      ),
+    );
   }
 
   Future<void> _onCallerDoc(
@@ -348,14 +543,24 @@ class CallService {
     // 언니에게 "나 들어왔어"라고 알린다 → 언니가 새 offer를 보낸다.
     await _announce();
 
-    _subs.add(_callDoc.snapshots().listen((snap) => _onCalleeDoc(pc, snap)));
-    _subs.add(_callerCandidates.snapshots().listen((snap) {
-      for (final change in snap.docChanges) {
-        if (change.type == DocumentChangeType.added) {
-          _addCandidate(pc, change.doc.data());
-        }
-      }
-    }));
+    _subs.add(
+      _callDoc.snapshots().listen(
+        (snap) => _onCalleeDoc(pc, snap),
+        onError: (Object e) => debugPrint('통화 문서 구독 오류: $e'),
+      ),
+    );
+    _subs.add(
+      _callerCandidates.snapshots().listen(
+        (snap) {
+          for (final change in snap.docChanges) {
+            if (change.type == DocumentChangeType.added) {
+              _addCandidate(pc, change.doc.data());
+            }
+          }
+        },
+        onError: (Object e) => debugPrint('언니 ICE 후보 구독 오류: $e'),
+      ),
+    );
   }
 
   Future<void> _onCalleeDoc(
@@ -421,9 +626,11 @@ class CallService {
         if (_connected) return;
         // 언니는 동생이 들어온 뒤부터 다시 시도한다(아무도 없으면 의미 없음).
         if (isCaller && _lastCalleeId == null) return;
+        // 오래 안 붙으면 포기하지 않고 간격만 늘린다. 지하철에서 나오거나
+        // 와이파이가 돌아오면 그때 저절로 다시 붙어야 하기 때문이다.
         if (_recoverCount >= 12) {
-          timer.cancel();
-          return;
+          _slowTicks++;
+          if (_slowTicks % 6 != 0) return;
         }
         _recover();
       },
@@ -449,7 +656,20 @@ class CallService {
     // 화면(렌더러)이 스트림을 놓쳤을 수 있으니 다시 연결해 준다.
     try {
       if (_localStream != null) localRenderer.srcObject = _localStream;
-    } catch (_) {}
+      if (_remoteStream != null) remoteRenderer.srcObject = _remoteStream;
+    } catch (e) {
+      debugPrint('화면에 스트림을 다시 붙이지 못했습니다: $e');
+    }
+
+    // 돌아와 보니 카메라·마이크가 죽어 있으면(전화·다른 앱에 뺏김) 다시 연다.
+    // onEnded가 오지 않는 경우가 있어 여기서도 직접 확인한다.
+    final tracks = _localStream?.getTracks() ?? const <MediaStreamTrack>[];
+    final dead = tracks.isEmpty || tracks.every((t) => t.muted == true);
+    if (dead) {
+      await _reopenLocalStream();
+    }
+
+    _slowTicks = 0;
     if (_connected) return;
     _recoverCount = 0;
     await _recover();
@@ -467,7 +687,12 @@ class CallService {
       data['sdpMLineIndex'] as int?,
     );
     if (_remoteReady) {
-      pc.addCandidate(candidate);
+      // 상태가 어긋난 순간에 들어오면 던질 수 있다. 통화를 죽이지는 않는다.
+      unawaited(
+        pc.addCandidate(candidate).catchError((Object e) {
+          debugPrint('ICE 후보를 넣지 못했습니다: $e');
+        }),
+      );
     } else {
       _pendingCandidates.add((id: id, cand: candidate));
     }
@@ -518,7 +743,8 @@ class CallService {
     // 탭에 카메라가 계속 켜져 있으므로, 각 트랙에 stop()을 반드시 호출한다.
     // (다른 async 정리보다 먼저 실행해 중간에 끊겨도 반드시 멈추게 한다.)
     try {
-      for (final t in _localStream?.getTracks() ?? const []) {
+      for (final t in _localStream?.getTracks() ?? const <MediaStreamTrack>[]) {
+        t.onEnded = null;
         try {
           await t.stop();
         } catch (_) {}
@@ -531,14 +757,30 @@ class CallService {
     } catch (_) {}
 
     for (final s in _subs) {
-      await s.cancel();
+      try {
+        await s.cancel();
+      } catch (_) {}
     }
+    _subs.clear();
+    _pendingCandidates.clear();
+
     try {
       await _localStream?.dispose();
+      await _remoteStream?.dispose();
       await _pc?.close();
-    } catch (_) {}
-    await localRenderer.dispose();
-    await remoteRenderer.dispose();
+    } catch (e) {
+      debugPrint('통화 정리 중 오류(무시): $e');
+    }
+    _localStream = null;
+    _remoteStream = null;
+    _pc = null;
+
+    try {
+      await localRenderer.dispose();
+      await remoteRenderer.dispose();
+    } catch (e) {
+      debugPrint('화면 정리 중 오류(무시): $e');
+    }
     // caller가 통화 정보를 정리한다(다음 통화를 위해).
     if (isCaller) {
       await _resetCallDoc();
