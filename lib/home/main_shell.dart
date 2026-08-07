@@ -133,16 +133,18 @@ class _MainShellState extends State<MainShell> {
     // 다크 모드 토글 시 하단바·현재 탭이 즉시 다시 그려지도록 테마를 구독한다.
     context.watch<ThemeController>();
     final config = _config();
-    // 예전에는 각 탭을 '당겨서 새로고침'으로 감쌌는데, 그 동작이 서비스워커를
-    // 해제하고 캐시를 통째로 비운 뒤 페이지를 리로드하는 것이었다. 목록 맨
-    // 위에서 살짝만 아래로 끌어도 앱 전체가 다시 받아지느라 몇 초 동안 아무
-    // 것도 눌리지 않았다(홈 화면에 추가해 쓰면 특히 심하다).
-    // 화면 내용은 어차피 Firestore 스트림이라 실시간으로 갱신되므로 당겨서
-    // 새로고침은 걷어내고, 최신 버전 받기는 '내 정보'의 버튼으로 옮겼다.
+    // 각 탭을 당겨서 새로고침으로 감싼다. 새로고침 시 캐시를 비우고 리로드하되
+    // 같은 탭으로 돌아온다(위 initState의 복원).
+    final edgeOffset = MediaQuery.of(context).padding.top + kToolbarHeight;
     final pages = [
       for (var i = 0; i < config.pages.length; i++)
         if (_visited.contains(i))
-          config.pages[i]
+          RefreshIndicator(
+            edgeOffset: edgeOffset,
+            color: AppColors.pink,
+            onRefresh: AppRefresh.refreshKeepingTab,
+            child: config.pages[i],
+          )
         else
           // 아직 안 열어 본 탭은 만들지 않는다(구독도 열리지 않는다).
           const SizedBox.shrink(),

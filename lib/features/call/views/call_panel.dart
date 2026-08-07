@@ -37,6 +37,9 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
   bool _micOn = true;
   bool _restarting = false;
 
+  /// 지금 통화를 켜는 중인지(두 번 켜지 않도록).
+  bool _starting = false;
+
   /// 한 번이라도 연결된 적이 있는지(앱 복귀 후 완전 재연결 판단에 사용).
   bool _everConnected = false;
 
@@ -72,12 +75,21 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
   }
 
   Future<void> _init() async {
+    // 이미 켜는 중이거나 켜져 있으면 두 번 시작하지 않는다
+    // (카메라가 두 개 열려 하나가 검게 남는 것을 막는다).
+    if (_starting || _ready) return;
+    _starting = true;
+
     final service = CallService(
       sessionId: widget.sessionId,
       isCaller: widget.isCaller,
       onRemoteStream: () {
         // 원격 영상이 도착하면 UI를 강제로 다시 그린다.
         if (mounted) setState(() => _remoteActive = true);
+      },
+      onLocalStreamChanged: () {
+        // 카메라를 다시 열었을 때(전화 등으로 끊겼다가 살아남) 다시 그린다.
+        if (mounted) setState(() {});
       },
       onConnectionState: (state) {
         if (!mounted) return;
@@ -104,12 +116,40 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
         _service = service;
         _ready = true;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('영상통화 시작 실패: $e');
       await service.dispose();
       if (mounted) {
-        setState(() => _error = '카메라·마이크를 켤 수 없어요. 권한을 확인해 주세요.');
+        setState(() => _error = _mediaErrorMessage(e));
       }
+    } finally {
+      _starting = false;
     }
+  }
+
+  /// 무엇 때문에 못 켰는지에 따라 할 수 있는 일을 알려 준다.
+  String _mediaErrorMessage(Object error) {
+    final message = error.toString().toLowerCase();
+    if (message.contains('notallowed') ||
+        message.contains('permission') ||
+        message.contains('denied')) {
+      return '카메라·마이크 사용을 허용해 주세요.\n허용한 적이 없으면 다시 연결을 눌러 주세요.';
+    }
+    if (message.contains('notreadable') ||
+        message.contains('trackstart') ||
+        message.contains('aborterror')) {
+      return '카메라를 다른 앱이 쓰고 있어요.\n그 앱을 닫고 다시 연결을 눌러 주세요.';
+    }
+    if (message.contains('notfound') || message.contains('devicesnotfound')) {
+      return '카메라·마이크를 찾을 수 없어요.\n기기를 확인한 뒤 다시 연결을 눌러 주세요.';
+    }
+    if (message.contains('securityerror') ||
+        message.contains('not supported') ||
+        message.contains('unsupported') ||
+        message.contains('mediadevices')) {
+      return '이 브라우저에서는 영상통화를 켤 수 없어요.\n사파리에서 열어 주세요.';
+    }
+    return '카메라·마이크를 켤 수 없어요.\n잠시 뒤 다시 연결을 눌러 주세요.';
   }
 
   Future<void> _retry() async {
@@ -236,7 +276,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
             ),
           ),
         ),
-        // 내 영상 - 작게(PiP).
+        // 내 영상 - 작게(PiP). 카메라를 못 열었으면 소리만 나가는 중이라고 알린다.
         Positioned(
           right: 10.w,
           top: 10.h,
@@ -245,14 +285,36 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
             height: 112.h,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
+              color: AppColors.navySoft,
               borderRadius: BorderRadius.circular(12.r),
               border: Border.all(color: AppColors.mintEnd, width: 2),
             ),
-            child: RTCVideoView(
-              service.localRenderer,
-              mirror: true,
-              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-            ),
+            child: service.isAudioOnly
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.mic_rounded,
+                          color: Colors.white70,
+                          size: 20.sp,
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          '소리만',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : RTCVideoView(
+                    service.localRenderer,
+                    mirror: true,
+                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                  ),
           ),
         ),
         // 컨트롤(카메라/마이크).
