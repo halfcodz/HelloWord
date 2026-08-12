@@ -84,6 +84,35 @@ TURN_CREDENTIAL_2=bbb-pw
       expect(IceConfig.turnServersForTest, hasLength(1));
     });
 
+    test('turn:이 빠진 주소는 붙여서 쓴다', () {
+      // 대시보드에서 주소만 복사하면 앞의 turn:을 빠뜨리기 쉽다.
+      // 그대로 두면 브라우저가 잘못된 주소로 보고 통째로 무시한다.
+      dotenv.loadFromString(envString: '''
+TURN_URL=free.expressturn.com:3478
+TURN_USERNAME=sister
+TURN_CREDENTIAL=secret
+''');
+      IceConfig.resetCache();
+
+      expect(
+        IceConfig.turnServersForTest.single['urls'],
+        'turn:free.expressturn.com:3478',
+      );
+    });
+
+    test('이미 turn:/turns:가 붙어 있으면 그대로 둔다', () {
+      dotenv.loadFromString(envString: '''
+TURN_URL=turn:a.example.com:3478, turns:b.example.com:443?transport=tcp
+TURN_USERNAME=sister
+TURN_CREDENTIAL=secret
+''');
+      IceConfig.resetCache();
+
+      final turn = IceConfig.turnServersForTest;
+      expect(turn[0]['urls'], 'turn:a.example.com:3478');
+      expect(turn[1]['urls'], 'turns:b.example.com:443?transport=tcp');
+    });
+
     test('STUN과 TURN이 함께 들어간다', () {
       dotenv.loadFromString(envString: '''
 TURN_URL=turn:example.com:3478

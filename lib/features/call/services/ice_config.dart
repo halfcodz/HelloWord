@@ -49,13 +49,45 @@ class IceConfig {
   @visibleForTesting
   static List<Map<String, dynamic>> get turnServersForTest => _turnServers;
 
+  /// 빌드할 때 넣어 준 값(`--dart-define`).
+  ///
+  /// 웹 배포에서는 `.env` 파일을 올리지 않는다. 통째로 올리면 나중에 `.env`에
+  /// 다른 비밀값을 넣었을 때 그것까지 사이트에 그대로 공개되기 때문이다.
+  /// 그래서 배포할 때는 중계 서버 값만 골라 심는다(`tool/deploy.sh`가 한다).
+  static const Map<String, String> _defines = {
+    'TURN_URL': String.fromEnvironment('TURN_URL'),
+    'TURN_USERNAME': String.fromEnvironment('TURN_USERNAME'),
+    'TURN_CREDENTIAL': String.fromEnvironment('TURN_CREDENTIAL'),
+    'TURN_URL_2': String.fromEnvironment('TURN_URL_2'),
+    'TURN_USERNAME_2': String.fromEnvironment('TURN_USERNAME_2'),
+    'TURN_CREDENTIAL_2': String.fromEnvironment('TURN_CREDENTIAL_2'),
+  };
+
+  /// 설정값을 읽는다. 빌드에 심어 준 값(배포)이 먼저, 없으면 `.env`(개발).
   static String _env(String key) {
+    final fromDefine = _defines[key]?.trim() ?? '';
+    if (fromDefine.isNotEmpty) return fromDefine;
     // dotenv를 불러오지 못한 경우(파일 없음)에도 앱이 죽지 않게 한다.
     try {
       return dotenv.env[key]?.trim() ?? '';
     } catch (_) {
       return '';
     }
+  }
+
+  /// 주소 앞에 `turn:`이 빠졌으면 붙여 준다.
+  ///
+  /// 대시보드에서 주소만 복사해 오면 `free.expressturn.com:3478`처럼
+  /// 앞의 `turn:`이 빠지기 쉬운데, 그대로 두면 브라우저가 잘못된 주소로 보고
+  /// 통째로 무시해 버린다(중계 서버가 있는데도 연결이 안 된다).
+  static String _normalizeUrl(String url) {
+    if (url.startsWith('turn:') ||
+        url.startsWith('turns:') ||
+        url.startsWith('stun:')) {
+      return url;
+    }
+    debugPrint('중계 서버 주소에 turn:이 빠져 있어 붙였습니다: $url');
+    return 'turn:$url';
   }
 
   static List<Map<String, dynamic>> _buildTurnServers() {
@@ -96,7 +128,11 @@ class IceConfig {
     // 서버를 하나씩 따로 넣는다. 한 주소가 죽어도 나머지를 계속 시도한다.
     return [
       for (final url in urls)
-        {'urls': url, 'username': username, 'credential': credential},
+        {
+          'urls': _normalizeUrl(url),
+          'username': username,
+          'credential': credential,
+        },
     ];
   }
 
