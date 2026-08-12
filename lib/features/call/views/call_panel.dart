@@ -47,6 +47,20 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
   bool _reconnecting = false;
   Timer? _resumeCheck;
 
+  /// 한참(30초) 동안 한 번도 연결되지 않은 상태인지.
+  /// 이때는 원인을 짐작할 수 있게 안내를 덧붙인다.
+  bool _stuck = false;
+  Timer? _stuckTimer;
+
+  /// 30초가 지나도 연결이 안 되면 안내를 띄운다.
+  void _armStuckTimer() {
+    _stuckTimer?.cancel();
+    _stuckTimer = Timer(const Duration(seconds: 30), () {
+      if (!mounted || _connected) return;
+      setState(() => _stuck = true);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -99,6 +113,8 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
             _everConnected = true;
             _error = null;
             _reconnecting = false;
+            _stuck = false;
+            _stuckTimer?.cancel();
           } else if (state == 'failed' || state == 'disconnected') {
             // 서비스가 스스로 다시 연결을 시도하므로 화면을 에러로 덮지 않는다.
             _reconnecting = true;
@@ -116,6 +132,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
         _service = service;
         _ready = true;
       });
+      _armStuckTimer();
     } catch (e) {
       debugPrint('영상통화 시작 실패: $e');
       await service.dispose();
@@ -162,6 +179,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
       _remoteActive = false;
       _connected = false;
       _reconnecting = false;
+      _stuck = false;
     });
     await _init();
   }
@@ -170,6 +188,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _resumeCheck?.cancel();
+    _stuckTimer?.cancel();
     _service?.dispose();
     SfxService.instance?.resume();
     super.dispose();
@@ -259,6 +278,21 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
                             : '상대가 들어오길 기다리는 중…'),
                     style: TextStyle(color: Colors.white54, fontSize: 12.sp),
                   ),
+                  // 중계 서버가 없으면 서로 다른 망(한 명은 와이파이, 한 명은 LTE)에
+                  // 있을 때 영상·소리가 아예 가지 않는다. 원인을 알 수 있게 알려 준다.
+                  if (_stuck && !service.hasRelay) ...[
+                    SizedBox(height: 6.h),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      child: Text(
+                        '둘 다 같은 와이파이에 있으면 잘 될 거예요.\n'
+                        '계속 안 되면 중계 서버 설정이 필요해요.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: Colors.white38, fontSize: 11.sp),
+                      ),
+                    ),
+                  ],
                   if (_reconnecting) ...[
                     SizedBox(height: 6.h),
                     TextButton(
