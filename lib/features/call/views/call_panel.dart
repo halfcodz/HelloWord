@@ -8,7 +8,7 @@ import '../../../core/services/sfx_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../services/call_service.dart';
 
-/// 시험 중 영상통화 패널. 원격(상대) 영상을 크게, 내 영상을 작게 보여준다.
+/// 시험 중 영상통화 패널. 두 얼굴을 반반으로 나란히 보여준다.
 class CallPanel extends StatefulWidget {
   const CallPanel({
     super.key,
@@ -21,7 +21,39 @@ class CallPanel extends StatefulWidget {
   final bool isCaller;
 
   /// 패널 높이. 키보드가 열릴 때 작게 줄이는 용도.
+  /// 비워 두면 [preferredHeight]로 계산한다.
   final double? height;
+
+  /// 얼굴 한 칸의 가로:세로 비율(폰 카메라에 맞춘 세로 모양).
+  static const double _tileRatio = 1.25;
+
+  /// 키보드가 올라와 자리가 좁을 때의 비율.
+  static const double _compactTileRatio = 0.95;
+
+  /// 통화 패널에 알맞은 높이.
+  ///
+  /// **화면 '높이'가 아니라 '폭'을 기준으로 계산한다.** 높이로 재면 브라우저와
+  /// 홈 화면 앱(PWA)에서 값이 달라지기 때문이다. 브라우저는 주소창이 화면
+  /// 높이를 15%쯤 깎아먹는데, 그러면 `.h`로 잡은 높이도 같이 줄어들어
+  /// 칸이 납작해지고 영상이 이상한 비율로 보인다. 폭은 둘이 똑같으므로
+  /// 폭으로 재면 어디서 열어도 같은 모양이 된다.
+  ///
+  /// 다만 자리가 정말 없을 때(작은 폰 + 키보드)는 화면을 다 잡아먹지 않도록
+  /// 남은 높이에 맞춰 줄인다.
+  static double preferredHeight(BuildContext context, {bool compact = false}) {
+    final media = MediaQuery.of(context);
+    // 패널 좌우 여백(12.w씩)을 뺀 뒤 두 칸으로 나눈다(가운데 간격 4.w).
+    final tileWidth = (media.size.width - 24.w - 4.w) / 2;
+    final wanted = tileWidth * (compact ? _compactTileRatio : _tileRatio);
+
+    // 상한은 자리가 정말 없을 때만 걸리게 넉넉히 둔다. 평소(키보드가 닫힌
+    // 상태)에는 상한에 닿지 않아 브라우저·홈 화면 앱이 똑같은 높이가 된다.
+    // 키보드가 올라오면 브라우저 쪽이 실제로 자리가 더 좁으므로 그때는
+    // 상한이 걸려 조금 더 줄어든다(넘쳐서 잘리는 것보다 낫다).
+    final available = media.size.height - media.viewInsets.bottom;
+    final limit = available * (compact ? 0.34 : 0.36);
+    return wanted < limit ? wanted : limit;
+  }
 
   @override
   State<CallPanel> createState() => _CallPanelState();
@@ -199,7 +231,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
-      height: widget.height ?? 200.h,
+      height: widget.height ?? CallPanel.preferredHeight(context),
       margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -299,8 +331,9 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
       label: widget.isCaller ? '동생' : '언니',
       child: RTCVideoView(
         service.remoteRenderer,
-        // 전체 보기. 잘라내지 않고 칸에 맞게 작아지기만 한다.
-        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
+        // 칸을 꽉 채운다. 칸 자체를 폰 카메라 비율에 맞춰 두었으므로
+        // 잘려 나가는 부분은 거의 없다. [CallPanel.preferredHeight] 참고.
+        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
         placeholderBuilder: (_) => _waitingPlaceholder(service),
       ),
     );
@@ -327,13 +360,8 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
           : RTCVideoView(
               service.localRenderer,
               mirror: true,
-              // 상대 칸과 똑같이 전체 보기.
-              //
-              // 꽉 채우기(Cover)로 두면 카메라 방향에 따라 잘리는 정도가
-              // 서로 달라진다. 노트북은 가로로 찍혀 칸 비율과 비슷하니 거의
-              // 안 잘리는데, 폰은 세로로 찍혀 위아래가 크게 잘려 나갔다.
-              // 같은 화면인데 한쪽만 잘려 보이므로 둘 다 전체 보기로 맞춘다.
-              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
+              // 상대 칸과 똑같이 꽉 채우기.
+              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
             ),
     );
   }

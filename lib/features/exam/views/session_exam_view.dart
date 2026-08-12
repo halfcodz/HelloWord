@@ -217,10 +217,12 @@ class _ExamBodyState extends State<_ExamBody> {
     // 키보드가 열리면 높이만 줄인다.
     // 0으로 접으면 웹에서 video 요소가 떨어져 나가 소리만 남는다.
     //
-    // 안내 문구('이 뜻의 영어 단어는?')와 카드 밖 문제 번호를 걷어내
-    // 위쪽이 넓어진 만큼 통화 화면을 키웠다. 예전 96은 답을 쓸 때
-    // 얼굴이 납작하게 눌려 누가 누군지 알아보기 어려웠다.
-    final callHeight = (!vm.isFinished && keyboardOpen) ? 150.h : 210.h;
+    // 높이는 화면 폭을 기준으로 잡는다. 화면 높이로 잡으면 브라우저에서 열
+    // 때와 홈 화면 앱으로 열 때 모양이 달라진다([CallPanel.preferredHeight]).
+    final callHeight = CallPanel.preferredHeight(
+      context,
+      compact: !vm.isFinished && keyboardOpen,
+    );
 
     return Column(
       children: [
