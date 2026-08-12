@@ -46,7 +46,9 @@ DEFINES=()
 if [ -f .env ]; then
   for KEY in TURN_URL TURN_USERNAME TURN_CREDENTIAL \
              TURN_URL_2 TURN_USERNAME_2 TURN_CREDENTIAL_2; do
-    VALUE="$(grep -E "^${KEY}=" .env | head -1 | cut -d= -f2- | tr -d '\r')"
+    # || true: 없는 키를 찾으면 grep이 실패를 알리는데,
+    # set -e 때문에 그대로 두면 스크립트가 거기서 죽는다.
+    VALUE="$(grep -E "^${KEY}=" .env | head -1 | cut -d= -f2- | tr -d '\r' || true)"
     if [ -n "$VALUE" ]; then
       DEFINES+=(--dart-define="${KEY}=${VALUE}")
     fi
