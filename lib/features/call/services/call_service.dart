@@ -5,9 +5,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import 'ice_config.dart';
+
 /// 시험 중 1:1 영상통화(WebRTC)를 관리한다.
 /// 시그널링(offer/answer/ICE 후보)은 Firestore를 통해 주고받고,
-/// 실제 영상은 두 기기가 P2P로 직접 연결한다(무료 STUN/TURN 사용).
+/// 실제 영상은 두 기기가 P2P로 직접 연결한다.
+///
+/// 연결에 쓰는 STUN/TURN 서버는 [IceConfig]가 정한다.
+/// **중계 서버(TURN)가 없으면 서로 다른 망(한 명은 와이파이, 한 명은 LTE)에서
+/// 영상도 소리도 상대에게 가지 않는다.** 신호는 Firestore로 잘 오가기 때문에
+/// 화면에는 "연결 중"만 계속 뜬다. `.env` 설정은 `.env.example` 참고.
 ///
 /// 바로바로 연결되게 하는 규칙:
 /// 1. 언니(caller)는 통화를 시작할 때 지난 통화 기록(offer/answer/후보)을 먼저 지운다.
@@ -17,7 +24,9 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 /// 3. 동생(callee)은 화면에 들어오는 순간 `calleeId`로 "들어왔다"고 알린다.
 ///    언니는 동생이 (다시) 들어온 걸 보면 즉시 새 offer를 보낸다.
 ///    → 나갔다 들어오기를 반복하지 않아도 바로 다시 연결된다.
-/// 4. 몇 초 안에 연결되지 않으면 양쪽이 스스로 다시 시도한다(watchdog).
+/// 4. 한참 지나도 연결되지 않으면 양쪽이 스스로 다시 시도한다(watchdog).
+///    단 **길을 찾는 중에는 끼어들지 않는다.** 너무 자주 다시 시도하면
+///    찾던 길을 매번 버리게 되어 오히려 영영 연결되지 않는다.
 class CallService {
   CallService({
     required this.sessionId,
@@ -69,6 +78,11 @@ class CallService {
   /// 지금 진행 중인 협상 번호(offerId).
   String? _negotiationId;
 
+  /// 지금까지 본 협상 번호들. 여기 있으면서 지금 번호가 아니면 '지나간 협상'이다.
+  /// 여기 없는 번호는 아직 offer가 도착하지 않은 '앞서 온' 후보일 수 있으므로
+  /// 버리지 않고 담아 둔다.
+  final Set<String> _seenNegotiationIds = {};
+
   /// 마지막으로 적용한 원격 SDP(같은 걸 두 번 적용하지 않기 위해).
   String? _appliedRemoteSdp;
 
@@ -111,41 +125,16 @@ class CallService {
   CollectionReference<Map<String, dynamic>> get _calleeCandidates =>
       _callDoc.collection('calleeCandidates');
 
-  static const Map<String, dynamic> _config = {
-    'sdpSemantics': 'unified-plan',
-    'iceServers': [
-      {
-        'urls': [
-          'stun:stun.l.google.com:19302',
-          'stun:stun1.l.google.com:19302',
-          'stun:stun2.l.google.com:19302',
-          'stun:stun.relay.metered.ca:80',
-        ],
-      },
-      {
-        'urls': 'turn:openrelay.metered.ca:80',
-        'username': 'openrelayproject',
-        'credential': 'openrelayproject',
-      },
-      {
-        'urls': 'turn:openrelay.metered.ca:443',
-        'username': 'openrelayproject',
-        'credential': 'openrelayproject',
-      },
-      {
-        'urls': 'turn:openrelay.metered.ca:443?transport=tcp',
-        'username': 'openrelayproject',
-        'credential': 'openrelayproject',
-      },
-      {
-        'urls': 'turns:openrelay.metered.ca:443?transport=tcp',
-        'username': 'openrelayproject',
-        'credential': 'openrelayproject',
-      },
-    ],
-  };
+  /// 통화가 지나갈 길(STUN/TURN). 중계 서버는 `.env`에서 읽는다.
+  /// 자세한 내용은 [IceConfig] 참고.
+  Map<String, dynamic> get _config => IceConfig.peerConfig;
+
+  /// 중계 서버(TURN) 없이 연결을 시도하는 중인지.
+  /// 서로 다른 망에 있으면 이 상태로는 영상·소리가 상대에게 가지 않는다.
+  bool get hasRelay => IceConfig.hasTurn;
 
   Future<void> start() async {
+    IceConfig.logStatus();
     await localRenderer.initialize();
     await remoteRenderer.initialize();
     if (_disposed) return;
@@ -315,6 +304,10 @@ class CallService {
       localRenderer.srcObject = fresh;
       _watchLocalTracks();
 
+      // 새로 연 카메라·마이크에도 지금 켬/끔 상태를 그대로 적용한다.
+      // (안 하면 꺼 뒀던 마이크가 슬그머니 다시 켜진다.)
+      _applyToggles(fresh);
+
       final pc = _pc;
       if (pc != null) {
         for (final sender in await pc.getSenders()) {
@@ -322,13 +315,20 @@ class CallService {
           final replacement = kind == 'audio'
               ? _firstOrNull(fresh.getAudioTracks())
               : _firstOrNull(fresh.getVideoTracks());
-          if (replacement == null) continue;
           try {
+            // 대신 넣을 트랙이 없으면(카메라가 끝내 안 열림) 비워 준다.
+            // 예전에는 그냥 넘어갔는데, 그러면 곧 멈출 옛 트랙이 그대로 남아
+            // **상대 화면이 검은 채로 영영 굳어 버렸다.**
             await sender.replaceTrack(replacement);
           } catch (e) {
             debugPrint('트랙 교체 실패($kind): $e');
           }
         }
+      }
+      // 옛 트랙을 멈추기 전에 감시를 뗀다. 안 그러면 멈춤이 '끊김'으로 잡혀
+      // 다시 열기가 끝없이 되풀이된다.
+      for (final t in old?.getTracks() ?? const <MediaStreamTrack>[]) {
+        t.onEnded = null;
       }
       await _stopStream(old);
       onLocalStreamChanged?.call();
@@ -357,30 +357,52 @@ class CallService {
   }
 
   void _onIceState(RTCIceConnectionState state) {
+    debugPrint('통화 ICE 상태: $state');
     switch (state) {
+      case RTCIceConnectionState.RTCIceConnectionStateChecking:
+        // 지금 길을 찾는 중이다. 이때 새 offer를 보내면 처음부터 다시
+        // 찾게 되므로, 다 찾을 때까지 재시도를 미룬다.
+        _checkingSince = DateTime.now();
       case RTCIceConnectionState.RTCIceConnectionStateConnected:
       case RTCIceConnectionState.RTCIceConnectionStateCompleted:
+        _checkingSince = null;
         _markConnected();
       case RTCIceConnectionState.RTCIceConnectionStateFailed:
+        _checkingSince = null;
         _markLost('failed');
       case RTCIceConnectionState.RTCIceConnectionStateDisconnected:
         _markLost('disconnected');
       default:
-        break; // new/checking/closed는 알리지 않는다.
+        break; // new/closed는 알리지 않는다.
     }
   }
 
   void _onPeerState(RTCPeerConnectionState state) {
+    debugPrint('통화 연결 상태: $state');
     switch (state) {
       case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
+        _checkingSince = null;
         _markConnected();
       case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
+        _checkingSince = null;
         _markLost('failed');
       case RTCPeerConnectionState.RTCPeerConnectionStateDisconnected:
         _markLost('disconnected');
       default:
         break;
     }
+  }
+
+  /// 지금 ICE가 길을 찾고 있는 중이라면 그 시작 시각.
+  /// 찾는 중일 때 재협상하면 처음부터 다시 찾게 되므로 기다려 준다.
+  DateTime? _checkingSince;
+
+  /// 길을 찾는 중이라 재시도를 미뤄야 하는지.
+  /// 중계 서버를 거치거나 LTE에서는 20초 넘게 걸리는 일이 흔하다.
+  bool get _iceStillTrying {
+    final since = _checkingSince;
+    if (since == null) return false;
+    return DateTime.now().difference(since) < const Duration(seconds: 25);
   }
 
   void _markConnected() {
@@ -397,10 +419,18 @@ class CallService {
     if (_disposed) return;
     _connected = false;
     onConnectionState?.call(reason);
-    // 잠시 뒤 스스로 다시 연결을 시도한다.
+
+    // 'disconnected'는 지하철·엘리베이터처럼 잠깐 끊긴 것일 때가 많고,
+    // WebRTC가 몇 초 안에 스스로 다시 붙인다. 여기서 바로 새 offer를 보내면
+    // 살아나려던 통화를 오히려 끊어 버리므로 충분히 기다렸다가 확인한다.
+    // 'failed'는 진짜로 길이 끊긴 것이라 조금 더 빨리 다시 시도한다.
+    final wait = reason == 'failed'
+        ? const Duration(seconds: 2)
+        : const Duration(seconds: 8);
     _restartTimer?.cancel();
-    _restartTimer = Timer(const Duration(milliseconds: 1500), () {
-      if (!_disposed && !_connected) _recover();
+    _restartTimer = Timer(wait, () {
+      if (_disposed || _connected) return;
+      _recover();
     });
   }
 
@@ -444,10 +474,13 @@ class CallService {
     final answer = data['answer'];
 
     // 동생이 (다시) 들어왔다 → 곧바로 새 offer로 다시 협상한다.
+    // 동생이 새로 들어온 것이므로 찾고 있던 길은 이미 의미가 없다.
+    // (그래서 '찾는 중' 표시를 지우고 바로 다시 협상한다.)
     if (calleeId != null && calleeId != _lastCalleeId) {
       final wasKnown = _lastCalleeId != null;
       _lastCalleeId = calleeId;
       if (wasKnown) {
+        _checkingSince = null;
         await _renegotiate(pc);
         return;
       }
@@ -473,8 +506,9 @@ class CallService {
           RTCSessionDescription(sdp, answer['type'] as String?));
       _remoteReady = true;
       await _flushPendingCandidates(pc);
-    } catch (_) {
+    } catch (e) {
       // 적용에 실패했으면 새 offer로 처음부터 다시 협상한다.
+      debugPrint('동생의 응답을 적용하지 못해 다시 협상합니다: $e');
       _appliedRemoteSdp = null;
       await _renegotiate(pc);
     }
@@ -485,6 +519,7 @@ class CallService {
       {required bool iceRestart}) async {
     final id = _randomId();
     _negotiationId = id;
+    _seenNegotiationIds.add(id);
     _lastOfferAt = DateTime.now();
     _appliedRemoteSdp = null;
     _remoteReady = false;
@@ -503,14 +538,15 @@ class CallService {
   }
 
   /// 연결이 어긋났을 때 언니가 새 offer로 다시 협상한다.
-  /// 너무 잦은 재협상(무한 반복)을 막기 위해 offer 간 최소 2초 간격을 두되,
+  /// 너무 잦은 재협상(무한 반복)을 막기 위해 offer 간 최소 6초 간격을 두되,
   /// 간격이 안 됐으면 버리지 않고 남은 시간만큼 미뤄서 한 번 실행한다.
+  /// 짧게 잡으면 길을 찾는 중에 자꾸 끼어들어 오히려 연결이 안 된다.
   Future<void> _renegotiate(RTCPeerConnection pc) async {
     if (_disposed || _renegotiating) return;
     final last = _lastOfferAt;
     final wait = last == null
         ? Duration.zero
-        : const Duration(seconds: 2) - DateTime.now().difference(last);
+        : const Duration(seconds: 6) - DateTime.now().difference(last);
     if (wait > Duration.zero) {
       _pendingRenegotiate?.cancel();
       _pendingRenegotiate = Timer(wait, () {
@@ -578,7 +614,10 @@ class CallService {
     // 새 offer가 왔다 → 협상 번호를 갱신하고 answer를 만들어 응답한다.
     _appliedRemoteSdp = sdp;
     _negotiationId = data['offerId'] as String?;
+    if (_negotiationId != null) _seenNegotiationIds.add(_negotiationId!);
     _remoteReady = false;
+    // 새 offer가 왔으니 찾고 있던 길은 의미가 없다.
+    _checkingSince = null;
     try {
       await pc.setRemoteDescription(
           RTCSessionDescription(sdp, offer['type'] as String?));
@@ -591,8 +630,9 @@ class CallService {
         'calleeId': _calleeToken,
       }, SetOptions(merge: true));
       await _flushPendingCandidates(pc);
-    } catch (_) {
+    } catch (e) {
       // 상태가 어긋났으면 다음 offer를 받아 다시 시도한다.
+      debugPrint('offer에 응답하지 못했습니다(다음 offer를 기다립니다): $e');
       _appliedRemoteSdp = null;
     }
   }
@@ -613,11 +653,17 @@ class CallService {
 
   // ── 공통 ──────────────────────────────────────
 
-  /// 몇 초 안에 연결되지 않으면 스스로 다시 시도한다.
+  /// 한참 지나도 연결되지 않으면 스스로 다시 시도한다.
+  ///
+  /// 예전에는 7~9초마다 다시 시도했는데, 이게 오히려 연결을 막고 있었다.
+  /// 중계 서버를 거치거나 LTE에서는 길을 찾는 데 10~20초가 걸리는 일이 흔한데,
+  /// 7초마다 새 offer를 보내면 찾던 길을 매번 버리고 처음부터 다시 찾게 되어
+  /// **영원히 연결되지 않는다.** 그래서 간격을 충분히 늘리고,
+  /// 길을 찾고 있는 중이면 끼어들지 않고 기다린다.
   void _startWatchdog() {
     _watchdog?.cancel();
     _watchdog = Timer.periodic(
-      Duration(seconds: isCaller ? 7 : 9),
+      Duration(seconds: isCaller ? 20 : 24),
       (timer) {
         if (_disposed) {
           timer.cancel();
@@ -626,11 +672,16 @@ class CallService {
         if (_connected) return;
         // 언니는 동생이 들어온 뒤부터 다시 시도한다(아무도 없으면 의미 없음).
         if (isCaller && _lastCalleeId == null) return;
+        // 지금 길을 찾는 중이면 방해하지 않는다.
+        if (_iceStillTrying) {
+          debugPrint('아직 연결할 길을 찾는 중이라 재시도를 미룹니다.');
+          return;
+        }
         // 오래 안 붙으면 포기하지 않고 간격만 늘린다. 지하철에서 나오거나
         // 와이파이가 돌아오면 그때 저절로 다시 붙어야 하기 때문이다.
-        if (_recoverCount >= 12) {
+        if (_recoverCount >= 6) {
           _slowTicks++;
-          if (_slowTicks % 6 != 0) return;
+          if (_slowTicks % 3 != 0) return;
         }
         _recover();
       },
@@ -678,15 +729,24 @@ class CallService {
   void _addCandidate(RTCPeerConnection pc, Map<String, dynamic>? data) {
     if (data == null || _disposed) return;
     final id = data['offerId'] as String?;
-    // 지난 협상에서 온 후보는 버린다.
-    if (id != null && _negotiationId != null && id != _negotiationId) return;
+    // 지난 협상에서 온 후보만 버린다.
+    //
+    // 예전에는 '지금 협상 번호와 다르면' 무조건 버렸는데, 이것 때문에 길을
+    // 찾는 데 필요한 후보가 사라졌다. 통화 문서(offer)와 후보 목록은 서로 다른
+    // 구독으로 오기 때문에 **새 협상의 후보가 새 offer보다 먼저 도착할 수 있다.**
+    // 그러면 아직 번호를 모르는 상태라 멀쩡한 후보를 버려 버린다.
+    // 그래서 지나간 번호로 확인된 것만 버리고, 모르는 번호는 일단 담아 둔다.
+    if (id != null && _seenNegotiationIds.contains(id) && id != _negotiationId) {
+      return;
+    }
 
     final candidate = RTCIceCandidate(
       data['candidate'] as String?,
       data['sdpMid'] as String?,
       data['sdpMLineIndex'] as int?,
     );
-    if (_remoteReady) {
+    // 아직 번호를 모르는(앞서 도착한) 후보는 담아 뒀다가 offer를 받은 뒤 넣는다.
+    if (_remoteReady && (id == null || id == _negotiationId)) {
       // 상태가 어긋난 순간에 들어오면 던질 수 있다. 통화를 죽이지는 않는다.
       unawaited(
         pc.addCandidate(candidate).catchError((Object e) {
@@ -698,19 +758,27 @@ class CallService {
     }
   }
 
+  /// 담아 둔 후보를 넣는다.
+  /// 지금 협상 것이면 넣고, 아직 모르는 번호면 다음을 위해 그대로 남겨 둔다
+  /// (새 offer보다 먼저 도착한 후보를 잃지 않기 위해).
   Future<void> _flushPendingCandidates(RTCPeerConnection pc) async {
     final pending = List.of(_pendingCandidates);
     _pendingCandidates.clear();
+    var added = 0;
     for (final item in pending) {
-      if (item.id != null &&
-          _negotiationId != null &&
-          item.id != _negotiationId) {
+      if (item.id != null && item.id != _negotiationId) {
+        // 지나간 번호면 버리고, 처음 보는 번호면 다음 협상을 위해 남겨 둔다.
+        if (!_seenNegotiationIds.contains(item.id)) _pendingCandidates.add(item);
         continue;
       }
       try {
         await pc.addCandidate(item.cand);
-      } catch (_) {}
+        added++;
+      } catch (e) {
+        debugPrint('담아 둔 ICE 후보를 넣지 못했습니다: $e');
+      }
     }
+    if (added > 0) debugPrint('담아 둔 ICE 후보 $added개를 넣었습니다.');
   }
 
   Future<void> _clearCandidates(
@@ -723,12 +791,29 @@ class CallService {
     } catch (_) {}
   }
 
+  /// 지금 카메라·마이크를 켜 둔 상태인지. 카메라·마이크를 다시 열었을 때
+  /// 그대로 이어 주기 위해 기억해 둔다.
+  bool _cameraOn = true;
+  bool _micOn = true;
+
   void toggleCamera(bool enabled) {
+    _cameraOn = enabled;
     _localStream?.getVideoTracks().forEach((t) => t.enabled = enabled);
   }
 
   void toggleMic(bool enabled) {
+    _micOn = enabled;
     _localStream?.getAudioTracks().forEach((t) => t.enabled = enabled);
+  }
+
+  /// 새로 연 스트림에 지금 켬/끔 상태를 적용한다.
+  void _applyToggles(MediaStream stream) {
+    for (final t in stream.getVideoTracks()) {
+      t.enabled = _cameraOn;
+    }
+    for (final t in stream.getAudioTracks()) {
+      t.enabled = _micOn;
+    }
   }
 
   Future<void> dispose() async {
