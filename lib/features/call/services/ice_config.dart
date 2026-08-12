@@ -59,19 +59,36 @@ class IceConfig {
   }
 
   static List<Map<String, dynamic>> _buildTurnServers() {
-    final urls = _env('TURN_URL')
+    // 중계 서버를 두 곳까지 넣을 수 있다(`TURN_*`, `TURN_*_2`).
+    // 무료 중계 서버는 저마다 약점이 있어서 하나로는 부족할 때가 있다.
+    // 예: ExpressTurn 무료는 3478 포트만 열려 있어 학교·회사망에서 막히고,
+    //     Metered는 443 포트라 뚫리지만 용량이 작다. 둘 다 넣어 두면
+    //     한쪽이 막힌 곳에서도 다른 쪽으로 연결된다.
+    return [
+      ..._serversFrom('TURN_URL', 'TURN_USERNAME', 'TURN_CREDENTIAL'),
+      ..._serversFrom('TURN_URL_2', 'TURN_USERNAME_2', 'TURN_CREDENTIAL_2'),
+    ];
+  }
+
+  /// 자격증명 한 벌(아이디·비밀번호)에 딸린 주소들을 서버 목록으로 만든다.
+  static List<Map<String, dynamic>> _serversFrom(
+    String urlKey,
+    String userKey,
+    String credKey,
+  ) {
+    final urls = _env(urlKey)
         .split(',')
         .map((u) => u.trim())
         .where((u) => u.isNotEmpty)
         .toList();
-    final username = _env('TURN_USERNAME');
-    final credential = _env('TURN_CREDENTIAL');
-
     if (urls.isEmpty) return const [];
+
+    final username = _env(userKey);
+    final credential = _env(credKey);
     if (username.isEmpty || credential.isEmpty) {
       debugPrint(
-        'TURN_URL은 있는데 TURN_USERNAME/TURN_CREDENTIAL이 비어 있습니다. '
-        '중계 서버 없이 연결을 시도합니다.',
+        '$urlKey은(는) 있는데 $userKey/$credKey이(가) 비어 있습니다. '
+        '이 중계 서버는 건너뜁니다.',
       );
       return const [];
     }
