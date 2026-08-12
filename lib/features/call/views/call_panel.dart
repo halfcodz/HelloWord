@@ -299,9 +299,8 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
       label: widget.isCaller ? '동생' : '언니',
       child: RTCVideoView(
         service.remoteRenderer,
-        // 반으로 나뉜 칸을 꽉 채운다. 전체 보기(Contain)로 두면
-        // 좁은 칸에 검은 여백만 잔뜩 남아 얼굴이 오히려 더 작아진다.
-        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+        // 전체 보기. 잘라내지 않고 칸에 맞게 작아지기만 한다.
+        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
         placeholderBuilder: (_) => _waitingPlaceholder(service),
       ),
     );
@@ -328,7 +327,13 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
           : RTCVideoView(
               service.localRenderer,
               mirror: true,
-              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+              // 상대 칸과 똑같이 전체 보기.
+              //
+              // 꽉 채우기(Cover)로 두면 카메라 방향에 따라 잘리는 정도가
+              // 서로 달라진다. 노트북은 가로로 찍혀 칸 비율과 비슷하니 거의
+              // 안 잘리는데, 폰은 세로로 찍혀 위아래가 크게 잘려 나갔다.
+              // 같은 화면인데 한쪽만 잘려 보이므로 둘 다 전체 보기로 맞춘다.
+              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
             ),
     );
   }
