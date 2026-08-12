@@ -53,6 +53,37 @@ TURN_CREDENTIAL=secret
       expect(IceConfig.peerConfig.toString(), isNot(contains('openrelay')));
     });
 
+    test('중계 서버 두 곳을 각각 다른 계정으로 넣을 수 있다', () {
+      dotenv.loadFromString(envString: '''
+TURN_URL=turn:aaa.example.com:3478
+TURN_USERNAME=aaa-id
+TURN_CREDENTIAL=aaa-pw
+TURN_URL_2=turn:bbb.example.com:443
+TURN_USERNAME_2=bbb-id
+TURN_CREDENTIAL_2=bbb-pw
+''');
+      IceConfig.resetCache();
+
+      final turn = IceConfig.turnServersForTest;
+      expect(turn, hasLength(2));
+      expect(turn[0]['username'], 'aaa-id');
+      expect(turn[1]['urls'], 'turn:bbb.example.com:443');
+      expect(turn[1]['username'], 'bbb-id');
+      expect(turn[1]['credential'], 'bbb-pw');
+    });
+
+    test('두 번째 중계 서버만 채워도 동작한다', () {
+      dotenv.loadFromString(envString: '''
+TURN_URL_2=turn:bbb.example.com:443
+TURN_USERNAME_2=bbb-id
+TURN_CREDENTIAL_2=bbb-pw
+''');
+      IceConfig.resetCache();
+
+      expect(IceConfig.hasTurn, isTrue);
+      expect(IceConfig.turnServersForTest, hasLength(1));
+    });
+
     test('STUN과 TURN이 함께 들어간다', () {
       dotenv.loadFromString(envString: '''
 TURN_URL=turn:example.com:3478
