@@ -249,113 +249,25 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
     }
 
     final service = _service!;
+    // 두 얼굴을 딱 반반으로 나란히 놓는다.
+    // 작게 겹쳐 놓던 예전 방식은 키보드가 올라와 패널이 납작해지면
+    // 내 얼굴이 상대 얼굴을 거의 다 가려서 잘 보이지 않았다.
     return Stack(
       children: [
-        // 원격(상대) 영상 - 크게.
         Positioned.fill(
-          child: RTCVideoView(
-            service.remoteRenderer,
-            // 세로로 찍힌 얼굴이 잘리지 않도록 전체 보기.
-            // (그리기 방식만 바꾸는 것이라 연결에는 영향을 주지 않는다)
-            objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
-            placeholderBuilder: (_) => Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation(Colors.white54)),
-                  ),
-                  SizedBox(height: 10.h),
-                  Text(
-                    _reconnecting
-                        ? '다시 연결하는 중…'
-                        : (_remoteActive || _connected
-                            ? '상대 영상 불러오는 중…'
-                            : '상대가 들어오길 기다리는 중…'),
-                    style: TextStyle(color: Colors.white54, fontSize: 12.sp),
-                  ),
-                  // 중계 서버가 없으면 서로 다른 망(한 명은 와이파이, 한 명은 LTE)에
-                  // 있을 때 영상·소리가 아예 가지 않는다. 원인을 알 수 있게 알려 준다.
-                  if (_stuck && !service.hasRelay) ...[
-                    SizedBox(height: 6.h),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      child: Text(
-                        '둘 다 같은 와이파이에 있으면 잘 될 거예요.\n'
-                        '계속 안 되면 중계 서버 설정이 필요해요.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: Colors.white38, fontSize: 11.sp),
-                      ),
-                    ),
-                  ],
-                  if (_reconnecting) ...[
-                    SizedBox(height: 6.h),
-                    TextButton(
-                      onPressed: _restarting ? null : _retry,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      child: Text('다시 연결',
-                          style: TextStyle(fontSize: 12.sp)),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-        // 내 영상 - 작게(PiP). 카메라를 못 열었으면 소리만 나가는 중이라고 알린다.
-        Positioned(
-          right: 10.w,
-          top: 10.h,
-          child: Container(
-            width: 84.w,
-            height: 112.h,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: AppColors.navySoft,
-              borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(color: AppColors.mintEnd, width: 2),
-            ),
-            child: service.isAudioOnly
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.mic_rounded,
-                          color: Colors.white70,
-                          size: 20.sp,
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          '소리만',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 10.sp,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : RTCVideoView(
-                    service.localRenderer,
-                    mirror: true,
-                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                  ),
+          child: Row(
+            children: [
+              Expanded(child: _remoteTile(service)),
+              SizedBox(width: 4.w),
+              Expanded(child: _localTile(service)),
+            ],
           ),
         ),
         // 컨트롤(카메라/마이크).
         Positioned(
           left: 0,
           right: 0,
-          bottom: 8.h,
+          bottom: 6.h,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -366,7 +278,7 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
                   service.toggleCamera(_camOn);
                 },
               ),
-              SizedBox(width: 16.w),
+              SizedBox(width: 12.w),
               _CircleButton(
                 icon: _micOn ? Icons.mic : Icons.mic_off,
                 onTap: () {
@@ -378,6 +290,134 @@ class _CallPanelState extends State<CallPanel> with WidgetsBindingObserver {
           ),
         ),
       ],
+    );
+  }
+
+  /// 상대 얼굴(왼쪽 절반).
+  Widget _remoteTile(CallService service) {
+    return _tile(
+      label: widget.isCaller ? '동생' : '언니',
+      child: RTCVideoView(
+        service.remoteRenderer,
+        // 반으로 나뉜 칸을 꽉 채운다. 전체 보기(Contain)로 두면
+        // 좁은 칸에 검은 여백만 잔뜩 남아 얼굴이 오히려 더 작아진다.
+        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+        placeholderBuilder: (_) => _waitingPlaceholder(service),
+      ),
+    );
+  }
+
+  /// 내 얼굴(오른쪽 절반).
+  Widget _localTile(CallService service) {
+    return _tile(
+      label: '나',
+      child: service.isAudioOnly
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.mic_rounded, color: Colors.white70, size: 22.sp),
+                  SizedBox(height: 4.h),
+                  Text(
+                    '소리만',
+                    style: TextStyle(color: Colors.white70, fontSize: 10.sp),
+                  ),
+                ],
+              ),
+            )
+          : RTCVideoView(
+              service.localRenderer,
+              mirror: true,
+              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+            ),
+    );
+  }
+
+  /// 얼굴 한 칸. 모서리를 둥글게 자르고 누구인지 작게 적어 준다.
+  Widget _tile({required String label, required Widget child}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14.r),
+      child: ColoredBox(
+        color: AppColors.navySoft,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            child,
+            Positioned(
+              left: 6.w,
+              top: 5.h,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 2.h),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.42),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 상대 얼굴이 아직 없을 때 그 칸에 띄우는 안내.
+  /// 칸이 좁으니 문구는 최대한 짧게 쓴다.
+  Widget _waitingPlaceholder(CallService service) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 6.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation(Colors.white54),
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              _reconnecting
+                  ? '다시 연결 중…'
+                  : (_remoteActive || _connected ? '불러오는 중…' : '기다리는 중…'),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white54, fontSize: 11.sp),
+            ),
+            // 중계 서버가 없으면 서로 다른 망(한 명은 와이파이, 한 명은 LTE)에
+            // 있을 때 영상·소리가 아예 가지 않는다. 원인을 알 수 있게 알려 준다.
+            if (_stuck && !service.hasRelay) ...[
+              SizedBox(height: 4.h),
+              Text(
+                '같은 와이파이면 잘 돼요',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white38, fontSize: 10.sp),
+              ),
+            ],
+            if (_reconnecting) ...[
+              SizedBox(height: 2.h),
+              TextButton(
+                onPressed: _restarting ? null : _retry,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.symmetric(horizontal: 8.w),
+                ),
+                child: Text('다시 연결', style: TextStyle(fontSize: 11.sp)),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
