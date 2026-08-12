@@ -43,7 +43,6 @@ dependencies:
   file_picker: ^11.0.2
   csv: ^8.0.0
   excel: ^4.0.6
-  google_fonts: ^8.2.0
   flutter_animate: ^4.5.2
   table_calendar: ^3.2.0
   shared_preferences: ^2.5.5
@@ -81,6 +80,47 @@ flutter:
     - .env
     # 배경음악(tool/generate_bgm.py로 직접 합성한 16초 루프)
     - assets/audio/
+
+  # 폰트를 앱에 직접 넣는다(예전에는 실행 중에 인터넷으로 받아 왔다).
+  #
+  # 받아오는 동안에는 글자를 그릴 수 없어 네모(□·⊠)가 보였다가 몇 초 뒤에
+  # 글자로 바뀌었다. 특히 한글은 Nunito/Fredoka에 아예 없어서 그리기 엔진이
+  # 그때그때 한글 폰트를 따로 받아 왔고, 그래서 답을 칠 때마다 네모가 번쩍였다.
+  # 앱에 넣어 두면 받아올 것이 없어 처음부터 바로 글자로 보인다.
+  #
+  # 파일은 tool/build_fonts.sh 로 만든다(구글 폰트 원본을 필요한 굵기·글자만
+  # 남겨 줄인 것). 라이선스는 OFL-*.txt.
+  fonts:
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/Nunito-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Nunito-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Nunito-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Nunito-ExtraBold.ttf
+          weight: 800
+    - family: Fredoka
+      fonts:
+        - asset: assets/fonts/Fredoka-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Fredoka-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Fredoka-Bold.ttf
+          weight: 700
+    # 한글. 굵은 글씨는 엔진이 알아서 굵게 그려 준다(파일 하나면 2.5MB인데
+    # 굵기마다 넣으면 그만큼 더 커져서, 한 벌만 넣는 쪽을 택했다).
+    - family: NotoSansKR
+      fonts:
+        - asset: assets/fonts/NotoSansKR-Regular.ttf
+          weight: 400
+    # 이모지. 앱에서 실제로 쓰는 것만 남겨 10MB → 41KB로 줄였다.
+    # 새 이모지를 화면에 쓰면 tool/build_fonts.sh를 다시 돌려야 한다
+    # (안 그러면 그 이모지만 네모로 보인다).
+    - family: NotoColorEmoji
+      fonts:
+        - asset: assets/fonts/NotoColorEmoji-Subset.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

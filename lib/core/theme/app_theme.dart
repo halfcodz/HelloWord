@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// ── HelloWord 디자인 시스템 ─────────────────────────────────────────
 /// ui-ux-pro-max 스킬이 '영어 단어 시험·공부 앱(교육/퀴즈)' 기준으로 뽑아준
@@ -283,23 +282,30 @@ class AppIconSize {
 class AppTheme {
   AppTheme._();
 
-  /// 구글 폰트(Nunito/Fredoka/Noto Sans KR)는 첫 실행 때 네트워크로 내려받는다.
-  /// 다 내려받기 전에는 글리프가 없어 한글·이모지가 □로 보이므로,
-  /// 기기에 이미 있는 한글/이모지 폰트를 대체 폰트로 지정해 둔다.
-  /// (라틴 문자는 Nunito/Fredoka, 한글은 아래 폰트가 그린다.)
+  /// 본문용 라틴 폰트. 앱에 직접 넣어 두었다(pubspec.yaml 참고).
+  static const String bodyFamily = 'Nunito';
+
+  /// 제목·영어 단어용 라틴 폰트.
+  static const String displayFamily = 'Fredoka';
+
+  /// 한글을 그리는 폰트.
+  ///
+  /// Nunito·Fredoka에는 한글 글리프가 아예 없다. 예전에는 여기에 기기에 깔린
+  /// 폰트 이름('Apple SD Gothic Neo' 등)을 적어 뒀는데, **웹에서는 그런 이름이
+  /// 통하지 않는다.** 브라우저의 그리기 엔진(CanvasKit)은 기기 폰트를 모르고
+  /// 앱에 등록된 폰트만 알기 때문이다. 그래서 한글을 만날 때마다 엔진이
+  /// 한글 폰트를 인터넷에서 따로 받아 왔고, 받아오는 동안 네모(□·⊠)가 보였다.
+  /// 이제는 앱에 넣은 폰트를 지정해 그런 일이 없다.
+  ///
+  /// 이모지도 같은 이유로 앱에 넣었다(쓰는 것만 골라 41KB).
+  /// 'Apple Color Emoji'는 아이폰·맥 앱에서만 통하므로 뒤에 둔다.
   static const List<String> koFallback = [
-    'Noto Sans KR',
-    'Apple SD Gothic Neo', // iOS/macOS 기본 한글
-    'AppleSDGothicNeo-Regular',
-    'Noto Sans CJK KR', // Android 기본 한글
-    'NanumGothic',
-    'Malgun Gothic',
-    'sans-serif',
+    'NotoSansKR',
+    'NotoColorEmoji',
     'Apple Color Emoji',
-    'Noto Color Emoji',
   ];
 
-  /// 본문 폰트(Nunito + 한글 대체 폰트).
+  /// 본문 폰트(Nunito + 한글).
   static TextStyle font({
     double? fontSize,
     FontWeight? fontWeight,
@@ -307,13 +313,15 @@ class AppTheme {
     double? height,
     double? letterSpacing,
   }) =>
-      GoogleFonts.nunito(
+      TextStyle(
+        fontFamily: bodyFamily,
+        fontFamilyFallback: koFallback,
         fontSize: fontSize,
         fontWeight: fontWeight,
         color: color,
         height: height,
         letterSpacing: letterSpacing,
-      ).copyWith(fontFamilyFallback: koFallback);
+      );
 
   /// 제목·영어 단어·점수 숫자용 폰트(Fredoka, 둥글고 친근한 느낌).
   /// 단어 앱의 주인공인 영어 단어를 이 폰트로 그린다.
@@ -324,13 +332,15 @@ class AppTheme {
     double? height,
     double? letterSpacing,
   }) =>
-      GoogleFonts.fredoka(
+      TextStyle(
+        fontFamily: displayFamily,
+        fontFamilyFallback: koFallback,
         fontSize: fontSize,
         fontWeight: fontWeight,
         color: color,
         height: height,
         letterSpacing: letterSpacing,
-      ).copyWith(fontFamilyFallback: koFallback);
+      );
 
   /// 숫자를 표에 나란히 세울 때(점수·개수) 쓰는 고정폭 숫자 스타일.
   static TextStyle tabularNumber({
@@ -341,9 +351,9 @@ class AppTheme {
       display(fontSize: fontSize, fontWeight: fontWeight, color: color)
           .copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
 
-  /// 폰트를 내려받기 전에도 글자가 반드시 보여야 하는 화면(로딩 화면)용 스타일.
-  /// 구글 폰트를 쓰지 않고 기기에 이미 있는 폰트만 사용한다.
-  /// (inherit: false — 상위 기본 스타일의 구글 폰트가 섞이지 않게 한다.)
+  /// 로딩 화면처럼 어떤 경우에도 글자가 보여야 하는 곳에 쓰는 스타일.
+  /// 이제 폰트를 앱에 넣어 두어 기다릴 일이 없지만, 상위 스타일이 섞이지 않게
+  /// 하려고 남겨 둔다. (inherit: false)
   static TextStyle systemFont({
     required double fontSize,
     required Color color,
@@ -380,11 +390,12 @@ class AppTheme {
       outline: AppColors.border,
     );
 
-    final baseText = GoogleFonts.nunitoTextTheme().apply(
-      bodyColor: AppColors.ink,
-      displayColor: AppColors.ink,
-      fontFamilyFallback: koFallback,
-    );
+    final baseText = ThemeData(brightness: Brightness.light).textTheme.apply(
+          fontFamily: bodyFamily,
+          bodyColor: AppColors.ink,
+          displayColor: AppColors.ink,
+          fontFamilyFallback: koFallback,
+        );
 
     // 제목 계열만 Fredoka로 바꿔 위계를 만든다.
     final textTheme = baseText.copyWith(

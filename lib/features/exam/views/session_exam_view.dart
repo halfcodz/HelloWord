@@ -214,10 +214,13 @@ class _ExamBodyState extends State<_ExamBody> {
 
     final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
-    // v1에서 잘 되던 방식 그대로: 키보드가 열리면 높이만 줄인다.
+    // 키보드가 열리면 높이만 줄인다.
     // 0으로 접으면 웹에서 video 요소가 떨어져 나가 소리만 남는다.
-    // 전체 보기(Contain)라 높이가 줄어도 얼굴이 잘리지 않고 작아질 뿐이다.
-    final callHeight = (!vm.isFinished && keyboardOpen) ? 96.h : 190.h;
+    //
+    // 안내 문구('이 뜻의 영어 단어는?')와 카드 밖 문제 번호를 걷어내
+    // 위쪽이 넓어진 만큼 통화 화면을 키웠다. 예전 96은 답을 쓸 때
+    // 얼굴이 납작하게 눌려 누가 누군지 알아보기 어려웠다.
+    final callHeight = (!vm.isFinished && keyboardOpen) ? 150.h : 210.h;
 
     return Column(
       children: [
@@ -275,15 +278,6 @@ class _ExamBodyState extends State<_ExamBody> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    '${vm.currentIndex + 1} / ${vm.total}',
-                    textAlign: TextAlign.center,
-                    style: AppTheme.tabularNumber(
-                      fontSize: 14.sp,
-                      color: AppColors.gray,
-                    ),
-                  ),
-                  SizedBox(height: 12.h),
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.symmetric(
@@ -298,12 +292,13 @@ class _ExamBodyState extends State<_ExamBody> {
                     ),
                     child: Column(
                       children: [
+                        // 몇 번째 문제인지. ('이 뜻의 영어 단어는?' 자리를 대신한다 —
+                        // 매 문제 똑같은 안내보다 진행 상황이 훨씬 쓸모 있다)
                         Text(
-                          word.quizHint,
-                          style: TextStyle(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.hint,
+                          '${vm.currentIndex + 1} / ${vm.total}',
+                          style: AppTheme.tabularNumber(
+                            fontSize: 14.sp,
+                            color: AppColors.gray,
                           ),
                         ),
                         SizedBox(height: 12.h),
