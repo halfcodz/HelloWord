@@ -30,7 +30,8 @@ class AuthService {
     });
   }
 
-  Future<void> signUp({
+  /// 가입하고 방금 만들어진 계정의 uid를 돌려준다.
+  Future<String> signUp({
     required String email,
     required String password,
     required String name,
@@ -40,15 +41,18 @@ class AuthService {
       email: email.trim(),
       password: password,
     );
-    await _users.doc(cred.user!.uid).set({
+    final uid = cred.user!.uid;
+    await _users.doc(uid).set({
       'email': email.trim(),
       'name': name.trim(),
       'role': role.storageValue,
       'createdAt': FieldValue.serverTimestamp(),
     });
+    return uid;
   }
 
-  Future<void> signIn({
+  /// 로그인하고 그 계정의 uid를 돌려준다.
+  Future<String> signIn({
     required String email,
     required String password,
     bool rememberMe = true,
@@ -60,10 +64,20 @@ class AuthService {
         rememberMe ? Persistence.LOCAL : Persistence.SESSION,
       );
     }
-    await _auth.signInWithEmailAndPassword(
+    final cred = await _auth.signInWithEmailAndPassword(
       email: email.trim(),
       password: password,
     );
+    return cred.user!.uid;
+  }
+
+  /// 비밀번호 재설정 메일을 보낸다. 메일 속 링크에서 새 비밀번호를 정한다.
+  ///
+  /// 가입되지 않은 주소여도 파이어베이스가 오류를 내지 않을 수 있다
+  /// (남의 가입 여부를 떠보지 못하게 막는 설정). 그래서 화면에서는
+  /// '메일함을 확인해 달라'고만 말한다.
+  Future<void> sendPasswordReset(String email) {
+    return _auth.sendPasswordResetEmail(email: email.trim());
   }
 
   /// 역할 미지정 사용자를 위한 보정 저장(회원가입 시 지정하지만 예외 대비).
@@ -114,6 +128,10 @@ String authErrorMessage(Object error) {
         return '비밀번호는 6자 이상이어야 합니다.';
       case 'network-request-failed':
         return '네트워크 연결을 확인해 주세요.';
+      case 'too-many-requests':
+        return '잠시 뒤에 다시 시도해 주세요.';
+      case 'missing-email':
+        return '이메일을 입력해 주세요.';
       default:
         return '오류가 발생했습니다. (${error.code})';
     }

@@ -58,11 +58,42 @@ class ProfileView extends StatelessWidget {
     }
   }
 
+  /// 다른 계정으로 갈아탄다. 지금 계정은 로그인 화면 목록에 남으므로
+  /// 나중에 얼굴만 눌러서 다시 돌아올 수 있다.
+  Future<void> _switchAccount(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('계정을 바꿀까요?'),
+        content: const Text(
+          '로그인 화면으로 가서 다른 계정을 고를 수 있어요.\n'
+          '지금 계정도 목록에 남아 있으니 얼굴만 눌러 돌아오면 돼요.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('계정 전환'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await AuthService().signOut();
+  }
+
   Future<void> _confirmLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('로그아웃 할까요?'),
+        content: const Text(
+          '프로필은 이 기기에 남겨 둘게요. 다음엔 로그인 화면에서\n'
+          '얼굴만 눌러 바로 들어올 수 있어요.\n'
+          '(프로필을 아예 지우려면 로그인 화면에서 ✕를 누르면 돼요.)',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -233,6 +264,12 @@ class ProfileView extends StatelessWidget {
                   SizedBox(height: AppSpace.lg.h),
                   _SettingCard(
                     children: [
+                      _SettingRow(
+                        icon: Icons.switch_account_rounded,
+                        label: '계정 전환',
+                        value: '다른 계정으로',
+                        onTap: () => _switchAccount(context),
+                      ),
                       _SettingRow(
                         icon: Icons.logout_rounded,
                         label: '로그아웃',

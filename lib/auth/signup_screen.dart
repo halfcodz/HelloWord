@@ -5,6 +5,7 @@ import '../core/theme/app_theme.dart';
 import '../models/app_user.dart';
 import 'auth_service.dart';
 import 'login_screen.dart';
+import 'saved_accounts.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -36,12 +37,14 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      await _auth.signUp(
+      final uid = await _auth.signUp(
         email: _emailController.text,
         password: _passwordController.text,
         name: _nameController.text,
         role: _role,
       );
+      // 다음에 로그아웃해도 얼굴만 눌러서 다시 들어올 수 있게 저장해 둔다.
+      await SavedAccounts.savePassword(uid, _passwordController.text);
       if (mounted) Navigator.of(context).pop();
     } catch (error) {
       if (!mounted) return;

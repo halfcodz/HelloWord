@@ -6,6 +6,7 @@ import '../models/app_user.dart';
 import '../role/role_selection_screen.dart';
 import 'auth_service.dart';
 import 'login_screen.dart';
+import 'saved_accounts.dart';
 
 /// 로그인 상태와 역할 지정 여부에 따라 진입 화면을 결정하는 라우터.
 class AuthGate extends StatelessWidget {
@@ -38,12 +39,47 @@ class AuthGate extends StatelessWidget {
             if (appUser == null || appUser.role == null) {
               return RoleSelectionScreen(uid: firebaseUser.uid);
             }
-            return MainShell(user: appUser);
+            // 로그인 화면의 얼굴 목록에 쓸 이름·사진을 기기에 남겨 둔다.
+            return _RememberProfile(
+              user: appUser,
+              child: MainShell(user: appUser),
+            );
           },
         );
       },
     );
   }
+}
+
+/// 로그인한 계정의 프로필을 이 기기에 저장해 둔다.
+///
+/// 다음에 로그인 화면이 나올 때 이름·사진이 얼굴 목록에 그대로 보이고,
+/// 이름이나 사진을 바꾸면 여기서 바로 갱신된다.
+class _RememberProfile extends StatefulWidget {
+  const _RememberProfile({required this.user, required this.child});
+
+  final AppUser user;
+  final Widget child;
+
+  @override
+  State<_RememberProfile> createState() => _RememberProfileState();
+}
+
+class _RememberProfileState extends State<_RememberProfile> {
+  @override
+  void initState() {
+    super.initState();
+    SavedAccounts.remember(widget.user);
+  }
+
+  @override
+  void didUpdateWidget(_RememberProfile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    SavedAccounts.remember(widget.user);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// 로그인 상태를 확인하는 잠깐 동안 보이는 화면.
