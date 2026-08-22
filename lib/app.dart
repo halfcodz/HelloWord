@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import 'auth/auth_gate.dart';
 import 'core/services/sfx_service.dart';
+import 'core/services/version_watcher.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'core/utils/safe_area_insets.dart';
@@ -44,6 +45,10 @@ class HelloWordApp extends StatelessWidget {
         Provider<TodoRepository>(create: (_) => TodoRepository()),
         ChangeNotifierProvider<ThemeController>.value(value: themeController),
         ChangeNotifierProvider<SfxService>.value(value: sfx),
+        // 새 버전이 올라왔는지 지켜본다(웹만). 로그인해서 화면이 뜰 때 켜진다.
+        ChangeNotifierProvider<VersionWatcher>(
+          create: (_) => VersionWatcher()..start(),
+        ),
       ],
       // 팔레트가 바뀌면 테마를 다시 계산해 앱 전체에 반영한다.
       child: Consumer<ThemeController>(

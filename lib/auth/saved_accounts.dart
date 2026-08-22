@@ -91,6 +91,7 @@ class SavedAccounts {
   SavedAccounts._();
 
   static const _prefKey = 'saved_accounts';
+  static const _wantKey = 'quick_login_uids';
   static const _pwPrefix = 'pw_';
 
   /// 얼굴이 너무 많아지지 않게 최근 5개까지만 들고 있는다.
@@ -183,15 +184,23 @@ class SavedAccounts {
 
   // ── 비밀번호(기기 금고) ──────────────────────────────────────────
   //
-  // '자동 로그인'을 켜고 로그인했을 때만 넣는다. 꺼져 있으면 지운다.
-  // 금고를 못 쓰는 환경(오래된 브라우저 등)에서는 조용히 실패하고
-  // 비밀번호 한 줄을 받는 쪽으로 넘어간다.
+  // 얼굴을 눌러 들어오게 하겠다고 정한 계정만 넣는다. 금고를 못 쓰는
+  // 환경(사파리 프라이빗 모드, http로 연 페이지 등)에서는 조용히 실패하는데,
+  // 그러면 '분명 비밀번호를 넣었는데 또 물어보는' 상황이 된다.
+  // 그래서 '넣으려고 했다'는 표시를 따로 남겨 두고(_wantKey), 화면에서
+  // 저장이 안 됐다는 것을 말해 준다.
 
-  static Future<void> savePassword(String uid, String password) async {
+  /// 비밀번호를 금고에 넣는다. 정말 들어갔는지 다시 읽어 확인하고,
+  /// 실패하면 false를 돌려준다.
+  static Future<bool> savePassword(String uid, String password) async {
+    await _setWanted(uid, true);
     try {
       await _secure.write(key: '$_pwPrefix$uid', value: password);
+      // 쓴 척만 하고 사라지는 환경이 있어서 되읽어 본다.
+      final back = await _secure.read(key: '$_pwPrefix$uid');
+      return back == password;
     } catch (_) {
-      // 금고를 못 쓰면 다음에 비밀번호를 받으면 된다.
+      return false;
     }
   }
 
@@ -204,6 +213,7 @@ class SavedAccounts {
   }
 
   static Future<void> forgetPassword(String uid) async {
+    await _setWanted(uid, false);
     try {
       await _secure.delete(key: '$_pwPrefix$uid');
     } catch (_) {
@@ -211,18 +221,53 @@ class SavedAccounts {
     }
   }
 
-  /// 얼굴만 눌러서 바로 들어갈 수 있는 계정들의 uid.
-  static Future<Set<String>> quickLoginUids(List<SavedAccount> accounts) async {
-    final result = <String>{};
+  /// 얼굴만 눌러 들어가게 하겠다고 정해 둔 계정들.
+  static Future<Set<String>> _wanted() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(_wantKey) ?? const <String>[]).toSet();
+  }
+
+  static Future<void> _setWanted(String uid, bool wanted) async {
+    final prefs = await SharedPreferences.getInstance();
+    final set = (prefs.getStringList(_wantKey) ?? const <String>[]).toSet();
+    if (wanted ? !set.add(uid) : !set.remove(uid)) return;
+    await prefs.setStringList(_wantKey, set.toList());
+  }
+
+  /// 로그인 화면에서 각 얼굴을 어떻게 그릴지 정하는 정보.
+  static Future<QuickLogin> quickLogin(List<SavedAccount> accounts) async {
+    final wanted = await _wanted();
+    final ready = <String>{};
+    final broken = <String>{};
     for (final account in accounts) {
+      var has = false;
       try {
-        if (await _secure.containsKey(key: '$_pwPrefix${account.uid}')) {
-          result.add(account.uid);
-        }
+        has = await _secure.containsKey(key: '$_pwPrefix${account.uid}');
       } catch (_) {
-        // 못 읽으면 비밀번호를 받는다.
+        has = false;
+      }
+      if (has) {
+        ready.add(account.uid);
+      } else if (wanted.contains(account.uid)) {
+        // 저장하겠다고 해 놓고 금고에 없다 = 이 기기에서 저장이 안 된다.
+        broken.add(account.uid);
       }
     }
-    return result;
+    return QuickLogin(ready: ready, broken: broken);
   }
+}
+
+/// 저장된 얼굴들이 지금 어떤 상태인지.
+class QuickLogin {
+  const QuickLogin({required this.ready, required this.broken});
+
+  const QuickLogin.empty()
+      : ready = const {},
+        broken = const {};
+
+  /// 누르면 바로 들어가는 계정.
+  final Set<String> ready;
+
+  /// 비밀번호를 저장하려 했지만 이 기기(브라우저)가 받아 주지 않은 계정.
+  final Set<String> broken;
 }
