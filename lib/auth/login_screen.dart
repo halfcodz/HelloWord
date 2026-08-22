@@ -34,8 +34,8 @@ class _LoginScreenState extends State<LoginScreen> {
   /// 이 기기에서 로그인한 적 있는 계정들(얼굴 목록).
   List<SavedAccount> _accounts = const [];
 
-  /// 비밀번호까지 저장돼 있어서 얼굴만 눌러도 들어가지는 계정들.
-  Set<String> _quickUids = const {};
+  /// 저장된 얼굴들의 상태(바로 들어갈 수 있는지 / 저장이 안 되는 기기인지).
+  QuickLogin _quick = const QuickLogin.empty();
 
   /// 얼굴 목록 대신 입력 칸을 보여 줄지.
   bool _showForm = false;
@@ -60,13 +60,13 @@ class _LoginScreenState extends State<LoginScreen> {
     final remember = prefs.getBool(_prefRemember) ?? true;
     final email = prefs.getString(_prefEmail) ?? '';
     final accounts = await SavedAccounts.list();
-    final quick = await SavedAccounts.quickLoginUids(accounts);
+    final quick = await SavedAccounts.quickLogin(accounts);
     if (!mounted) return;
     setState(() {
       _restored = true;
       _rememberMe = remember;
       _accounts = accounts;
-      _quickUids = quick;
+      _quick = quick;
       _showForm = accounts.isEmpty;
       if (remember && email.isNotEmpty) _emailController.text = email;
     });
@@ -84,16 +84,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
   /// 로그인에 성공한 뒤 이 기기에 남길 것들을 정리한다.
   /// 프로필(이름·사진)은 로그인이 끝나면 [AuthGate]가 채워 준다.
-  Future<void> _afterSignIn(String uid, String email, String password) async {
+  ///
+  /// [remember]를 호출한 쪽에서 정해 넘긴다. 예전에는 화면의 '자동 로그인'
+  /// 값을 그대로 봤는데, 그 값이 꺼져 있으면 얼굴을 눌러 비밀번호를 넣어도
+  /// 방금 넣은 비밀번호를 곧바로 지워 버려서 다음에 또 물어봤다.
+  Future<void> _afterSignIn({
+    required String uid,
+    required String email,
+    required String password,
+    required bool remember,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefRemember, _rememberMe);
-    if (_rememberMe) {
-      await prefs.setString(_prefEmail, email);
-      await SavedAccounts.savePassword(uid, password);
-    } else {
+    await prefs.setBool(_prefRemember, remember);
+    if (!remember) {
       await prefs.remove(_prefEmail);
       await SavedAccounts.forgetPassword(uid);
+      return;
     }
+    await prefs.setString(_prefEmail, email);
+    await SavedAccounts.savePassword(uid, password);
   }
 
   // ── 얼굴 눌러 로그인 ────────────────────────────────────────────
@@ -102,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_busy) return;
 
     // 비밀번호를 저장해 두지 않은 계정은 한 줄만 받는다.
-    if (!_quickUids.contains(account.uid)) {
+    if (!_quick.ready.contains(account.uid)) {
       _askPasswordFor(account);
       return;
     }
@@ -112,11 +121,12 @@ class _LoginScreenState extends State<LoginScreen> {
       _busyUid = account.uid;
       _rememberMe = true;
     });
+
     try {
       final password = await SavedAccounts.password(account.uid);
       if (password == null || password.isEmpty) {
         if (!mounted) return;
-        setState(() => _quickUids = {..._quickUids}..remove(account.uid));
+        _dropQuick(account.uid);
         _askPasswordFor(account);
         return;
       }
@@ -124,7 +134,12 @@ class _LoginScreenState extends State<LoginScreen> {
         email: account.email,
         password: password,
       );
-      await _afterSignIn(uid, account.email, password);
+      await _afterSignIn(
+        uid: uid,
+        email: account.email,
+        password: password,
+        remember: true,
+      );
       // 이제 AuthGate가 알아서 홈 화면으로 넘어간다.
     } catch (error) {
       if (!mounted) return;
@@ -132,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // 다른 곳에서 비밀번호를 바꿨다. 저장해 둔 것을 버리고 다시 받는다.
         await SavedAccounts.forgetPassword(account.uid);
         if (!mounted) return;
-        setState(() => _quickUids = {..._quickUids}..remove(account.uid));
+        _dropQuick(account.uid);
         _askPasswordFor(account);
         showToast(context, '비밀번호가 바뀌었어요. 다시 넣어 주세요.', isError: true);
       } else {
@@ -141,6 +156,16 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _busyUid = null);
     }
+  }
+
+  /// 이 계정은 이제 얼굴만 눌러선 못 들어간다고 표시한다.
+  void _dropQuick(String uid) {
+    setState(() {
+      _quick = QuickLogin(
+        ready: {..._quick.ready}..remove(uid),
+        broken: {..._quick.broken}..remove(uid),
+      );
+    });
   }
 
   static bool _isCredentialError(Object error) {
@@ -211,7 +236,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() {
       _accounts = accounts;
-      _quickUids = {..._quickUids}..remove(account.uid);
+      _quick = QuickLogin(
+        ready: {..._quick.ready}..remove(account.uid),
+        broken: {..._quick.broken}..remove(account.uid),
+      );
       if (accounts.isEmpty) {
         _pending = null;
         _showForm = true;
@@ -225,15 +253,22 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     final email = (_pending?.email ?? _emailController.text).trim();
     final password = _passwordController.text;
+    // 저장된 얼굴을 눌러 들어온 것이라면 '다음엔 안 물어보기'가 당연하다.
+    final remember = _rememberMe || _pending != null;
 
     setState(() => _loading = true);
     try {
       final uid = await _auth.signIn(
         email: email,
         password: password,
-        rememberMe: _rememberMe,
+        rememberMe: remember,
       );
-      await _afterSignIn(uid, email, password);
+      await _afterSignIn(
+        uid: uid,
+        email: email,
+        password: password,
+        remember: remember,
+      );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -326,7 +361,8 @@ class _LoginScreenState extends State<LoginScreen> {
         for (final account in _accounts) ...[
           _AccountCard(
             account: account,
-            quick: _quickUids.contains(account.uid),
+            quick: _quick.ready.contains(account.uid),
+            broken: _quick.broken.contains(account.uid),
             busy: _busyUid == account.uid,
             disabled: _busy && _busyUid != account.uid,
             onTap: () => _tapAccount(account),
@@ -458,16 +494,32 @@ class _LoginScreenState extends State<LoginScreen> {
                 (v == null || v.isEmpty) ? '비밀번호를 입력해 주세요.' : null,
           ),
           SizedBox(height: 14.h),
-          _RememberToggle(
-            value: _rememberMe,
-            onChanged: _busy ? null : (v) => setState(() => _rememberMe = v),
-          ),
-          SizedBox(height: 6.h),
-          Padding(
-            padding: EdgeInsets.only(left: 30.w),
-            child: Text('이 기기에 저장해 두고, 다음엔 얼굴만 눌러서 들어와요.',
-                style: AppTheme.font(fontSize: 12.sp, color: AppColors.hint)),
-          ),
+          if (pending == null) ...[
+            _RememberToggle(
+              value: _rememberMe,
+              onChanged: _busy ? null : (v) => setState(() => _rememberMe = v),
+            ),
+            SizedBox(height: 6.h),
+            Padding(
+              padding: EdgeInsets.only(left: 30.w),
+              child: Text('이 기기에 저장해 두고, 다음엔 얼굴만 눌러서 들어와요.',
+                  style: AppTheme.font(fontSize: 12.sp, color: AppColors.hint)),
+            ),
+          ] else
+            // 저장된 얼굴을 눌러 들어온 것이라 저장은 당연한 일이다.
+            // 토글을 또 보여 주면 꺼져 있을 때 방금 넣은 비밀번호가 지워진다.
+            Row(
+              children: [
+                Icon(Icons.lock_outline_rounded,
+                    size: 15.sp, color: AppColors.hint),
+                SizedBox(width: 6.w),
+                Expanded(
+                  child: Text('한 번만 넣으면 다음부터는 안 물어봐요.',
+                      style: AppTheme.font(
+                          fontSize: 12.sp, color: AppColors.hint)),
+                ),
+              ],
+            ),
           SizedBox(height: 16.h),
           BlueButton(
             label: '로그인',
@@ -532,6 +584,7 @@ class _AccountCard extends StatelessWidget {
   const _AccountCard({
     required this.account,
     required this.quick,
+    required this.broken,
     required this.busy,
     required this.disabled,
     required this.onTap,
@@ -542,6 +595,9 @@ class _AccountCard extends StatelessWidget {
 
   /// 비밀번호까지 저장돼 있어 누르면 바로 들어가는 계정인지.
   final bool quick;
+
+  /// 비밀번호를 저장하려 했지만 이 기기가 받아 주지 않은 계정인지.
+  final bool broken;
   final bool busy;
   final bool disabled;
   final VoidCallback onTap;
@@ -585,13 +641,22 @@ class _AccountCard extends StatelessWidget {
                             color: AppColors.ink)),
                     SizedBox(height: 2.h),
                     Text(
-                      quick ? '눌러서 바로 들어가기' : '비밀번호를 한 번 넣어 주세요',
+                      quick
+                          ? '눌러서 바로 들어가기'
+                          : broken
+                              ? '이 브라우저는 비밀번호를 저장 못 해요'
+                              : '비밀번호를 한 번 넣어 주세요',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTheme.font(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w600,
-                          color: quick ? AppColors.pink : AppColors.gray),
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: quick
+                            ? AppColors.pink
+                            : broken
+                                ? AppColors.danger
+                                : AppColors.gray,
+                      ),
                     ),
                   ],
                 ),

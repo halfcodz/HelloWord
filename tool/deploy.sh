@@ -63,6 +63,19 @@ else
   echo "  중계 서버 설정 ${#DEFINES[@]}개를 빌드에 심습니다."
 fi
 
+# 지금 빌드하는 버전을 앱 안에 심는다.
+#
+# 앱은 이 값을 서버의 version.json과 견줘 보고, 다르면 '새 버전이 나왔어요'
+# 띠를 띄운다. 웹은 탭을 계속 켜 두거나 홈 화면 앱으로 쓰면 예전 파일을
+# 계속 쓰게 되는데, 그걸 본인이 알 방법이 이것 말고는 없다.
+#
+# 값이 비면(로컬에서 그냥 flutter run 할 때) 확인 자체를 하지 않는다.
+APP_VERSION="$(grep -E '^version:' pubspec.yaml | head -1 | sed 's/^version:[[:space:]]*//' | tr -d '\r')"
+if [ -n "$APP_VERSION" ]; then
+  echo "  이 빌드의 버전: $APP_VERSION"
+  DEFINES+=(--dart-define="APP_VERSION=${APP_VERSION}")
+fi
+
 echo "→ 웹 빌드"
 # --no-tree-shake-icons: 아이콘 글리프가 빌드에서 빠져
 # 화면에 빈 네모로 보이는 것을 막는다.

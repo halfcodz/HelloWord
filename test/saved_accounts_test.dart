@@ -105,8 +105,33 @@ void main() {
       // 테스트 환경에는 금고 플러그인이 없다. 예외를 삼키고 빈 값을 준다.
       await SavedAccounts.remember(_user('u1'));
       final saved = await SavedAccounts.list();
-      expect(await SavedAccounts.quickLoginUids(saved), isEmpty);
+      expect((await SavedAccounts.quickLogin(saved)).ready, isEmpty);
       expect(await SavedAccounts.password('u1'), isNull);
+    });
+
+    test('저장에 실패하면 false를 주고, 저장 안 되는 계정으로 표시한다', () async {
+      await SavedAccounts.remember(_user('u1'));
+
+      // 금고가 없으니 저장은 실패한다.
+      expect(await SavedAccounts.savePassword('u1', 'pw1234'), isFalse);
+
+      final saved = await SavedAccounts.list();
+      final quick = await SavedAccounts.quickLogin(saved);
+      expect(quick.ready, isEmpty);
+      // '넣으려고 했다'는 표시가 남아 화면에서 이유를 말해 줄 수 있다.
+      expect(quick.broken, {'u1'});
+    });
+
+    test('저장을 포기하면 저장 안 되는 계정 표시도 지운다', () async {
+      await SavedAccounts.remember(_user('u1'));
+      await SavedAccounts.savePassword('u1', 'pw1234');
+
+      await SavedAccounts.forgetPassword('u1');
+
+      final saved = await SavedAccounts.list();
+      final quick = await SavedAccounts.quickLogin(saved);
+      expect(quick.ready, isEmpty);
+      expect(quick.broken, isEmpty);
     });
   });
 }

@@ -5,10 +5,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../core/services/presence_service.dart';
+import '../core/services/version_watcher.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/theme_controller.dart';
 import '../core/utils/app_refresh.dart';
 import '../core/widgets/bouncy_tap.dart';
+import '../core/widgets/update_banner.dart';
 import '../features/exam/repositories/exam_repository.dart';
 import '../features/exam/views/exam_dashboard_view.dart';
 import '../features/exam/views/exam_schedule_view.dart';
@@ -152,9 +154,26 @@ class _MainShellState extends State<MainShell> {
     // 시험 초대는 팝업으로 튀어나오지 않고 동생 홈의 '오늘 시험'에 쌓인다.
     final Widget body = IndexedStack(index: _index, children: pages);
 
+    // 새 버전이 있으면 맨 위에 띠를 얹는다. 띠가 상태바 자리를 대신 맡으므로
+    // 아래 화면들이 상태바 여백을 한 번 더 넣지 않도록 걷어 낸다.
+    final showUpdate = context.watch<VersionWatcher>().updateAvailable;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: body,
+      body: showUpdate
+          ? Column(
+              children: [
+                const UpdateBanner(),
+                Expanded(
+                  child: MediaQuery.removePadding(
+                    context: context,
+                    removeTop: true,
+                    child: body,
+                  ),
+                ),
+              ],
+            )
+          : body,
       bottomNavigationBar: _BlingBottomBar(
         index: _index,
         items: config.items,
