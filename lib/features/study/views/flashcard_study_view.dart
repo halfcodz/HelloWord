@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/services/tts_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bouncy_tap.dart';
+import '../../../core/widgets/shuffle_toggle.dart';
 import '../services/memorized_store.dart';
 import '../widgets/memorize_filter.dart';
 import '../../word_sets/models/word_pair.dart';
@@ -21,19 +22,40 @@ class FlashcardStudyView extends StatefulWidget {
 
 class _FlashcardStudyViewState extends State<FlashcardStudyView> {
   MemorizeFilter _filter = MemorizeFilter.all;
-  late List<WordPair> _words = applyFilter(widget.set.words, _filter);
+
+  /// 켜면 카드 순서를 무작위로 섞어서 본다.
+  bool _random = false;
+
+  late List<WordPair> _words = _buildWords();
   int _index = 0;
   bool _showKorean = false;
   int _memorized = 0;
 
-  void _applyFilter(MemorizeFilter f) {
+  /// 지금 필터·무작위 설정으로 볼 카드 목록을 만든다.
+  List<WordPair> _buildWords() {
+    final words = applyFilter(widget.set.words, _filter);
+    if (_random) words.shuffle();
+    return words;
+  }
+
+  /// 목록을 다시 만들고 처음부터 시작한다.
+  void _restart() {
     setState(() {
-      _filter = f;
-      _words = applyFilter(widget.set.words, _filter);
+      _words = _buildWords();
       _index = 0;
       _showKorean = false;
       _memorized = 0;
     });
+  }
+
+  void _applyFilter(MemorizeFilter f) {
+    _filter = f;
+    _restart();
+  }
+
+  void _setRandom(bool on) {
+    _random = on;
+    _restart();
   }
 
   void _flip() => setState(() => _showKorean = !_showKorean);
@@ -71,15 +93,6 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
     );
   }
 
-  void _shuffle() {
-    setState(() {
-      _words = applyFilter(widget.set.words, _filter)..shuffle();
-      _index = 0;
-      _showKorean = false;
-      _memorized = 0;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final total = _words.length;
@@ -97,11 +110,12 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            onPressed: total == 0 ? null : _shuffle,
-            icon: Icon(Icons.shuffle_rounded, color: AppColors.grayText),
-            tooltip: '섞기',
-          ),
+          if (_random)
+            IconButton(
+              onPressed: total == 0 ? null : _restart,
+              icon: Icon(Icons.refresh_rounded, color: AppColors.grayText),
+              tooltip: '다시 섞기',
+            ),
         ],
       ),
       body: SafeArea(
@@ -109,13 +123,20 @@ class _FlashcardStudyViewState extends State<FlashcardStudyView> {
           padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 20.h),
           child: Column(
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: MemorizeFilterBar(
-                  value: _filter,
-                  words: widget.set.words,
-                  onChanged: _applyFilter,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: MemorizeFilterBar(
+                        value: _filter,
+                        words: widget.set.words,
+                        onChanged: _applyFilter,
+                      ),
+                    ),
+                  ),
+                  ShuffleChip(on: _random, onChanged: _setRandom),
+                ],
               ),
               SizedBox(height: 10.h),
               if (total == 0)

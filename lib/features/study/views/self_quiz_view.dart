@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/shuffle_toggle.dart';
 import '../../word_sets/models/word_pair.dart';
 import '../../word_sets/models/word_set.dart';
 import '../widgets/memorize_filter.dart';
@@ -20,7 +21,11 @@ class SelfQuizView extends StatefulWidget {
 class _SelfQuizViewState extends State<SelfQuizView> {
   final _controller = TextEditingController();
   MemorizeFilter _filter = MemorizeFilter.all;
-  late List<WordPair> _words = applyFilter(widget.set.words, _filter)..shuffle();
+
+  /// 켜면 문제 순서를 무작위로 섞는다(기본은 켜짐).
+  bool _random = true;
+
+  late List<WordPair> _words = _buildWords();
   int _index = 0;
   bool _checked = false;
   bool _correct = false;
@@ -32,16 +37,33 @@ class _SelfQuizViewState extends State<SelfQuizView> {
     super.dispose();
   }
 
-  void _applyFilter(MemorizeFilter f) {
+  /// 지금 필터·무작위 설정으로 풀 문제 목록을 만든다.
+  List<WordPair> _buildWords() {
+    final words = applyFilter(widget.set.words, _filter);
+    if (_random) words.shuffle();
+    return words;
+  }
+
+  /// 목록을 다시 만들고 처음 문제부터 시작한다.
+  void _restart() {
     setState(() {
-      _filter = f;
-      _words = applyFilter(widget.set.words, _filter)..shuffle();
+      _words = _buildWords();
       _index = 0;
       _checked = false;
       _correct = false;
       _score = 0;
       _controller.clear();
     });
+  }
+
+  void _applyFilter(MemorizeFilter f) {
+    _filter = f;
+    _restart();
+  }
+
+  void _setRandom(bool on) {
+    _random = on;
+    _restart();
   }
 
   void _check() {
@@ -70,13 +92,20 @@ class _SelfQuizViewState extends State<SelfQuizView> {
 
   Widget _filterBar() => Padding(
         padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 6.h),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: MemorizeFilterBar(
-            value: _filter,
-            words: widget.set.words,
-            onChanged: _applyFilter,
-          ),
+        child: Row(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: MemorizeFilterBar(
+                  value: _filter,
+                  words: widget.set.words,
+                  onChanged: _applyFilter,
+                ),
+              ),
+            ),
+            ShuffleChip(on: _random, onChanged: _setRandom),
+          ],
         ),
       );
 
