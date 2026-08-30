@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/shuffle_toggle.dart';
 import '../../../core/widgets/word_tile.dart';
+import '../../word_sets/models/word_pair.dart';
 import '../../word_sets/models/word_set.dart';
 import '../widgets/memorize_filter.dart';
 
@@ -20,9 +22,22 @@ class WordListView extends StatefulWidget {
 class _WordListViewState extends State<WordListView> {
   MemorizeFilter _filter = MemorizeFilter.all;
 
+  /// 켜면 단어를 무작위 순서로 늘어놓는다.
+  bool _random = false;
+
+  /// 화면에 보여줄 기준 순서(무작위를 켤 때 한 번 섞어 고정한다).
+  late List<WordPair> _base = widget.set.words;
+
+  void _setRandom(bool on) {
+    setState(() {
+      _random = on;
+      _base = on ? ([...widget.set.words]..shuffle()) : widget.set.words;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final words = applyFilter(widget.set.words, _filter);
+    final words = applyFilter(_base, _filter);
     return Scaffold(
       appBar: AppBar(title: Text(widget.set.title)),
       body: SafeArea(
@@ -30,10 +45,20 @@ class _WordListViewState extends State<WordListView> {
           children: [
             Padding(
               padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 6.h),
-              child: MemorizeFilterBar(
-                value: _filter,
-                words: widget.set.words,
-                onChanged: (f) => setState(() => _filter = f),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: MemorizeFilterBar(
+                        value: _filter,
+                        words: widget.set.words,
+                        onChanged: (f) => setState(() => _filter = f),
+                      ),
+                    ),
+                  ),
+                  ShuffleChip(on: _random, onChanged: _setRandom),
+                ],
               ),
             ),
             Expanded(

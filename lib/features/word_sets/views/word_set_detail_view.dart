@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/toast.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/shuffle_toggle.dart';
 import '../../../core/widgets/word_tile.dart';
 import '../../../core/widgets/x_mark.dart';
 import '../../../models/app_user.dart';
@@ -50,6 +51,9 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
 
   /// '뜻 적기'로 낼 단어(객체 참조로 추적해 삭제 후에도 유지).
   final Set<WordPair> _ask = {};
+
+  /// 켜면 시험을 낼 때 문제 순서를 무작위로 섞는다.
+  bool _shuffle = false;
 
   /// 다중 선택 삭제 모드.
   bool _selectMode = false;
@@ -280,6 +284,7 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
               set: set,
               user: widget.user,
               words: _examWords,
+              shuffle: _shuffle,
               onAssigned: _onExamAssigned,
             ),
       body: Column(
@@ -333,6 +338,17 @@ class _WordSetDetailViewState extends State<WordSetDetailView> {
                 if (set.message.trim().isNotEmpty) ...[
                   SizedBox(height: 10.h),
                   Text(set.message, style: theme.textTheme.bodyMedium),
+                ],
+                if (!_selectMode) ...[
+                  SizedBox(height: 12.h),
+                  ShuffleToggleRow(
+                    on: _shuffle,
+                    onChanged: (v) => setState(() => _shuffle = v),
+                    title: '문제 순서 섞기',
+                    hint: _shuffle
+                        ? '시험을 낼 때마다 순서를 새로 섞어요.'
+                        : '목록에 있는 순서 그대로 나와요.',
+                  ),
                 ],
                 SizedBox(height: 12.h),
                 Row(
@@ -573,12 +589,16 @@ class _StartExamButton extends StatefulWidget {
     required this.set,
     required this.user,
     required this.words,
+    required this.shuffle,
     required this.onAssigned,
   });
 
   final WordSet set;
   final AppUser user;
   final List<WordPair> words;
+
+  /// 문제 순서를 무작위로 섞어 낼지.
+  final bool shuffle;
 
   /// 시험을 냈을 때(자료에 배정 표시를 남긴 뒤) 호출된다.
   final void Function(DateTime scheduledDate) onAssigned;
@@ -625,9 +645,13 @@ class _StartExamButtonState extends State<_StartExamButton> {
     setState(() => _creating = true);
     final wordSetRepo = context.read<WordSetRepository>();
     try {
+      // 섞기를 켜 뒀으면 세션에 담기 전에 순서를 무작위로 바꾼다.
+      // (세션에 그 순서 그대로 저장되므로 언니·동생 화면이 같은 순서를 본다.)
+      final words = [...widget.words];
+      if (widget.shuffle) words.shuffle();
       final session = await context.read<ExamRepository>().createSession(
         wordSet: widget.set,
-        words: widget.words,
+        words: words,
         hostUid: widget.user.uid,
         hostName: widget.user.name,
         invitedUid: target.uid,
@@ -665,7 +689,7 @@ class _StartExamButtonState extends State<_StartExamButton> {
       child: Padding(
         padding: EdgeInsets.all(12.w),
         child: GradientButton(
-          label: '이 단어로 시험 내기',
+          label: widget.shuffle ? '무작위 순서로 시험 내기' : '이 단어로 시험 내기',
           icon: Icons.play_arrow_rounded,
           loading: _creating,
           onPressed: _creating ? null : _start,

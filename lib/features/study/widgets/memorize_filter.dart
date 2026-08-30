@@ -49,6 +49,7 @@ class MemorizeFilterBar extends StatelessWidget {
     return SizedBox(
       height: 40.h,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           for (final f in MemorizeFilter.values) ...[
             _Chip(
