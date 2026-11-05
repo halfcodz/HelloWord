@@ -79,7 +79,7 @@ class FriendAvatar extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: AppColors.green,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                          border: Border.all(color: AppColors.cream, width: 2),
                         ),
                       ),
                     ),

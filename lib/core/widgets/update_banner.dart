@@ -73,7 +73,7 @@ class UpdateBanner extends StatelessWidget {
                     style: AppTheme.font(
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                      color: AppColors.onPink,
                     ),
                   ),
                 ),

@@ -234,7 +234,7 @@ class _DayDialog extends StatelessWidget {
                       child: Container(
                         padding: EdgeInsets.all(14.w),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.cream,
                           borderRadius: BorderRadius.circular(16.r),
                           boxShadow: AppColors.softShadow(blur: 10, y: 4),
                         ),
@@ -249,7 +249,7 @@ class _DayDialog extends StatelessWidget {
                               ),
                               child: Icon(
                                 Icons.menu_book_rounded,
-                                color: Colors.white,
+                                color: AppColors.onPink,
                                 size: 20.sp,
                               ),
                             ),

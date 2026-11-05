@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/toast.dart';
 import '../core/widgets/bouncy_tap.dart';
+import '../core/widgets/cat_mascot.dart';
 import 'account_avatar.dart';
 import 'auth_service.dart';
 import 'password_reset_sheet.dart';
@@ -317,18 +318,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _header() {
     return Column(
       children: [
-        Container(
-          width: 76.w,
-          height: 76.w,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.pink,
-            borderRadius: BorderRadius.circular(AppRadius.lg.r),
-          ),
-          // 로딩 화면과 같은 로고. 이모지 대신 앱에 포함된 아이콘을 쓴다.
-          child:
-              Icon(Icons.menu_book_rounded, size: 38.sp, color: Colors.white),
-        ),
+        // 스플래시·로딩 화면과 같은 고양이 로고.
+        CatLogo(size: 96.w),
         SizedBox(height: 14.h),
         Text('HelloWord',
             style: AppTheme.display(
@@ -337,8 +328,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 color: AppColors.ink,
                 letterSpacing: -0.5)),
         SizedBox(height: 6.h),
-        Text('언니랑 함께하는 영어 단어 공부 ✏️',
-            style: TextStyle(
+        Text('같이 외우는 영어 단어',
+            style: AppTheme.font(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w600,
                 color: AppColors.gray)),
@@ -379,8 +370,8 @@ class _LoginScreenState extends State<LoginScreen> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: AppColors.cream,
-              borderRadius: BorderRadius.circular(AppRadius.md.r),
-              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(AppRadius.pill.r),
+              border: Border.all(color: AppColors.border, width: 1.5),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -614,7 +605,7 @@ class _AccountCard extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(14.w, 12.h, 6.w, 12.h),
           decoration: BoxDecoration(
             color: AppColors.cream,
-            borderRadius: BorderRadius.circular(AppRadius.lg.r),
+            borderRadius: BorderRadius.circular(AppRadius.xl.r),
             border: Border.all(color: AppColors.border),
             boxShadow: AppColors.softShadow(blur: 10, y: 3),
           ),
@@ -711,14 +702,14 @@ class _RememberToggle extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: value ? AppColors.pink : AppColors.cream,
-              borderRadius: BorderRadius.circular(7.r),
+              shape: BoxShape.circle,
               border: Border.all(
                 color: value ? AppColors.pink : AppColors.border,
                 width: 1.5,
               ),
             ),
             child: value
-                ? Icon(Icons.check, size: 15.sp, color: Colors.white)
+                ? Icon(Icons.check_rounded, size: 15.sp, color: AppColors.onPink)
                 : null,
           ),
           SizedBox(width: 8.w),
@@ -733,7 +724,7 @@ class _RememberToggle extends StatelessWidget {
   }
 }
 
-/// 디자인의 블루 풀버튼(라운드 16 + 그림자).
+/// 로그인 화면의 주요 버튼(버터 알약). 이름은 예전 코드 호환을 위해 유지한다.
 class BlueButton extends StatelessWidget {
   const BlueButton({
     super.key,
@@ -755,22 +746,22 @@ class BlueButton extends StatelessWidget {
         height: 54.h,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: onTap == null ? AppColors.border : AppColors.pink,
-          borderRadius: BorderRadius.circular(AppRadius.md.r),
+          color: onTap == null ? AppColors.border : AppColors.accent,
+          borderRadius: BorderRadius.circular(AppRadius.pill.r),
         ),
         child: loading
             ? SizedBox(
                 width: 22.w,
                 height: 22.w,
-                child: const CircularProgressIndicator(
+                child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation(Colors.white)),
+                    valueColor: AlwaysStoppedAnimation(AppColors.onAccent)),
               )
             : Text(label,
                 style: AppTheme.font(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w800,
-                    color: onTap == null ? AppColors.hint : Colors.white)),
+                    color: onTap == null ? AppColors.hint : AppColors.onAccent)),
       ),
     );
   }

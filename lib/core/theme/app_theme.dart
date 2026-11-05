@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// ── HelloWord 디자인 시스템 ─────────────────────────────────────────
-/// ui-ux-pro-max 스킬이 '영어 단어 시험·공부 앱(교육/퀴즈)' 기준으로 뽑아준
-/// 디자인 시스템을 Flutter 토큰으로 옮긴 것.
+/// ── HelloWord 디자인 시스템 '버터노트' ────────────────────────────────
+/// 따뜻한 버터 옐로 + 종이색 바탕 + 먹색 라인 드로잉.
+/// 토큰 정의·사용 규칙은 디자인 시스템 문서(README)와 같다.
 ///
-/// - 스타일: Flat Design (그라디언트·큰 그림자 없이 색과 여백으로 위계를 만든다)
-/// - 색: 퀴즈 블루(#2563EB) + 학습 보라(#7C3AED) + 성취 골드(#F59E0B)
+/// - 버터(accent)는 채움 전용. 위 글자는 항상 [AppColors.onAccent](먹색).
+/// - 강조 글자·아이콘은 [AppColors.pink](=primary). 라이트는 먹색, 다크는 버터.
+///   primary로 채운 칸의 글자는 [AppColors.onPink]를 쓴다(흰색 직접 사용 금지).
 /// - 타이포: Fredoka(제목·영어 단어·숫자) + Nunito(본문) + 한글은 Noto Sans KR
 /// - 모션: 150~300ms, easeOutCubic 계열
 ///
@@ -13,18 +14,20 @@ import 'package:flutter/material.dart';
 /// 여백은 [AppSpace], 모서리는 [AppRadius], 시간·커브는 [AppMotion]을 쓴다.
 
 /// 사용자가 설정에서 고를 수 있는 포인트 색.
+/// enum 이름은 저장된 설정과의 호환을 위해 그대로 둔다.
 enum AppPalette { pink, lavender, mint, sky, peach }
 
 extension AppPaletteX on AppPalette {
   String get label => switch (this) {
-        AppPalette.pink => '블루',
-        AppPalette.lavender => '인디고',
-        AppPalette.mint => '그린',
-        AppPalette.sky => '스카이',
-        AppPalette.peach => '오렌지',
+        AppPalette.pink => '버터',
+        AppPalette.lavender => '라벤더',
+        AppPalette.mint => '민트',
+        AppPalette.sky => '하늘',
+        AppPalette.peach => '피치',
       };
 
-  Color get swatch => _specs[this]!.primary;
+  /// 설정 화면의 색 동그라미. 그 팔레트의 채움 색을 보여 준다.
+  Color get swatch => _specs[this]!.accent;
 
   static AppPalette fromName(String? name) {
     for (final p in AppPalette.values) {
@@ -37,46 +40,54 @@ extension AppPaletteX on AppPalette {
 class _PaletteSpec {
   const _PaletteSpec({
     required this.primary,
-    required this.primarySoft,
-    required this.primaryDark,
+    required this.soft,
+    required this.accent,
+    required this.softDark,
   });
 
-  /// 라이트 모드 포인트 색.
+  /// 라이트 모드 강조 글자·아이콘 색(흰 바탕 4.5:1 이상, 흰 글자를 얹을 수 있음).
   final Color primary;
 
-  /// 포인트 색의 옅은 배경(칩·뱃지 바탕).
-  final Color primarySoft;
+  /// 옅은 바탕(칩·뱃지·선택 탭).
+  final Color soft;
 
-  /// 다크 모드에서 쓰는 밝은 변형(어두운 바탕에서 대비 확보용).
-  final Color primaryDark;
+  /// 밝은 채움 색(주요 버튼·헤더 블록). 위 글자는 먹색. 다크 모드 강조색도 이것.
+  final Color accent;
+
+  /// 다크 모드의 옅은 바탕.
+  final Color softDark;
 }
 
-// 교육/퀴즈 앱 팔레트: 신뢰감 있는 블루 계열을 기본으로 한다.
 const Map<AppPalette, _PaletteSpec> _specs = {
   AppPalette.pink: _PaletteSpec(
-    primary: Color(0xFF2563EB), // 퀴즈 블루(primary)
-    primarySoft: Color(0xFFDBEAFE),
-    primaryDark: Color(0xFF60A5FA),
+    primary: Color(0xFF1F1C17), // 먹색
+    soft: Color(0xFFFFF0B3),
+    accent: Color(0xFFFFD84A), // 버터
+    softDark: Color(0xFF3A321A),
   ),
   AppPalette.lavender: _PaletteSpec(
-    primary: Color(0xFF4F46E5),
-    primarySoft: Color(0xFFE0E7FF),
-    primaryDark: Color(0xFF818CF8),
+    primary: Color(0xFF5A45B8),
+    soft: Color(0xFFECE6FF),
+    accent: Color(0xFFC9BCFF),
+    softDark: Color(0xFF2B2540),
   ),
   AppPalette.mint: _PaletteSpec(
-    primary: Color(0xFF16A34A),
-    primarySoft: Color(0xFFDCFCE7),
-    primaryDark: Color(0xFF4ADE80),
+    primary: Color(0xFF1E7A52),
+    soft: Color(0xFFDDF5E8),
+    accent: Color(0xFF8EE0B4),
+    softDark: Color(0xFF173126),
   ),
   AppPalette.sky: _PaletteSpec(
-    primary: Color(0xFF0891B2),
-    primarySoft: Color(0xFFCFFAFE),
-    primaryDark: Color(0xFF38BDF8),
+    primary: Color(0xFF1F63A8),
+    soft: Color(0xFFDCEEFF),
+    accent: Color(0xFF9FD0FF),
+    softDark: Color(0xFF172A3D),
   ),
   AppPalette.peach: _PaletteSpec(
-    primary: Color(0xFFEA8A0B),
-    primarySoft: Color(0xFFFEF3C7),
-    primaryDark: Color(0xFFFBBF24),
+    primary: Color(0xFFB4441F),
+    soft: Color(0xFFFFE4D6),
+    accent: Color(0xFFFFB68C),
+    softDark: Color(0xFF3A2418),
   ),
 };
 
@@ -86,59 +97,74 @@ class AppColors {
   AppColors._();
 
   // ── 포인트(브랜드) 색 ──
-  // 이름(pink/mint)은 예전 코드 호환을 위해 유지하되 값은 퀴즈 블루다.
-  static Color pink = _specs[AppPalette.pink]!.primary; // primary
-  static Color pinkSoft = _specs[AppPalette.pink]!.primarySoft;
-  static Color mint = _specs[AppPalette.pink]!.primary; // primary(별칭)
-  static Color mintEnd = const Color(0xFF3B82F6); // primary 밝은 변형
-  static Color mintDeep = const Color(0xFF1D4ED8); // primary 진한 변형(텍스트)
+  // 이름(pink/mint)은 예전 코드 호환을 위해 유지한다. 의미는 primary.
+  static Color pink = _specs[AppPalette.pink]!.primary; // primary(강조 글자·아이콘)
+  static Color pinkSoft = _specs[AppPalette.pink]!.soft; // 옅은 바탕
+  static Color mint = pink; // primary(별칭)
+  static Color mintEnd = const Color(0xFF4D473D); // primary 보조 변형
+  static Color mintDeep = pink; // 옅은 바탕 위 강조 글자
 
-  /// 주요 버튼 배경. Flat 디자인이라 단색에 가깝게 둔다.
+  /// primary로 채운 칸 위의 글자색.
+  static Color onPink = Colors.white;
+
+  /// 버터: 주요 버튼·헤더 블록·선택 탭의 채움 색.
+  static Color accent = _specs[AppPalette.pink]!.accent;
+
+  /// 버터 위 글자·아이콘. 다크 모드에서도 먹색 그대로.
+  static const Color onAccent = Color(0xFF1F1C17);
+
+  /// 버터 블록·그 위 흰 카드에서 쓰는 보조 글자(모드와 무관하게 고정).
+  static const Color onAccentMuted = Color(0xFF6E675B);
+
+  /// 주요 버튼 배경(예전 호환). 단색에 가깝게 둔다.
   static LinearGradient primaryButton = LinearGradient(
-    colors: [pink, mintEnd],
+    colors: [accent, accent],
   );
 
-  /// 앱 배경(아주 옅은 블루). 움직이는 배경이 이 위에 그려진다.
+  /// 앱 배경(종이색). 움직이는 배경이 이 위에 그려진다.
   static LinearGradient background = const LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFFF7FAFF), Color(0xFFEFF6FF)],
+    colors: [Color(0xFFFFFCF4), Color(0xFFFFF6DF)],
   );
 
-  // ── 보조 색 ──
-  static const Color purple = Color(0xFF7C3AED); // 학습/복습 계열 강조
-  static const Color purpleSoft = Color(0xFFEDE9FE);
-  static const Color gold = Color(0xFFF59E0B); // 성취·연속학습·D-DAY
-  static const Color goldSoft = Color(0xFFFEF3C7);
-  static const Color orange = gold; // 예전 이름 호환
-  static const Color peach = gold;
-  static const Color orangeSoft = goldSoft;
+  /// 데스크톱 브라우저에서 폰 컬럼 바깥 바탕.
+  static Color get desk =>
+      isDark ? const Color(0xFF0A0907) : const Color(0xFFF1E9D6);
 
-  // ── 잉크 네이비(다크 표면: 탭바·통화 패널·스낵바) ──
-  static const Color navy = Color(0xFF0F172A);
-  static const Color navySoft = Color(0xFF1E293B);
-  static const Color onNavy = Color(0xFF94A3B8); // 네이비 위 보조 텍스트
+  // ── 보조 색 ──
+  static Color purple = const Color(0xFFAD3F23); // coral: 복습·공부 계열 강조
+  static Color purpleSoft = const Color(0xFFFDE6DE);
+  static Color gold = const Color(0xFFE0A400); // honey: 성취·연속학습·D-DAY
+  static Color goldSoft = const Color(0xFFFFF3C4);
+  static Color get orange => gold; // 예전 이름 호환
+  static Color get peach => gold;
+  static Color get orangeSoft => goldSoft;
+
+  // ── 차콜(어두운 표면: 통화 패널·스낵바·툴팁) ──
+  static const Color navy = Color(0xFF24211C);
+  static const Color navySoft = Color(0xFF36322B);
+  static const Color onNavy = Color(0xFFB5AD9E); // 차콜 위 보조 텍스트
 
   // ── 중성 토큰(라이트/다크에 따라 [applyMode]로 스왑) ──
   static Color cream = Colors.white; // 카드/다이얼로그/시트 표면
-  static Color ink = const Color(0xFF0F172A); // 본문 텍스트
-  static Color grayText = const Color(0xFF475569); // 진한 보조 텍스트
-  static Color rowBg = const Color(0xFFF1F5FD); // 리스트 행 배경
-  static Color fieldBg = const Color(0xFFEFF4FF); // 입력/칩 배경
-  static Color border = const Color(0xFFE4ECFC); // 얇은 테두리
-  static Color gray = const Color(0xFF64748B); // 보조 텍스트(대비 4.5:1)
-  static Color hint = const Color(0xFF94A3B8); // 힌트/비활성
-  static Color lavender = const Color(0xFF64748B); // 보조 아이콘(중성)
-  static Color lavenderSoft = const Color(0xFFF1F5FD);
-  static Color blueSoft = const Color(0xFFDBEAFE); // 포인트 소프트(아바타 배경)
+  static Color ink = const Color(0xFF1F1C17); // 본문 텍스트·라인 드로잉
+  static Color grayText = const Color(0xFF4D473D); // 진한 보조 텍스트
+  static Color rowBg = const Color(0xFFFBF6EA); // 리스트 행 배경
+  static Color fieldBg = const Color(0xFFF7F1E3); // 입력/칩 배경
+  static Color border = const Color(0xFFEDE5D3); // 얇은 테두리
+  static Color gray = const Color(0xFF6E675B); // 보조 텍스트(대비 4.5:1)
+  static Color hint = const Color(0xFFA39C8E); // 힌트/비활성
+  static Color lavender = const Color(0xFF6E675B); // 보조 아이콘(중성)
+  static Color lavenderSoft = const Color(0xFFFBF6EA);
+  static Color blueSoft = pinkSoft; // 포인트 소프트(아바타 배경)
 
-  // ── 의미 색(정답·오답은 모드와 무관하게 유지) ──
-  // 어두운 바탕에서는 같은 채도로 두면 눈에 안 박히므로 [applyMode]에서 밝게 바꾼다.
-  static Color green = const Color(0xFF16A34A); // 정답/성공
-  static Color greenSoft = const Color(0xFFDCFCE7);
-  static Color danger = const Color(0xFFDC2626); // 오답/삭제/경고
-  static Color dangerSoft = const Color(0xFFFEE2E2);
-  static Color sunday = const Color(0xFFDC2626); // 달력 일요일
+  // ── 의미 색 ──
+  static Color green = const Color(0xFF1D7843); // 정답/성공
+  static Color greenSoft = const Color(0xFFDDF3E5);
+  static Color danger = const Color(0xFFBF342A); // 오답/삭제/경고
+  static Color dangerSoft = const Color(0xFFFDE3E0);
+  static Color sunday = const Color(0xFFBF342A); // 달력 일요일
 
   /// 현재 다크 모드 여부(테마 생성 시 참조).
   static bool isDark = false;
@@ -153,74 +179,80 @@ class AppColors {
 
   static void _applyPalette() {
     final s = _specs[_palette]!;
-    pink = isDark ? s.primaryDark : s.primary;
-    pinkSoft = isDark
-        ? Color.alphaBlend(s.primary.withValues(alpha: 0.22), navy)
-        : s.primarySoft;
+    accent = s.accent;
+    pink = isDark ? s.accent : s.primary;
+    onPink = isDark ? onAccent : Colors.white;
+    pinkSoft = isDark ? s.softDark : s.soft;
     mint = pink;
     mintEnd = isDark
-        ? Color.lerp(pink, Colors.white, 0.18)!
-        : Color.lerp(pink, Colors.white, 0.12)!;
-    mintDeep = isDark ? Color.lerp(pink, Colors.white, 0.3)! : s.primary;
+        ? Color.lerp(s.accent, Colors.white, 0.25)!
+        : Color.lerp(s.primary, Colors.white, 0.22)!;
+    mintDeep = pink;
     blueSoft = pinkSoft;
-    primaryButton = LinearGradient(colors: [pink, mintEnd]);
+    primaryButton = LinearGradient(colors: [accent, accent]);
   }
 
   /// 라이트/다크 모드에 맞춰 중성 토큰과 배경을 스왑한다.
   static void applyMode(bool dark) {
     isDark = dark;
     if (dark) {
-      ink = const Color(0xFFE8EDF7);
-      cream = const Color(0xFF151E32); // 카드/시트 표면
-      grayText = const Color(0xFFB6C0D4);
-      gray = const Color(0xFF97A3BA);
-      hint = const Color(0xFF6B7893);
-      rowBg = const Color(0xFF111A2C);
-      fieldBg = const Color(0xFF1B2740);
-      border = const Color(0xFF26324F);
-      lavender = const Color(0xFF97A3BA);
-      lavenderSoft = const Color(0xFF1B2740);
-      // 정답·오답 색은 어두운 바탕에서 대비가 나오도록 밝은 쪽으로.
-      green = const Color(0xFF4ADE80);
-      greenSoft = const Color(0xFF14301F);
-      danger = const Color(0xFFF87171);
-      dangerSoft = const Color(0xFF3A1A1A);
-      sunday = const Color(0xFFF87171);
+      ink = const Color(0xFFF5EFE2);
+      cream = const Color(0xFF211E17); // 카드/시트 표면
+      grayText = const Color(0xFFCFC7B6);
+      gray = const Color(0xFFA9A090);
+      hint = const Color(0xFF756D5F);
+      rowBg = const Color(0xFF1A1812);
+      fieldBg = const Color(0xFF2A261D);
+      border = const Color(0xFF353025);
+      lavender = const Color(0xFFA9A090);
+      lavenderSoft = const Color(0xFF2A261D);
+      purple = const Color(0xFFFF9A7A);
+      purpleSoft = const Color(0xFF3A2018);
+      gold = const Color(0xFFFFC933);
+      goldSoft = const Color(0xFF3A321A);
+      green = const Color(0xFF5BD08A);
+      greenSoft = const Color(0xFF16301F);
+      danger = const Color(0xFFFF7B6E);
+      dangerSoft = const Color(0xFF3A1A17);
+      sunday = const Color(0xFFFF7B6E);
       background = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Color(0xFF0D1526), Color(0xFF0B1220)],
+        colors: [Color(0xFF15130E), Color(0xFF100E0A)],
       );
     } else {
-      ink = const Color(0xFF0F172A);
+      ink = const Color(0xFF1F1C17);
       cream = Colors.white;
-      grayText = const Color(0xFF475569);
-      gray = const Color(0xFF64748B);
-      hint = const Color(0xFF94A3B8);
-      rowBg = const Color(0xFFF1F5FD);
-      fieldBg = const Color(0xFFEFF4FF);
-      border = const Color(0xFFE4ECFC);
-      lavender = const Color(0xFF64748B);
-      lavenderSoft = const Color(0xFFF1F5FD);
-      green = const Color(0xFF16A34A);
-      greenSoft = const Color(0xFFDCFCE7);
-      danger = const Color(0xFFDC2626);
-      dangerSoft = const Color(0xFFFEE2E2);
-      sunday = const Color(0xFFDC2626);
+      grayText = const Color(0xFF4D473D);
+      gray = const Color(0xFF6E675B);
+      hint = const Color(0xFFA39C8E);
+      rowBg = const Color(0xFFFBF6EA);
+      fieldBg = const Color(0xFFF7F1E3);
+      border = const Color(0xFFEDE5D3);
+      lavender = const Color(0xFF6E675B);
+      lavenderSoft = const Color(0xFFFBF6EA);
+      purple = const Color(0xFFAD3F23);
+      purpleSoft = const Color(0xFFFDE6DE);
+      gold = const Color(0xFFE0A400);
+      goldSoft = const Color(0xFFFFF3C4);
+      green = const Color(0xFF1D7843);
+      greenSoft = const Color(0xFFDDF3E5);
+      danger = const Color(0xFFBF342A);
+      dangerSoft = const Color(0xFFFDE3E0);
+      sunday = const Color(0xFFBF342A);
       background = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Color(0xFFF7FAFF), Color(0xFFEFF6FF)],
+        colors: [Color(0xFFFFFCF4), Color(0xFFFFF6DF)],
       );
     }
     _applyPalette();
   }
 
   /// 표면을 배경에서 살짝 띄우는 정도의 그림자.
-  /// Flat 디자인이라 그림자는 '있는 듯 없는 듯'만 준다.
   static List<BoxShadow> softShadow({double blur = 14, double y = 4}) => [
         BoxShadow(
-          color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.3 : 0.05),
+          color: const Color(0xFF1F1C17).withValues(alpha: isDark ? 0.3 : 0.06),
           blurRadius: blur,
           offset: Offset(0, y),
         ),
@@ -243,15 +275,16 @@ class AppSpace {
   static const double gutter = 20;
 }
 
-/// 모서리 반경 토큰. 종류를 섞지 않도록 이 단계만 쓴다.
+/// 모서리 반경 토큰. 둥글둥글한 느낌을 위해 넉넉하게 잡았다.
+/// 종류를 섞지 않도록 이 단계만 쓴다.
 class AppRadius {
   AppRadius._();
 
-  static const double xs = 8;
-  static const double sm = 12;
-  static const double md = 16;
-  static const double lg = 20;
-  static const double xl = 28;
+  static const double xs = 10;
+  static const double sm = 14;
+  static const double md = 18;
+  static const double lg = 24;
+  static const double xl = 32;
   static const double pill = 999;
 }
 
@@ -374,7 +407,7 @@ class AppTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.pink,
       primary: AppColors.pink,
-      onPrimary: Colors.white,
+      onPrimary: AppColors.onPink,
       secondary: AppColors.purple,
       tertiary: AppColors.gold,
       error: AppColors.danger,
@@ -453,19 +486,17 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          side: BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.border, width: 1.2),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.pink,
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.accent,
+          foregroundColor: AppColors.onAccent,
           disabledBackgroundColor: AppColors.border,
           disabledForegroundColor: AppColors.hint,
           elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
+          shape: const StadiumBorder(),
           // 최소 44pt 터치 영역.
           minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -482,10 +513,9 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.grayText,
-          side: BorderSide(color: AppColors.border),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
+          backgroundColor: AppColors.cream,
+          side: BorderSide(color: AppColors.border, width: 1.5),
+          shape: const StadiumBorder(),
           minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
           textStyle: font(fontSize: 15, fontWeight: FontWeight.w700),
@@ -498,12 +528,11 @@ class AppTheme {
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.pink,
-        foregroundColor: Colors.white,
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
+        backgroundColor: AppColors.accent,
+        foregroundColor: AppColors.onAccent,
+        elevation: 0,
+        highlightElevation: 0,
+        shape: const CircleBorder(),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -520,7 +549,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: AppColors.pink, width: 2),
+          borderSide: BorderSide(color: AppColors.pink, width: 1.8),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -531,7 +560,7 @@ class AppTheme {
           borderSide: BorderSide(color: AppColors.danger, width: 2),
         ),
         labelStyle: TextStyle(color: AppColors.gray),
-        floatingLabelStyle: TextStyle(color: AppColors.mintDeep),
+        floatingLabelStyle: TextStyle(color: AppColors.ink),
         hintStyle: TextStyle(color: AppColors.hint),
         helperStyle: TextStyle(color: AppColors.gray, fontSize: 12),
         errorStyle: TextStyle(color: AppColors.danger, fontSize: 12),
@@ -557,7 +586,7 @@ class AppTheme {
         contentTextStyle:
             font(fontSize: 15, height: 1.5, color: AppColors.grayText),
         // 뒤 화면이 시각적으로 경쟁하지 않도록 충분히 어둡게.
-        barrierColor: const Color(0xFF0F172A).withValues(alpha: 0.5),
+        barrierColor: const Color(0xFF1F1C17).withValues(alpha: 0.45),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: AppColors.cream,
@@ -573,11 +602,9 @@ class AppTheme {
         backgroundColor: AppColors.navy,
         contentTextStyle: font(
             color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-        actionTextColor: AppColors.mintEnd,
+        actionTextColor: AppColors.accent,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
+        shape: const StadiumBorder(),
       ),
       dividerTheme: DividerThemeData(
         color: AppColors.border,
@@ -591,7 +618,7 @@ class AppTheme {
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? Colors.white : AppColors.cream,
+          (s) => s.contains(WidgetState.selected) ? AppColors.onPink : AppColors.cream,
         ),
         trackColor: WidgetStateProperty.resolveWith(
           (s) => s.contains(WidgetState.selected)
@@ -603,7 +630,7 @@ class AppTheme {
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
           color: AppColors.navy,
-          borderRadius: BorderRadius.circular(AppRadius.xs),
+          borderRadius: BorderRadius.circular(AppRadius.pill),
         ),
         textStyle: font(color: Colors.white, fontSize: 12),
       ),

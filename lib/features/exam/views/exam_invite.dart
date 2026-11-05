@@ -80,7 +80,7 @@ class ExamInviteCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.navySoft,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.mintEnd, width: 4),
+                  border: Border.all(color: AppColors.accent, width: 4),
                 ),
                 child: Text('🐰', style: TextStyle(fontSize: 54.sp)),
               ),

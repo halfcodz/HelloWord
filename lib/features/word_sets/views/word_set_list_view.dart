@@ -281,7 +281,7 @@ class _FilterChip extends StatelessWidget {
           style: AppTheme.font(
             fontSize: 13.sp,
             fontWeight: FontWeight.w800,
-            color: selected ? Colors.white : AppColors.grayText,
+            color: selected ? AppColors.onPink : AppColors.grayText,
           ),
         ),
       ),

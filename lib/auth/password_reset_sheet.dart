@@ -163,7 +163,7 @@ class _PasswordResetSheetState extends State<_PasswordResetSheet> {
                       height: 18.w,
                       child: const CircularProgressIndicator(
                         strokeWidth: 2.2,
-                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                        valueColor: AlwaysStoppedAnimation(AppColors.onAccent),
                       ),
                     )
                   : const Text('메일 보내기'),

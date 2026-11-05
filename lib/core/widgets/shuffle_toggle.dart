@@ -36,7 +36,7 @@ class ShuffleChip extends StatelessWidget {
             Icon(
               Icons.shuffle_rounded,
               size: 15.sp,
-              color: on ? Colors.white : AppColors.grayText,
+              color: on ? AppColors.onPink : AppColors.grayText,
             ),
             SizedBox(width: 5.w),
             Text(
@@ -44,7 +44,7 @@ class ShuffleChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w700,
-                color: on ? Colors.white : AppColors.grayText,
+                color: on ? AppColors.onPink : AppColors.grayText,
               ),
             ),
           ],

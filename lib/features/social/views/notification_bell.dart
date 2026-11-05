@@ -99,7 +99,7 @@ class NotificationBell extends StatelessWidget {
                   ),
                   child: Text(
                     '$count',
-                    style: TextStyle(fontSize: 9.sp, color: Colors.white),
+                    style: TextStyle(fontSize: 9.sp, color: AppColors.onPink),
                   ),
                 ),
               ),

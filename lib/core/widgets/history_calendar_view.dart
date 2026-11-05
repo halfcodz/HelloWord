@@ -318,7 +318,7 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
               style: AppTheme.font(
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w800,
-                color: selected ? Colors.white : AppColors.grayText,
+                color: selected ? AppColors.onPink : AppColors.grayText,
               ),
             ),
           ),
@@ -410,7 +410,7 @@ class _HistoryCalendarViewState extends State<HistoryCalendarView> {
 
     if (selected) {
       bg = AppColors.pink;
-      fg = Colors.white;
+      fg = AppColors.onPink;
       weight = FontWeight.w800;
     } else if (today) {
       bg = AppColors.cream;
@@ -479,7 +479,7 @@ class HistoryEntryButton extends StatelessWidget {
               ),
               child: Icon(
                 Icons.calendar_month_rounded,
-                color: Colors.white,
+                color: AppColors.onPink,
                 size: 22.sp,
               ),
             ),

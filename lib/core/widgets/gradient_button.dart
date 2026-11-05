@@ -4,8 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../theme/app_theme.dart';
 import 'bouncy_tap.dart';
 
-/// 화면의 주요 동작 버튼.
-/// Flat 디자인이라 그라데이션·번쩍이는 그림자 없이 단색 + 탭 반응만 준다.
+/// 버터 알약 버튼. 그라데이션·그림자 없이 단색 + 탭 반응만 준다.
 /// (이름은 예전 코드 호환을 위해 유지한다.)
 class GradientButton extends StatelessWidget {
   const GradientButton({
@@ -25,8 +24,8 @@ class GradientButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onPressed != null && !loading;
     // 비활성은 투명도만 낮추지 않고 색 자체를 바꿔 '못 누르는 상태'를 분명히 한다.
-    final background = enabled ? AppColors.pink : AppColors.border;
-    final foreground = enabled ? Colors.white : AppColors.hint;
+    final background = enabled ? AppColors.accent : AppColors.border;
+    final foreground = enabled ? AppColors.onAccent : AppColors.hint;
 
     return Semantics(
       button: true,
@@ -41,15 +40,15 @@ class GradientButton extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: background,
-            borderRadius: BorderRadius.circular(AppRadius.md.r),
+            borderRadius: BorderRadius.circular(AppRadius.pill.r),
           ),
           child: loading
               ? SizedBox(
                   height: 22.h,
                   width: 22.h,
-                  child: const CircularProgressIndicator(
+                  child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                    valueColor: AlwaysStoppedAnimation(AppColors.onAccent),
                   ),
                 )
               : Row(

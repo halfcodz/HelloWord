@@ -12,7 +12,7 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
   <!-- 상태바/테마 색 (앱에서 테마 변경 시 갱신됨) -->
-  <meta name="theme-color" content="#F7FAFF">
+  <meta name="theme-color" content="#FFFCF4">
 
   <!-- iOS 홈화면 추가(PWA) 대응 -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -42,7 +42,7 @@
       width: 100%;
       height: 100%;
       /* 앱 배경과 같은 색. 스크롤 튕김 영역까지 이 색이 보인다. */
-      background: linear-gradient(180deg, #F7FAFF 0%, #EFF6FF 100%);
+      background: linear-gradient(180deg, #FFFCF4 0%, #FFF6DF 100%);
       background-attachment: fixed;
       overscroll-behavior: none;
       /* 문서 자체는 절대 스크롤되지 않게 못 박는다.
@@ -66,54 +66,146 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(180deg, #F7FAFF 0%, #EFF6FF 100%);
+      background: linear-gradient(180deg, #FFFCF4 0%, #FFF6DF 100%);
       font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
         "Segoe UI", Roboto, sans-serif;
-      color: #0F172A;
+      color: #1F1C17;
+      transition: opacity .25s ease-out;
     }
-    #loading .logo {
+    #loading.hide { opacity: 0; }
+    /* 스케치 고양이가 가운데 빈 곳을 입체적으로 뱅글뱅글 돈다.
+       위치·크기·방향은 아래 스크립트가 매 프레임 계산한다. */
+    #loading .stage {
+      position: relative;
+      width: 130px;
+      height: 90px;
+    }
+    #loading .runner {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 0; height: 0;
+      will-change: transform;
+    }
+    #loading .shadow {
+      position: absolute;
+      left: -22px; top: 8px;
+      width: 48px; height: 9px;
+      border-radius: 50%;
+      background: rgba(31, 28, 23, 0.10);
+    }
+    #loading .cat {
+      position: absolute;
+      left: -38px; top: -42px;
       width: 76px;
-      height: 76px;
-      border-radius: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 38px;
-      background: #2563EB;
     }
+    #loading .cat svg { display: block; width: 76px; height: auto; }
     #loading .title {
-      margin-top: 18px;
+      margin-top: 4px;
       font-size: 26px;
       font-weight: 800;
       letter-spacing: -0.5px;
-      color: #0F172A;
+      color: #1F1C17;
     }
-    #loading .sub { margin-top: 6px; font-size: 14px; font-weight: 600; color: #5D6580; }
-    #loading .spinner {
-      margin-top: 28px;
-      width: 34px;
-      height: 34px;
-      border: 3px solid rgba(0, 196, 140, 0.2);
-      border-top-color: #00C48C;
-      border-radius: 50%;
-      animation: spin 0.85s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading .sub { margin-top: 6px; font-size: 14px; font-weight: 600; color: #6E675B; }
   </style>
 </head>
 <body>
-  <div id="loading">
-    <div class="logo">📖</div>
+  <div id="loading" role="img" aria-label="HelloWord 불러오는 중">
+    <div class="stage">
+      <div class="runner" id="cat-runner">
+        <div class="shadow"></div>
+        <div class="cat"><div class="flip" id="cat-flip"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" fill="none" stroke="#1F1C17" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+  <g class="legs-far" stroke-width="2.4" opacity="0.45">
+    <path class="leg leg-hf" d="M47 66 Q47 74 44 82 l2.5 0"/>
+    <path class="leg leg-ff" d="M75 66 Q74 74 77 82 l2.5 0"/>
+  </g>
+  <g class="cat-body">
+    <path d="M34.6 47.0 Q32.0 45.4 30.3 46.9 Q28.7 44.7 26.9 45.8 Q26.1 43.4 24.2 44.0 Q24.2 41.5 22.2 41.5 Q22.9 38.9 21.0 38.3 Q22.5 35.7 21.0 34.4 Q23.3 31.4 22.6 29.3 Q22.9 25.5 20.6 23.4 Q17.5 23.6 15.4 26.7 Q12.9 29.7 13.5 31.8 Q11.6 35.4 12.8 37.7 Q12.0 41.6 13.8 43.5 Q14.2 47.3 16.5 48.7 Q18.1 52.3 20.8 52.9 Q23.6 55.9 26.6 55.7 Q30.4 57.9 33.4 57.0 Z" fill="#FFFFFF"/>
+    <path d="M82.0 55.0 Q83.4 58.4 80.0 61.1 Q79.4 64.6 74.4 66.3 Q71.9 69.7 65.9 69.8 Q61.7 72.7 56.0 71.0 Q50.3 72.7 46.1 69.8 Q40.1 69.7 37.6 66.3 Q32.6 64.6 32.0 61.1 Q28.6 58.4 30.0 55.0 Q28.6 51.6 32.0 48.9 Q32.6 45.4 37.6 43.7 Q40.1 40.3 46.1 40.2 Q50.3 37.3 56.0 39.0 Q61.7 37.3 65.9 40.2 Q71.9 40.3 74.4 43.7 Q79.4 45.4 80.0 48.9 Q83.4 51.6 82.0 55.0 Z" fill="#FFFFFF"/>
+    <path d="M48 44 q2 -3 4 0 M56 42 q2 -3 4 0 M64 43 q2 -3 4 0" stroke-width="1.7"/>
+    <path d="M99.3 31.7 Q102.6 33.7 102.4 37.5 Q104.6 40.6 102.9 44.0 Q103.7 47.8 100.7 50.2 Q100.0 54.0 96.3 55.0 Q94.1 58.2 90.3 57.7 Q87.0 59.7 83.7 57.7 Q79.9 58.2 77.7 55.0 Q74.0 54.0 73.3 50.2 Q70.3 47.8 71.1 44.0 Q69.4 40.6 71.6 37.5 Q71.4 33.7 74.7 31.7 Q75.4 24.4 76 17 Q79.0 21.9 82.1 26.8 Q87 23.5 91.9 26.8 Q95.0 21.6 98 16.5 Q98.6 24.1 99.3 31.7 Z" fill="#FFFFFF"/>
+    <path d="M84.5 29 v3 M87.5 28.5 v3 M90.5 29 v3" stroke-width="1.5"/>
+    <circle cx="82.5" cy="40" r="1.7" fill="#1F1C17" stroke="none"/>
+    <circle cx="93.5" cy="39.5" r="1.7" fill="#1F1C17" stroke="none"/>
+    <path d="M88 43.5 l-1.4 1.4 h2.8 z" fill="#1F1C17" stroke-width="1.2"/>
+    <path d="M88 45.2 q-1.4 2.2 -3 1 M88 45.2 q1.4 2.2 3 1" stroke-width="1.6"/>
+    <path d="M103 42 h6 M103 45.5 l5 1.6" stroke-width="1.5"/>
+  </g>
+  <g class="legs-near" stroke-width="2.4">
+    <path class="leg leg-hn" d="M44 66 Q44 74 47 82 l2.5 0"/>
+    <path class="leg leg-fn" d="M72 66 Q71 74 68 82 l2.5 0"/>
+  </g>
+</svg></div></div>
+      </div>
+    </div>
     <div class="title">HelloWord</div>
-    <div class="sub">자매 영어 단어 시험</div>
-    <div class="spinner"></div>
+    <div class="sub">같이 외우는 영어 단어</div>
   </div>
 
   <script>
+    // 고양이 걷기 + 입체 궤도.
+    // - 다리 네 개를 매 프레임 계산한다(뒷발→앞발 순서로 번갈아 딛는 걸음).
+    // - 가로로 긴 타원을 천천히 돌며, 앞(아래)에선 크고 오른쪽을 보고
+    //   뒤(위)에선 작고 왼쪽을 본다. 도는 속도를 보폭에 맞춰 발이 미끄러지지 않게 한다.
+    // 같은 계산이 Flutter 쪽(lib/core/widgets/cat_mascot.dart)에도 있다.
+    (function () {
+      var runner = document.getElementById('cat-runner');
+      var flip = document.getElementById('cat-flip');
+      if (!runner || !flip) return;
+      var svg = flip.querySelector('svg');
+      var body = svg.querySelector('.cat-body');
+      var legs = {
+        hn: svg.querySelector('.leg-hn'), fn: svg.querySelector('.leg-fn'),
+        hf: svg.querySelector('.leg-hf'), ff: svg.querySelector('.leg-ff')
+      };
+      var still = window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var RX = 22, RY = 7, ORBIT = 6000, STEP = 750, start = performance.now();
+      var GROUND = 82, STRIDE = 6, LIFT = 4;
+
+      // 다리 하나: 엉덩이(hx,hy)에서 발까지 살짝 굽은 선 + 앞으로 꺾인 발끝.
+      function leg(hx, hy, p, front) {
+        var s = p * 2 * Math.PI;
+        var fx = hx - STRIDE * Math.cos(s);              // 들린 동안 앞으로 나간다
+        var fy = GROUND - LIFT * Math.max(0, Math.sin(s));
+        var cx = (hx + fx) / 2 + (front ? -2 : 2);        // 앞발은 뒤로, 뒷발은 앞으로 살짝 굽힘
+        var cy = (hy + fy) / 2;
+        return 'M' + hx.toFixed(1) + ' ' + hy.toFixed(1) +
+          ' Q' + cx.toFixed(1) + ' ' + cy.toFixed(1) + ' ' + fx.toFixed(1) + ' ' + fy.toFixed(1) +
+          ' l2.5 0';
+      }
+
+      function frame(now) {
+        if (!document.getElementById('cat-runner')) return; // 로딩 화면이 사라짐
+        var t = now - start;
+        var p = still ? 0.1 : (t % STEP) / STEP;           // 걸음 진행도
+        var bob = 1.2 * Math.abs(Math.sin(p * 2 * Math.PI)); // 한 걸음에 두 번 살짝 들썩
+        body.setAttribute('transform', 'translate(0,' + (-bob).toFixed(2) + ')');
+        var hy = 66 - bob;
+        legs.hn.setAttribute('d', leg(44, hy, p, false));
+        legs.fn.setAttribute('d', leg(72, hy, (p + 0.25) % 1, true));
+        legs.hf.setAttribute('d', leg(47, hy, (p + 0.5) % 1, false));
+        legs.ff.setAttribute('d', leg(75, hy, (p + 0.75) % 1, true));
+
+        var th = still ? Math.PI / 2 : -(t / ORBIT) * 2 * Math.PI + Math.PI / 2;
+        var sin = Math.sin(th), cos = Math.cos(th);
+        var scale = 0.8 + 0.2 * sin;                        // 앞(sin=1)일수록 크게
+        runner.style.transform = 'translate(' + (RX * cos).toFixed(1) + 'px,' +
+          (RY * sin).toFixed(1) + 'px) scale(' + scale.toFixed(3) + ')';
+        runner.style.opacity = (0.75 + 0.25 * sin).toFixed(2);
+        flip.style.transform = 'scaleX(' + (sin >= 0 ? 1 : -1) + ')';
+        if (!still) requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    })();
+
     // Flutter 첫 프레임이 그려지면 로딩 화면 제거.
     window.addEventListener('flutter-first-frame', function () {
+      // 바로 지우지 않고 살짝 흐려지며 사라지게 해 화면이 툭 끊기지 않게 한다.
       var el = document.getElementById('loading');
-      if (el) el.remove();
+      if (!el) return;
+      el.classList.add('hide');
+      setTimeout(function () { el.remove(); }, 260);
     });
 
     // 아이폰은 viewport의 user-scalable=no 를 무시한다. 두 손가락으로 화면이

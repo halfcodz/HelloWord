@@ -11,6 +11,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'core/utils/safe_area_insets.dart';
 import 'core/widgets/animated_background.dart';
+import 'core/widgets/splash_gate.dart';
 import 'features/chat/repositories/chat_repository.dart';
 import 'features/exam/repositories/exam_repository.dart';
 import 'features/social/repositories/friend_repository.dart';
@@ -57,7 +58,8 @@ class HelloWordApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.build(dark: controller.isDark),
           builder: (context, child) => _ResponsiveShell(child: child),
-          home: const AuthGate(),
+          // 앱을 열면 고양이 스플래시가 잠깐 나왔다 사라진다.
+          home: SplashGate(child: const AuthGate()),
         ),
       ),
     );
@@ -152,11 +154,9 @@ class _ResponsiveShellState extends State<_ResponsiveShell>
 
         if (!isWide) return content;
 
-        // 데스크톱: 옅은 블루그레이 배경 위에 폰 컬럼을 가운데 배치.
+        // 데스크톱: 따뜻한 종이색 배경 위에 폰 컬럼을 가운데 배치.
         return ColoredBox(
-          color: AppColors.isDark
-              ? const Color(0xFF070C17)
-              : const Color(0xFFE2EAF8),
+          color: AppColors.desk,
           child: Center(
             child: Container(
               width: contentWidth,
