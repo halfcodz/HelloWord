@@ -90,8 +90,8 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
           style: AppTheme.display(
             fontSize: 26 + (i % 3) * 6,
             fontWeight: FontWeight.w600,
-            color: _toneOf(_letters[i].tone)
-                .withValues(alpha: dark ? 0.24 : 0.17),
+            // 글자는 먹색 한 가지로 아주 옅게(심플한 종이 위 연필 자국 느낌).
+            color: AppColors.ink.withValues(alpha: dark ? 0.08 : 0.07),
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -130,10 +130,12 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
           painter: _BackgroundPainter(
             t: _step.value,
             dark: dark,
-            primary: AppColors.pink,
-            secondary: AppColors.purple,
+            // 방울은 버터 계열만 써서 화면이 알록달록해지지 않게 한다.
+            primary: AppColors.accent,
+            secondary: AppColors.accent,
             accent: AppColors.gold,
-            glyphs: _glyphs,
+            // 화면을 최대한 심플하게: 떠다니는 알파벳은 그리지 않고 버터 방울만 남긴다.
+            glyphs: const [],
           ),
           child: child,
         ),
@@ -141,12 +143,6 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
     );
   }
 }
-
-Color _toneOf(int tone) => switch (tone) {
-      1 => AppColors.purple,
-      2 => AppColors.gold,
-      _ => AppColors.pink,
-    };
 
 /// 배경에 떠다니는 요소 하나의 궤도 정보.
 class _Floater {

@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import '../services/tts_service.dart';
 import '../utils/motivation_quotes.dart';
 import 'bouncy_tap.dart';
+import 'line_doodle.dart';
 
 /// 화면을 짜는 데 쓰는 공용 조각들.
 /// 화면마다 카드·제목·빈 상태를 따로 만들지 않고 여기 것만 가져다 쓴다.
@@ -25,9 +26,9 @@ import 'bouncy_tap.dart';
 /// 탭바가 반투명이라 그 뒤로 내용이 비치므로 조금 넉넉히 잡는다.
 double get kBottomInset => 108.0;
 
-/// 홈 맨 위 헤더.
-/// 뒤에서 움직이는 배경이 그대로 비치도록 색을 채우지 않고,
-/// 숫자 칸만 반투명 카드로 띄운다.
+/// 홈 맨 위 헤더. 버터노트의 시그니처인 '버터 블록'.
+/// 버터색으로 채운 둥근 블록 안에 인사말과 라인 드로잉을 두고,
+/// 숫자 칸은 그 안에 흰 카드로 얹는다.
 class HeroHeader extends StatelessWidget {
   HeroHeader({
     super.key,
@@ -62,84 +63,123 @@ class HeroHeader extends StatelessWidget {
         AppSpace.gutter.w,
         AppSpace.xs.h,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(
+          AppSpace.lg.w - 4,
+          AppSpace.md.h,
+          AppSpace.sm.w,
+          AppSpace.md.h,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.accent,
+          borderRadius: BorderRadius.circular(AppRadius.xl.r),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        subtitle,
+                        style: AppTheme.font(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onAccent.withValues(alpha: 0.72),
+                        ),
+                      ),
+                      SizedBox(height: AppSpace.xxs.h),
+                      Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTheme.display(
+                          fontSize: 26.sp,
+                          height: 1.2,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.onAccent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      subtitle,
-                      style: AppTheme.font(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.gray,
+                    // 알림 벨 등은 버터 위에서도 먹색으로 보이도록 아이콘 색을 맞춘다.
+                    // (다크 모드의 밝은 회색 아이콘은 버터 위에서 안 보인다.)
+                    if (trailing != null)
+                      Theme(
+                        data: Theme.of(context).copyWith(
+                          iconButtonTheme: IconButtonThemeData(
+                            style: IconButton.styleFrom(
+                              foregroundColor: AppColors.onAccent,
+                              minimumSize: const Size(44, 44),
+                            ),
+                          ),
+                        ),
+                        child: IconTheme.merge(
+                          data: IconThemeData(color: AppColors.onAccent),
+                          child: trailing!,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: AppSpace.xxs.h),
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTheme.display(
-                        fontSize: 26.sp,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.ink,
-                      ),
+                    LineDoodle(
+                      size: (trailing != null ? 64 : 80).w,
+                      onAccent: true,
                     ),
                   ],
                 ),
+              ],
+            ),
+            if (badge != null) ...[
+              SizedBox(height: AppSpace.sm.h),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpace.sm.w,
+                  vertical: AppSpace.xxs.h + 2,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AppRadius.pill.r),
+                ),
+                child: Text(
+                  badge!,
+                  style: AppTheme.font(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.onAccent,
+                  ),
+                ),
               ),
-              ?trailing,
             ],
-          ),
-          if (badge != null) ...[
-            SizedBox(height: AppSpace.sm.h),
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpace.sm.w,
-                vertical: AppSpace.xxs.h + 2,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.pinkSoft,
-                borderRadius: BorderRadius.circular(AppRadius.pill.r),
-              ),
-              child: Text(
-                badge!,
-                style: AppTheme.font(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.mintDeep,
+            if (stats.isNotEmpty) ...[
+              SizedBox(height: AppSpace.md.h),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < stats.length; i++) ...[
+                      if (i > 0) SizedBox(width: AppSpace.xs.w),
+                      Expanded(child: stats[i]),
+                    ],
+                  ],
                 ),
               ),
-            ),
+            ],
           ],
-          if (stats.isNotEmpty) ...[
-            SizedBox(height: AppSpace.md.h),
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var i = 0; i < stats.length; i++) ...[
-                    if (i > 0) SizedBox(width: AppSpace.xs.w),
-                    Expanded(child: stats[i]),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
 }
 
 /// [HeroHeader] 안에 들어가는 숫자 한 칸.
-/// 배경이 살짝 비치는 반투명 카드.
+/// 버터 블록 위에 얹는 흰 카드(다크 모드에서도 흰색이라 먹색 글자를 쓴다).
 class HeroStat extends StatelessWidget {
   HeroStat({
     super.key,
@@ -162,9 +202,8 @@ class HeroStat extends StatelessWidget {
         vertical: AppSpace.sm.h,
       ),
       decoration: BoxDecoration(
-        color: AppColors.cream.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(AppRadius.md.r),
-        border: Border.all(color: AppColors.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.lg.r),
       ),
       // 글자 크기 설정이 큰 기기에서도 칸을 넘치지 않도록
       // 각 줄을 Flexible + 축소 허용으로 둔다.
@@ -174,7 +213,7 @@ class HeroStat extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: AppIconSize.sm.sp, color: AppColors.pink),
+            Icon(icon, size: AppIconSize.sm.sp, color: AppColors.onAccent),
             SizedBox(height: AppSpace.xxs.h),
           ],
           Flexible(
@@ -186,7 +225,7 @@ class HeroStat extends StatelessWidget {
                 maxLines: 1,
                 style: AppTheme.tabularNumber(
                   fontSize: 20.sp,
-                  color: AppColors.ink,
+                  color: AppColors.onAccent,
                 ).copyWith(height: 1.1),
               ),
             ),
@@ -200,7 +239,7 @@ class HeroStat extends StatelessWidget {
                 fontSize: 11.sp,
                 height: 1.2,
                 fontWeight: FontWeight.w700,
-                color: AppColors.gray,
+                color: AppColors.onAccentMuted,
               ),
             ),
           ),
@@ -262,9 +301,9 @@ class _QuoteCardState extends State<QuoteCard> {
             width: double.infinity,
             padding: EdgeInsets.all(AppSpace.md.w),
             decoration: BoxDecoration(
-              color: AppColors.cream.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(AppRadius.lg.r),
-              border: Border.all(color: AppColors.border),
+              color: AppColors.cream,
+              borderRadius: BorderRadius.circular(AppRadius.xl.r),
+              border: Border.all(color: AppColors.border, width: 1.2),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -389,7 +428,7 @@ class SectionHeader extends StatelessWidget {
   }
 }
 
-/// 앱 전체에서 쓰는 기본 카드. 테두리로 구분하고 그림자는 쓰지 않는다.
+/// 앱 전체에서 쓰는 기본 카드. 둥근 모서리 + 얇은 테두리 + 아주 옅은 그림자.
 class AppCard extends StatelessWidget {
   AppCard({
     super.key,
@@ -416,7 +455,11 @@ class AppCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color ?? AppColors.cream,
         borderRadius: BorderRadius.circular(AppRadius.lg.r),
-        border: Border.all(color: borderColor ?? AppColors.border),
+        border: Border.all(
+          color: borderColor ?? AppColors.border,
+          width: borderColor != null ? 1.8 : 1.2,
+        ),
+        boxShadow: AppColors.softShadow(blur: 12, y: 3),
       ),
       child: child,
     );
@@ -451,21 +494,21 @@ class EmptyState extends StatelessWidget {
           horizontal: AppSpace.md.w,
         ),
         decoration: BoxDecoration(
-          color: AppColors.rowBg,
-          borderRadius: BorderRadius.circular(AppRadius.lg.r),
-          border: Border.all(color: AppColors.border),
+          color: AppColors.cream,
+          borderRadius: BorderRadius.circular(AppRadius.xl.r),
+          border: Border.all(color: AppColors.border, width: 1.2),
         ),
         child: Column(
           children: [
             Container(
-              width: 44.w,
-              height: 44.w,
+              width: 56.w,
+              height: 56.w,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: AppColors.cream,
+                color: AppColors.pinkSoft,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: AppIconSize.md.sp, color: AppColors.hint),
+              child: Icon(icon, size: AppIconSize.md.sp, color: AppColors.pink),
             ),
             SizedBox(height: AppSpace.sm.h),
             Text(
@@ -501,12 +544,7 @@ class EmptyState extends StatelessWidget {
 
 /// 진행률 막대(공부한 단어 수 등).
 class ProgressBar extends StatelessWidget {
-  ProgressBar({
-    super.key,
-    required this.value,
-    this.color,
-    this.height = 6,
-  });
+  ProgressBar({super.key, required this.value, this.color, this.height = 6});
 
   /// 0~1.
   final double value;
@@ -552,7 +590,7 @@ class StatusChip extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: background ?? AppColors.pinkSoft,
-        borderRadius: BorderRadius.circular(AppRadius.xs.r),
+        borderRadius: BorderRadius.circular(AppRadius.pill.r),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

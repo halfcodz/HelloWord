@@ -151,7 +151,7 @@ class _Bubble extends StatelessWidget {
           style: TextStyle(
             fontSize: 14.sp,
             height: 1.35,
-            color: isMine ? Colors.white : AppColors.ink,
+            color: isMine ? AppColors.onPink : AppColors.ink,
           ),
         ),
       ),
@@ -194,7 +194,7 @@ class _InputBar extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.border),
               ),
-              child: Icon(Icons.send_rounded, color: Colors.white, size: 22.sp),
+              child: Icon(Icons.send_rounded, color: AppColors.onPink, size: 22.sp),
             ),
           ),
         ],

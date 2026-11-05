@@ -287,7 +287,7 @@ class _ResultScaffold extends StatelessWidget {
                     border: Border.all(color: AppColors.border),
                   ),
                   child: Text('$score / $total 개 맞았어요',
-                      style: TextStyle(fontSize: 22.sp, color: Colors.white)),
+                      style: TextStyle(fontSize: 22.sp, color: AppColors.onPink)),
                 ),
                 SizedBox(height: 40.h),
                 SizedBox(

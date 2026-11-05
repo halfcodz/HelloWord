@@ -219,7 +219,7 @@ class _DayCell extends StatelessWidget {
                   fontWeight:
                       (isToday || isSelected) ? FontWeight.w700 : FontWeight.w500,
                   color: isToday
-                      ? Colors.white
+                      ? AppColors.onPink
                       : isSelected
                           ? AppColors.pink
                           : dayColor,

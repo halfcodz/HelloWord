@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../core/widgets/cat_mascot.dart';
 import '../home/main_shell.dart';
 import '../models/app_user.dart';
 import '../role/role_selection_screen.dart';
@@ -82,15 +83,16 @@ class _RememberProfileState extends State<_RememberProfile> {
   Widget build(BuildContext context) => widget.child;
 }
 
-/// 로그인 상태를 확인하는 잠깐 동안 보이는 화면.
+/// 로그인 상태를 확인하는 동안 보이는 화면.
 ///
-/// 웹 껍데기(index.html)가 이미 로고 로딩 화면을 보여 주므로 여기서 또
-/// 카드를 띄우면 로딩 화면이 두 번 나온 것처럼 보인다. 그래서 배경만 두고
-/// 아무것도 그리지 않는다.
+/// 처음 0.9초는 스플래시가 덮고 있으므로, 확인이 그보다 오래 걸릴 때만
+/// 고양이가 뱅글뱅글 도는 모습이 보인다.
 class _LoadingScaffold extends StatelessWidget {
   const _LoadingScaffold();
 
   @override
-  Widget build(BuildContext context) =>
-      const Scaffold(backgroundColor: Colors.transparent);
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(child: CatLoader()),
+      );
 }

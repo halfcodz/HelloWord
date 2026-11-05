@@ -248,7 +248,7 @@ class _UpcomingExamBanner extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: AppColors.onPink,
                   ),
                 ),
               ),
@@ -346,7 +346,7 @@ class _TodoTile extends StatelessWidget {
           color: AppColors.danger,
           borderRadius: BorderRadius.circular(16.r),
         ),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: Icon(Icons.delete, color: AppColors.onPink),
       ),
       child: GestureDetector(
         onTap: onToggle,
@@ -401,7 +401,7 @@ class _CheckCircle extends StatelessWidget {
           width: 2,
         ),
       ),
-      child: done ? Icon(Icons.check, size: 15.sp, color: Colors.white) : null,
+      child: done ? Icon(Icons.check, size: 15.sp, color: AppColors.onPink) : null,
     );
   }
 }

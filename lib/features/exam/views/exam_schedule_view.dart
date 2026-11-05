@@ -214,7 +214,7 @@ class _InviteCard extends StatelessWidget {
             Icon(
                 Icons.mark_email_unread_rounded,
                 size: AppIconSize.md.sp,
-                color: Colors.white,
+                color: AppColors.pink,
               ),
             SizedBox(width: AppSpace.sm.w),
             Expanded(

@@ -215,7 +215,9 @@ class _BlingBottomBar extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.cream,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl.r)),
         border: Border(top: BorderSide(color: AppColors.border)),
+        boxShadow: AppColors.softShadow(blur: 18, y: -2),
       ),
       child: SafeArea(
         top: false,
@@ -253,7 +255,7 @@ class _BarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.pink : AppColors.gray;
+    final color = selected ? AppColors.ink : AppColors.gray;
     return Semantics(
       button: true,
       selected: selected,
@@ -274,10 +276,14 @@ class _BarItem extends StatelessWidget {
                 curve: AppMotion.enter,
                 padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 5.h),
                 decoration: BoxDecoration(
-                  color: selected ? AppColors.pinkSoft : Colors.transparent,
+                  color: selected ? AppColors.accent : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppRadius.pill.r),
                 ),
-                child: Icon(item.icon, size: 24.sp, color: color),
+                child: Icon(
+                  item.icon,
+                  size: 24.sp,
+                  color: selected ? AppColors.onAccent : color,
+                ),
               ),
               SizedBox(height: 3.h),
               Text(

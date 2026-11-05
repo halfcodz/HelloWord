@@ -74,7 +74,7 @@ class _MaterialBellState extends State<MaterialBell> {
                       decoration: BoxDecoration(
                         color: AppColors.danger,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.4),
+                        border: Border.all(color: AppColors.cream, width: 1.4),
                       ),
                     ),
                   ),
@@ -225,7 +225,7 @@ class _MaterialTile extends StatelessWidget {
                 child: Icon(
                   Icons.mark_email_unread_rounded,
                   size: AppIconSize.sm.sp,
-                  color: Colors.white,
+                  color: AppColors.onPink,
                 ),
               ),
               SizedBox(width: 12.w),

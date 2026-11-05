@@ -88,7 +88,7 @@ class _Chip extends StatelessWidget {
             style: TextStyle(
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w700,
-                color: selected ? Colors.white : AppColors.grayText)),
+                color: selected ? AppColors.onPink : AppColors.grayText)),
       ),
     );
   }
@@ -139,7 +139,7 @@ class _MemorizeCheckState extends State<MemorizeCheck> {
             ),
           ),
           child: _on
-              ? Icon(Icons.check_rounded, size: 17.sp, color: Colors.white)
+              ? Icon(Icons.check_rounded, size: 17.sp, color: AppColors.onPink)
               : null,
         ),
       ),

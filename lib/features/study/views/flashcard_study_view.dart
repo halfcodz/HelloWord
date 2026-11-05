@@ -328,7 +328,7 @@ class _RoundCardButton extends StatelessWidget {
           size: Size(30.w, 30.w),
           painter: _MarkPainter(
             check: primary,
-            color: primary ? Colors.white : AppColors.danger,
+            color: primary ? AppColors.onPink : AppColors.danger,
           ),
         ),
       ),

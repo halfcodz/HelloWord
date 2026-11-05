@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../core/widgets/cat_mascot.dart';
+
 import '../core/theme/app_theme.dart';
 import '../models/app_user.dart';
 import 'auth_service.dart';
@@ -71,14 +73,19 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('반가워요! 🌱',
-                        style: TextStyle(
-                            fontSize: 22.sp,
-                            fontWeight: FontWeight.w800,
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: CatMascot(size: 64.w),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text('반가워!',
+                        style: AppTheme.display(
+                            fontSize: 24.sp,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.ink)),
                     SizedBox(height: 6.h),
-                    Text('정보를 입력하고 역할을 골라 주세요',
-                        style: TextStyle(
+                    Text('이름이랑 이메일 넣고 역할만 고르면 끝',
+                        style: AppTheme.font(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w600,
                             color: AppColors.gray)),
@@ -176,10 +183,10 @@ class _RolePicker extends StatelessWidget {
       children: [
         Expanded(
           child: _RoleCard(
-            mascot: '🐰',
+            icon: Icons.school_rounded,
             label: '웅니',
             hint: '단어를 내요',
-            bg: AppColors.blueSoft,
+            bg: AppColors.pinkSoft,
             selected: role == UserRole.elder,
             onTap: () => onChanged(UserRole.elder),
           ),
@@ -187,10 +194,10 @@ class _RolePicker extends StatelessWidget {
         SizedBox(width: 12.w),
         Expanded(
           child: _RoleCard(
-            mascot: '🐥',
+            icon: Icons.edit_rounded,
             label: '동생',
             hint: '시험을 봐요',
-            bg: AppColors.orangeSoft,
+            bg: AppColors.fieldBg,
             selected: role == UserRole.younger,
             onTap: () => onChanged(UserRole.younger),
           ),
@@ -202,7 +209,7 @@ class _RolePicker extends StatelessWidget {
 
 class _RoleCard extends StatelessWidget {
   const _RoleCard({
-    required this.mascot,
+    required this.icon,
     required this.label,
     required this.hint,
     required this.bg,
@@ -210,7 +217,7 @@ class _RoleCard extends StatelessWidget {
     required this.onTap,
   });
 
-  final String mascot;
+  final IconData icon;
   final String label;
   final String hint;
   final Color bg;
@@ -226,11 +233,11 @@ class _RoleCard extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: EdgeInsets.symmetric(vertical: 20.h),
         decoration: BoxDecoration(
-          color: selected ? AppColors.blueSoft : AppColors.cream,
-          borderRadius: BorderRadius.circular(18.r),
+          color: AppColors.cream,
+          borderRadius: BorderRadius.circular(AppRadius.xl.r),
           border: Border.all(
             color: selected ? AppColors.pink : AppColors.border,
-            width: selected ? 2 : 1,
+            width: selected ? 2 : 1.2,
           ),
         ),
         child: Column(
@@ -239,15 +246,20 @@ class _RoleCard extends StatelessWidget {
               width: 56.w,
               height: 56.w,
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-              child: Text(mascot, style: TextStyle(fontSize: 30.sp)),
+              decoration: BoxDecoration(
+                color: selected ? AppColors.accent : bg,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon,
+                  size: AppIconSize.md.sp,
+                  color: selected ? AppColors.onAccent : AppColors.ink),
             ),
             SizedBox(height: 10.h),
             Text(label,
                 style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w800,
-                    color: selected ? AppColors.pink : AppColors.ink)),
+                    color: AppColors.ink)),
             SizedBox(height: 2.h),
             Text(hint,
                 style: TextStyle(fontSize: 12.sp, color: AppColors.gray)),

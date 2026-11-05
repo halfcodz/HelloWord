@@ -597,7 +597,7 @@ class _MenuTile extends StatelessWidget {
                 color: AppColors.pink,
                 borderRadius: BorderRadius.circular(13.r),
               ),
-              child: Icon(icon, color: Colors.white, size: 22.sp),
+              child: Icon(icon, color: AppColors.onPink, size: 22.sp),
             ),
             SizedBox(width: 14.w),
             Expanded(
