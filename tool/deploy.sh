@@ -12,9 +12,11 @@ set -euo pipefail
 TARGET="${1:-}"
 ORIGINAL="$(git rev-parse --abbrev-ref HEAD)"
 
-if [ -n "$(git status --porcelain)" ]; then
+# 커밋 안 한 '수정'만 막는다. 저장소에 안 올리는 개인 폴더(메모·자료 등)가
+# 있어도 되돌리기·배포가 막히지 않도록 추적하지 않는 파일은 보지 않는다.
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
   echo "커밋하지 않은 변경이 있습니다. 먼저 정리해 주세요."
-  git status --short
+  git status --short --untracked-files=no
   exit 1
 fi
 
